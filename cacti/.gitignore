@@ -1,0 +1,15 @@
+venv/
+
+managed_system/models/
+managed_system/policies/
+
+HarmonE/
+
+__pycache__/
+*.pyc
+
+.env
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

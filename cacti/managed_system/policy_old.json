@@ -1,0 +1,27 @@
+{
+  "policy_id": "harmone_score_policy_demo",
+  "quality_attribute": "score",
+  "adaptation_boundary": {
+    "type": "STATIC_THRESHOLD",
+    "condition": "LESS_THAN",
+    "threshold": 0.90,
+    "description": "Trigger if the model_score (initial 0.82) is < 0.90. This will force a switch."
+  },
+  "tactics": [
+    {
+      "tactic_id": "execute_mape_plan",
+      "priority": 1,
+      "tactic_type": "CORE",
+      "tactic_endpoint": "http://localhost:8080/adaptor/tactic",
+      "description": "Tells the local system to run its own sophisticated planning logic."
+    },
+    {
+      "tactic_id": "handle_data_drift",
+      "priority": 2,
+      "tactic_type": "CUSTOM",
+      "tactic_endpoint": "http://localhost:8080/adaptor/tactic",
+      "description": "Tells the local system to run its drift-handling logic."
+    }
+  ]
+}
+
