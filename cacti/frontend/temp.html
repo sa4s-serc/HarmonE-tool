@@ -4,7 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Adaptation Control Plane (ACP) Dashboard</title>
+    <!-- 1. Tailwind CSS for styling -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 2. Chart.js for real-time graphs -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
     
@@ -31,8 +33,7 @@
     </style>
 </head>
 <body class="h-full text-gray-200 font-sans">
-    
-    <div id="welcome-screen" class="flex items-center justify-center min-h-screen">
+    <div id="welcome-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900 bg-opacity-80">
         <div class="bg-gray-800 p-8 rounded-lg shadow-2xl max-w-lg w-full">
             <h2 class="text-2xl font-bold text-white mb-4">Welcome to the Adaptation Control Plane</h2>
             <p class="text-gray-400 mb-6">Choose an approach to begin. HarmonE is a pre-built demo system for sustainability-aware ML. You can also build your own.</p>
@@ -60,29 +61,27 @@
             </div>
         </div>
     </div>
-    
-    <div id="dashboard-wrapper" class="hidden flex flex-col h-screen">
+    <div class="flex flex-col h-screen">
 
+        <!-- HEADER -->
         <header class="bg-gray-800 shadow-md z-10">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center h-16">
-
-                <button id="back-to-menu-btn" class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-1.5 rounded-md text-sm font-medium transition-colors">
-                    &larr; Change Approach
-                </button>
-
-                <h1 class="text-2xl font-bold text-white hidden md:block">Adaptation Control Plane (ACP) Dashboard</h1>
+                <h1 class="text-2xl font-bold text-white">Adaptation Control Plane (ACP) Dashboard</h1>
                 
+                <!-- Global Policy Selector -->
                 <div class="flex items-center space-x-2">
                     <label for="policy-id-input" class="text-sm font-medium">Policy ID:</label>
-                    <input type="text" id="policy-id-input" value="harmone_score_policy" class="bg-gray-700 text-white px-3 py-1.5 rounded-md text-sm w-48 md:w-64 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter policy ID to load...">
+                    <input type="text" id="policy-id-input" value="harmone_score_policy_demo" class="bg-gray-700 text-white px-3 py-1.5 rounded-md text-sm w-64 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter policy ID to load...">
                     <button id="load-policy-btn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded-md text-sm font-medium transition-colors">Load</button>
                 </div>
             </div>
         </header>
 
+        <!-- MAIN CONTENT -->
         <main class="flex-1 overflow-y-auto bg-gray-900 p-4 lg:p-8">
             <div class="max-w-7xl mx-auto">
                 
+                <!-- TABS -->
                 <nav class="mb-6 border-b border-gray-700">
                     <ul class="flex space-x-8">
                         <li><button class="tab-btn text-gray-400 hover:text-white py-2 border-b-2 border-transparent transition-colors" data-tab="policy">Policy Management (KR1)</button></li>
@@ -91,8 +90,10 @@
                     </ul>
                 </nav>
 
+                <!-- Loading/Error State -->
                 <div id="message-container" class="hidden text-center p-4 rounded-md mb-4"></div>
 
+                <!-- TAB CONTENT -->
                 <div class="tab-content" id="dashboard-content">
                     <div class="flex justify-between items-center mb-4">
                         <h2 class="text-xl font-semibold text-white">Live Telemetry: <span id="policy-title-dashboard" class="text-blue-400">No Policy Loaded</span></h2>
@@ -103,11 +104,13 @@
                     </div>
                     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                         
+                        <!-- Main Metric Chart (KR2) -->
                         <div class="lg:col-span-3 bg-gray-800 p-6 rounded-lg shadow-lg">
                             <h3 id="main-chart-title" class="text-lg font-medium mb-4">Main Metric</h3>
                             <div class="h-80"><canvas id="main-metric-chart"></canvas></div>
                         </div>
                         
+                        <!-- Associated QA Charts -->
                         <div class="bg-gray-800 p-6 rounded-lg shadow-lg">
                             <h3 id="qa1-chart-title" class="text-lg font-medium mb-4">Associated QA 1</h3>
                             <div class="h-60"><canvas id="qa1-chart"></canvas></div>
@@ -131,11 +134,11 @@
                             <option value="">-- Select a preset --</option>
                             <option value="harmone_score">HarmonE - Score Policy (For Energy Performance Tradeoff)</option>
                             <option value="harmone_drift">HarmonE - Drift Policy (For Data Drift)</option>
-                            <option value="simple_switch_r2">Simple R² Switch Policy</option>
                         </select>
                     </div>
                     <form id="policy-form" class="bg-gray-800 p-6 rounded-lg shadow-lg space-y-6">
                         
+                        <!-- General Info -->
                         <fieldset class="border border-gray-700 p-4 rounded-md">
                             <legend class="text-lg font-medium px-2">General</legend>
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
@@ -150,6 +153,7 @@
                             </div>
                         </fieldset>
 
+                        <!-- Adaptation Boundary -->
                         <fieldset class="border border-gray-700 p-4 rounded-md">
                             <legend class="text-lg font-medium px-2">Adaptation Boundary</legend>
                             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">
@@ -171,9 +175,11 @@
                             </div>
                         </fieldset>
                         
+                        <!-- Tactics -->
                         <fieldset class="border border-gray-700 p-4 rounded-md">
                             <legend class="text-lg font-medium px-2">Tactics</legend>
                             <div id="tactics-container" class="space-y-4 mt-2">
+                                <!-- Tactic 1 (template) -->
                                 <div class="tactic-group border border-gray-600 p-3 rounded-md space-y-2">
                                     <h4 class="font-medium text-gray-300">Tactic 1</h4>
                                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -198,6 +204,7 @@
                             <button type="button" id="add-tactic-btn" class="mt-4 bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-md text-sm">+ Add Tactic</button>
                         </fieldset>
 
+                        <!-- Associated QAs -->
                         <fieldset class="border border-gray-700 p-4 rounded-md">
                             <legend class="text-lg font-medium px-2">Associated QAs</legend>
                              <div>
@@ -206,6 +213,7 @@
                             </div>
                         </fieldset>
                         
+                        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-md text-base font-medium transition-colors">Create / Update Policy</button>
                         <div class="flex space-x-4">
                             <button type="submit" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-md text-base font-medium transition-colors">
                                 Create / Update (Live)
@@ -220,6 +228,7 @@
                 <div class="tab-content hidden" id="history-content">
                     <h2 class="text-xl font-semibold mb-4 text-white">Adaptation History & Analysis (KR3)</h2>
                     <div id="history-feed" class="space-y-6">
+                        <!-- History items will be dynamically inserted here by JavaScript -->
                         <div class="text-gray-400">No adaptation events recorded yet.</div>
                     </div>
                 </div>
@@ -241,11 +250,6 @@
         let globalKnowledge = { telemetry_history: [] };
 
         // === DOM ELEMENTS ===
-        // --- These are the new elements for view switching ---
-        const welcomeScreen = document.getElementById('welcome-screen');
-        const dashboardWrapper = document.getElementById('dashboard-wrapper');
-        const backToMenuBtn = document.getElementById('back-to-menu-btn');
-
         const loadPolicyBtn = document.getElementById('load-policy-btn');
         const policyIdInput = document.getElementById('policy-id-input');
         const messageContainer = document.getElementById('message-container');
@@ -259,7 +263,6 @@
 
         const downloadPolicyBtn = document.getElementById('download-policy-btn');
         const downloadTelemetryBtn = document.getElementById('download-telemetry-btn');
-        
         const HARMONY_PRESETS = {
             "harmone_score": {
                 policy_id: "harmone_score_policy",
@@ -272,7 +275,7 @@
                 tactics: [
                     { tactic_id: "execute_mape_plan", priority: 1, tactic_endpoint: "http://localhost:8080/adaptor/tactic" } // From manage.py
                 ],
-                associated_qas: ["r2_score", "normalized_energy", "model_used", "kl_div"]
+                associated_qas: ["r2_score", "normalized_energy", "model_used"] // All metrics from monitor.py
             },
             "harmone_drift": {
                 policy_id: "harmone_drift_policy",
@@ -303,66 +306,38 @@
             }
         };
 
-        // === HELPER FUNCTION TO SWITCH VIEWS ===
-        const showView = (viewName) => {
-            if (viewName === 'dashboard') {
-                welcomeScreen.classList.add('hidden');
-                dashboardWrapper.classList.remove('hidden');
-            } else { // 'welcome'
-                dashboardWrapper.classList.add('hidden');
-                welcomeScreen.classList.remove('hidden');
-                
-                // Stop polling when we go back to the menu
-                if (pollingIntervalId) clearInterval(pollingIntervalId);
-                pollingIntervalId = null;
-                currentPolicyId = "";
-                policyIdInput.value = ""; // Clear the input box
-                document.getElementById('policy-title-dashboard').textContent = 'No Policy Loaded'; // Reset title
-                showMessage("Polling stopped. Select an approach.", "info");
-            }
-        };
-
         // === INITIALIZATION ===
         document.addEventListener('DOMContentLoaded', () => {
+            const welcomeModal = document.getElementById('welcome-modal');
 
-            // --- View Navigation Logic ---
-            backToMenuBtn.addEventListener('click', () => {
-                showView('welcome');
-            });
-
+            // --- Modal Button Logic ---
             document.getElementById('modal-btn-harmone').addEventListener('click', () => {
                 populateFormWithPreset(HARMONY_PRESETS.harmone_score);
                 showMessage("Loaded 'HarmonE Demo' preset. Download the policy files and set 'approach.conf' to 'harmone_acp'", "info");
-                showView('dashboard');
+                welcomeModal.classList.add('hidden');
+                // Go to Policy tab
                 document.querySelector('.tab-btn[data-tab="policy"]').click();
             });
 
             document.getElementById('modal-btn-switch').addEventListener('click', () => {
                 populateFormWithPreset(HARMONY_PRESETS.simple_switch_r2);
                 showMessage("Loaded 'Simple R² Switch' preset. Download the policy and set 'approach.conf' to 'switch_acp'", "info");
-                showView('dashboard');
+                welcomeModal.classList.add('hidden');
+                // Go to Policy tab
                 document.querySelector('.tab-btn[data-tab="policy"]').click();
             });
 
             document.getElementById('modal-btn-single').addEventListener('click', () => {
-                // For single model, we just need to load and monitor, no policy form needed
-                policyIdInput.value = 'monitor_only_policy'; // A dummy ID to show a title
                 showMessage("Ready for 'Single Model'. Set 'approach.conf' to 'single_acp' and run your managed system.", "info");
-                showView('dashboard');
-                document.querySelector('.tab-btn[data-tab="dashboard"]').click();
+                welcomeModal.classList.add('hidden');
             });
 
             document.getElementById('modal-btn-custom').addEventListener('click', () => {
-                // For custom, clear the form first
-                populateFormWithPreset({ policy_id: "my_custom_policy" }); 
                 showMessage("Ready to build a custom system. Define your policy below.", "info");
-                showView('dashboard');
+                welcomeModal.classList.add('hidden');
+                // Go to Policy tab
                 document.querySelector('.tab-btn[data-tab="policy"]').click();
             });
-            
-            // --- End View Navigation Logic ---
-
-
             // Tab switching logic
             tabs.forEach(tab => {
                 tab.addEventListener('click', () => {
@@ -378,8 +353,7 @@
                     });
                 });
             });
-
-            // Preset dropdown listener
+            // --- ADD THIS LISTENER ---
             const presetDropdown = document.getElementById('policy-presets');
             presetDropdown.addEventListener('change', (e) => {
                 const presetKey = e.target.value;
@@ -942,6 +916,7 @@
                     </div>
                 </div>
                 
+                <!-- KR3: Before and After Chart -->
                 <div class="mt-4">
                     <h4 class="text-sm font-medium text-gray-300 mb-2">Before & After Performance (${mainMetric || ''})</h4>
                     <div class="h-40 bg-gray-700 p-2 rounded-md">
@@ -968,7 +943,7 @@
 
             const dataPointsToShow = 10;
             const startIndex = Math.max(0, eventIndex - dataPointsToShow);
-            const endIndex = Mth.min(telemetry.length, eventIndex + dataPointsToShow);
+            const endIndex = Math.min(telemetry.length, eventIndex + dataPointsToShow);
 
             const chartData = telemetry.slice(startIndex, endIndex);
             

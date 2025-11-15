@@ -1,13 +1,13 @@
 {
-    "last_line": 48721,
+    "last_line": 51636,
     "current_energy_threshold": -28.9142881787198,
     "linear_version": 1,
     "lstm_version": 1,
     "svm_version": 1,
     "ema_scores": {
-        "lstm": 0.7560682115433595,
-        "linear": -2.353530947086568,
-        "svm": 0.1793831049318834
+        "lstm": 0.16535166666938053,
+        "linear": -0.9017555951390249,
+        "svm": -1.6343421845618715
     },
     "recovery_cycles": 2
 }

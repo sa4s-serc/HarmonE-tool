@@ -116,3 +116,20 @@ def plan_drift(trigger="local"):
     logging.info("PLAN (Drift): Drift detected! No previous version available. Retraining required.")
     return {"action": "retrain"}
 
+def plan_simple_switch():
+    """
+    A simple baseline plan: just switch to a different model.
+    Picks one of the *other* available models at random.
+    """
+    logging.info("PLAN (Simple Switch): Triggered by R² baseline.")
+    current_model = get_current_model()
+    available_models = ["lstm", "linear", "svm"]
+    
+    # Remove the current model from the list
+    available_models.remove(current_model) 
+    
+    # Randomly pick from the remaining two
+    chosen_model = random.choice(available_models)
+    
+    logging.info(f"PLAN (Simple Switch): Switching from '{current_model.upper()}' to '{chosen_model.upper()}'.")
+    return chosen_model

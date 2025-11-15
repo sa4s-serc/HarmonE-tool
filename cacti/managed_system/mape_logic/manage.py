@@ -3,7 +3,7 @@ import time
 import os
 import sys
 import logging
-from execute import execute_mape, execute_drift
+from execute import execute_mape, execute_drift, execute_simple_switch
 
 # --- Setup ---
 logging.basicConfig(
@@ -51,7 +51,7 @@ def run_mape_loop(approach):
             # time.sleep(400)
             # execute_drift(trigger="local")
 
-    elif approach == "harmone_acp":
+    elif approach in ["harmone_acp", "switch_acp"]:
         # --- ACP-Driven Logic ---
         logging.info("Running in 'harmone_acp' mode. Listening for commands...")
         while True:
@@ -76,6 +76,24 @@ def run_mape_loop(approach):
             time.sleep(5) # Check for a new command every 5 seconds
     else:
         logging.info(f"Mode '{approach}' requires no local MAPE loop. Exiting.")
+        
+def execute_tactic_locally(tactic_id):
+    """Executes the correct local logic based on the tactic_id."""
+    logging.info(f"Command '{tactic_id}' received. Triggering local logic...")
+    
+    if tactic_id == "execute_mape_plan":
+        execute_mape(trigger="acp")
+        
+    elif tactic_id == "handle_data_drift":
+        execute_drift(trigger="acp")
+    
+    # --- ADD THIS ELIF BLOCK ---
+    elif tactic_id == "switch_model_r2_baseline":
+        execute_simple_switch()
+    # --- END OF ADDITION ---
+        
+    else:
+        logging.warning(f"Unknown local tactic_id: '{tactic_id}'")
 
 # --- Startup ---
 if __name__ == "__main__":

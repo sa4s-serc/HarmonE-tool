@@ -2,7 +2,7 @@ import os
 import shutil
 import logging
 import sys
-from plan import plan_mape, plan_drift
+from plan import plan_mape, plan_drift, plan_simple_switch
 
 # --- Setup ---
 logging.basicConfig(
@@ -72,3 +72,20 @@ def execute_drift(trigger="local"):
         except Exception as e:
             logging.error(f"EXECUTE (Drift): Retraining failed: {e}")
 
+def execute_simple_switch():
+    """Switches model based on the simple_switch plan."""
+    logging.info("Executing Simple Switch (R² Baseline)...")
+    
+    decision = plan_simple_switch() # Call the new planner
+    
+    if not decision:
+        logging.info("EXECUTE (Simple Switch): No action needed.")
+        return
+
+    logging.info(f"⚡ EXECUTE (Simple Switch): Switching model to {decision.upper()} in {MODEL_FILE}")
+    try:
+        with open(MODEL_FILE, "w") as f:
+            f.write(decision)
+        logging.info("EXECUTE (Simple Switch): Model switch successful.")
+    except Exception as e:
+        logging.error(f"EXECUTE (Simple Switch): Failed to write to {MODEL_FILE}: {e}")

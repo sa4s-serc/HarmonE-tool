@@ -194,7 +194,7 @@ if __name__ == '__main__':
             exit(1)
 
     # Start the local MAPE logic (runs in local and acp modes)
-    if approach in ["harmone_local", "harmone_acp"]:
+    if approach in ["harmone_local", "harmone_acp", "switch_acp"]:
         try:
             mape_process = subprocess.Popen(["python", "-u", "mape_logic/manage.py"])
             subprocesses.append(mape_process)
@@ -202,6 +202,10 @@ if __name__ == '__main__':
         except Exception as e:
             logging.critical(f"Failed to start manage.py: {e}")
             exit(1)
+            
+    elif approach == "single_acp":
+        logging.info("Running in 'single_acp' (monitor-only) mode. 'manage.py' will not be started.")
+    # --- END ADDITION ---
 
     # --- 5. Handle ACP-specific setup ---
     # if approach == "harmone_acp":
@@ -214,7 +218,7 @@ if __name__ == '__main__':
     #     # Start the API handler to listen for commands
     #     threading.Thread(target=run_handler_api, daemon=True).start()
     #     logging.info(f"Adaptation Handler API listening on http://0.0.0.0:{HANDLER_PORT}...")
-    if approach == "harmone_acp":
+    if approach in ["harmone_acp", "switch_acp"]:
         # Create policies directory if it doesn't exist
         if not os.path.exists(POLICY_DIR):
             os.makedirs(POLICY_DIR)
@@ -229,6 +233,10 @@ if __name__ == '__main__':
         # Start the API handler to listen for commands
         threading.Thread(target=run_handler_api, daemon=True).start()
         logging.info(f"Adaptation Handler API listening on http://0.0.0.0:{HANDLER_PORT}...")
+        
+    elif approach == "single_acp":
+        logging.info("No policies will be registered. ACP will be in monitor-only mode.")
+    # --- END ADDITION ---
 
     # --- 6. Wait for processes to finish ---
     try:
