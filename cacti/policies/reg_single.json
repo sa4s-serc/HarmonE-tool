@@ -1,0 +1,10 @@
+{
+    "policy_id": "reg_single",
+    "quality_attribute": "r2_score",
+    "adaptation_boundary": {
+      "condition": "LESS_THAN",
+      "threshold": -9999
+    },
+    "tactics": [],
+    "associated_qas": ["r2_score", "normalized_energy", "model_used"]
+  }

@@ -1,0 +1,10 @@
+{
+    "policy_id": "cv_single",
+    "quality_attribute": "score",
+    "adaptation_boundary": {
+      "condition": "LESS_THAN",
+      "threshold": -9999
+    },
+    "tactics": [],
+    "associated_qas": ["confidence", "normalized_energy", "model_used"]
+  }

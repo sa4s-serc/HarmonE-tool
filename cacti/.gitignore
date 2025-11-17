@@ -1,9 +1,6 @@
 venv/
 
-managed_system/models/
 managed_system/policies/
-
-HarmonE/
 
 __pycache__/
 *.pyc

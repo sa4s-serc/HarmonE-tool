@@ -1,0 +1,29 @@
+{
+  "policy_id": "harmone_score_policy_demo",
+  "quality_attribute": "score",
+  "adaptation_boundary": {
+    "type": "STATIC_THRESHOLD",
+    "condition": "LESS_THAN",
+    "threshold": 0.9,
+    "dynamic_logic": null
+  },
+  "tactics": [
+    {
+      "tactic_id": "execute_mape_plan",
+      "priority": 1,
+      "tactic_type": "CORE",
+      "tactic_endpoint": "http://localhost:8080/adaptor/tactic"
+    },
+    {
+      "tactic_id": "handle_data_drift",
+      "priority": 2,
+      "tactic_type": "CORE",
+      "tactic_endpoint": "http://localhost:8080/adaptor/tactic"
+    }
+  ],
+  "associated_qas": [
+    "r2_score",
+    "normalized_energy",
+    "model_used"
+  ]
+}

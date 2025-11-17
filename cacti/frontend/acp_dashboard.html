@@ -10,54 +10,66 @@
     
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation"></script>
     <style>
-        /* Custom scrollbar for a more modern look */
-        ::-webkit-scrollbar {
-            width: 8px;
-        }
-        ::-webkit-scrollbar-track {
-            background: #1f2937; /* gray-800 */
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #4b5563; /* gray-600 */
-            border-radius: 4px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: #6b7280; /* gray-500 */
-        }
-        .tab-active {
-            border-bottom-color: #3b82f6 !important; /* blue-500 */
-            color: #3b82f6;
-        }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #1f2937; }
+        ::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #6b7280; }
+        .tab-active { border-bottom-color: #3b82f6 !important; color: #3b82f6; }
     </style>
 </head>
 <body class="h-full text-gray-200 font-sans">
     
     <div id="welcome-screen" class="flex items-center justify-center min-h-screen">
-        <div class="bg-gray-800 p-8 rounded-lg shadow-2xl max-w-lg w-full">
+        <div class="bg-gray-800 p-8 rounded-lg shadow-2xl max-w-2xl w-full">
             <h2 class="text-2xl font-bold text-white mb-4">Welcome to the Adaptation Control Plane</h2>
-            <p class="text-gray-400 mb-6">Choose an approach to begin. HarmonE is a pre-built demo system for sustainability-aware ML. You can also build your own.</p>
+            <p class="text-gray-400 mb-6">Choose an approach to begin. You can run a pre-built demo system (Regression or CV) or define your own custom pipeline.</p>
             
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <button id="modal-btn-harmone" class="text-left p-4 bg-gray-700 hover:bg-blue-600 rounded-lg transition-colors">
-                    <h3 class="font-semibold text-white">Run HarmonE Demo</h3>
-                    <p class="text-sm text-gray-400">Full logic (score, drift, energy) orchestrated by the ACP.</p>
-                </button>
-                
-                <button id="modal-btn-switch" class="text-left p-4 bg-gray-700 hover:bg-blue-600 rounded-lg transition-colors">
-                    <h3 class="font-semibold text-white">Run Simple R² Switch Demo</h3>
-                    <p class="text-sm text-gray-400">A simple baseline that switches models if R² score drops.</p>
-                </button>
     
-                <button id="modal-btn-single" class="text-left p-4 bg-gray-700 hover:bg-blue-600 rounded-lg transition-colors">
-                    <h3 class="font-semibold text-white">Run Single Model (Monitor-Only)</h3>
-                    <p class="text-sm text-gray-400">Runs one model (e.g., LSTM) and only monitors its performance.</p>
-                </button>
-    
-                <button id="modal-btn-custom" class="text-left p-4 bg-gray-700 hover:bg-blue-600 rounded-lg transition-colors">
-                    <h3 class="font-semibold text-white">Build Custom System</h3>
-                    <p class="text-sm text-gray-400">Go to the Policy Manager to define your own system from scratch.</p>
-                </button>
+                <div class="p-4 bg-gray-700 rounded-lg">
+                    <h3 class="font-semibold text-white text-lg mb-3 border-b border-gray-600 pb-2">Regression Demo (LSTM/SVM)</h3>
+                    <div class="space-y-3">
+                        <button id="modal-btn-reg-harmone" class="text-left w-full p-3 bg-gray-600 hover:bg-blue-600 rounded-lg transition-colors">
+                            <h4 class="font-semibold text-white">HarmonE (Score/Drift)</h4>
+                            <p class="text-sm text-gray-300">Full logic orchestrated by ACP.</p>
+                        </button>
+                        <button id="modal-btn-reg-switch" class="text-left w-full p-3 bg-gray-600 hover:bg-blue-600 rounded-lg transition-colors">
+                            <h4 class="font-semibold text-white">Simple R² Switch</h4>
+                            <p class="text-sm text-gray-300">Baseline: Switch on R² score drop.</p>
+                        </button>
+                        <button id="modal-btn-reg-single" class="text-left w-full p-3 bg-gray-600 hover:bg-blue-600 rounded-lg transition-colors">
+                            <h4 class="font-semibold text-white">Single Model (Monitor-Only)</h4>
+                            <p class="text-sm text-gray-300">Run one model, monitor only.</p>
+                        </button>
+                    </div>
+                </div>
+            
+                <div class="p-4 bg-gray-700 rounded-lg">
+                    <h3 class="font-semibold text-white text-lg mb-3 border-b border-gray-600 pb-2">Computer Vision Demo (YOLO)</h3>
+                    <div class="space-y-3">
+                        <button id="modal-btn-cv-harmone" class="text-left w-full p-3 bg-gray-600 hover:bg-blue-600 rounded-lg transition-colors">
+                            <h4 class="font-semibold text-white">HarmonE (Score/Drift)</h4>
+                            <p class="text-sm text-gray-300">Full logic orchestrated by ACP.</p>
+                        </button>
+                        <button id="modal-btn-cv-switch" class="text-left w-full p-3 bg-gray-600 hover:bg-blue-600 rounded-lg transition-colors">
+                            <h4 class="font-semibold text-white">Simple Confidence Switch</h4>
+                            <p class="text-sm text-gray-300">Baseline: Switch on confidence drop.</p>
+                        </button>
+                        <button id="modal-btn-cv-single" class="text-left w-full p-3 bg-gray-600 hover:bg-blue-600 rounded-lg transition-colors">
+                            <h4 class="font-semibold text-white">Single Model (Monitor-Only)</h4>
+                            <p class="text-sm text-gray-300">Run one model, monitor only.</p>
+                        </button>
+                    </div>
+                </div>
+            
+                <div class="md:col-span-2">
+                    <button id="modal-btn-custom" class="text-left w-full p-4 bg-gray-900 hover:bg-blue-800 rounded-lg transition-colors border border-gray-700">
+                        <h3 class="font-semibold text-white">Build Custom System</h3>
+                        <p class="text-sm text-gray-400">Go to the Policy Manager to define your own system from scratch.</p>
+                    </button>
+                </div>
             </div>
+
         </div>
     </div>
     
@@ -101,6 +113,7 @@
                             Download Telemetry (CSV)
                         </button>
                     </div>
+                    
                     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                         
                         <div class="lg:col-span-3 bg-gray-800 p-6 rounded-lg shadow-lg">
@@ -116,24 +129,34 @@
                             <h3 id="qa2-chart-title" class="text-lg font-medium mb-4">Associated QA 2</h3>
                             <div class="h-60"><canvas id="qa2-chart"></canvas></div>
                         </div>
+                        
                         <div class="bg-gray-800 p-6 rounded-lg shadow-lg">
-                            <h3 id="qa3-chart-title" class="text-lg font-medium mb-4">Associated QA 3</h3>
-                            <div class="h-60"><canvas id="qa3-chart"></canvas></div>
+                            <h3 id="model-chart-title" class="text-lg font-medium mb-4">Model Distribution</h3>
+                            <div class="h-60" style="position: relative; max-height: 240px;"><canvas id="model-chart"></canvas></div>
                         </div>
                     </div>
                 </div>
 
                 <div class="tab-content hidden" id="policy-content">
                     <h2 class="text-xl font-semibold mb-4 text-white">Policy Management (KR1)</h2>
+                    
                     <div class="mb-4">
-                        <label for="policy-presets" class="block text-sm font-medium mb-1">Load HarmonE Preset:</label>
+                        <label for="policy-presets" class="block text-sm font-medium mb-1">Load Preset:</label>
                         <select id="policy-presets" class="w-full bg-gray-700 rounded-md p-2 text-sm">
                             <option value="">-- Select a preset --</option>
-                            <option value="harmone_score">HarmonE - Score Policy (For Energy Performance Tradeoff)</option>
-                            <option value="harmone_drift">HarmonE - Drift Policy (For Data Drift)</option>
-                            <option value="simple_switch_r2">Simple R² Switch Policy</option>
+                            <optgroup label="Regression Presets">
+                                <option value="reg_harmone_score">REG: HarmonE Score Policy</option>
+                                <option value="reg_harmone_drift">REG: HarmonE Drift Policy</option>
+                                <option value="reg_switch_r2">REG: Simple R² Switch Policy</option>
+                            </optgroup>
+                            <optgroup label="Computer Vision Presets">
+                                <option value="cv_harmone_score">CV: HarmonE Score Policy</option>
+                                <option value="cv_harmone_drift">CV: HarmonE Drift Policy</option>
+                                <option value="cv_switch_conf">CV: Simple Confidence Switch</option>
+                            </optgroup>
                         </select>
                     </div>
+                    
                     <form id="policy-form" class="bg-gray-800 p-6 rounded-lg shadow-lg space-y-6">
                         
                         <fieldset class="border border-gray-700 p-4 rounded-md">
@@ -187,7 +210,7 @@
                                         </div>
                                         <div class="md:col-span-2">
                                             <label class="block text-sm font-medium mb-1">Tactic Endpoint URL</label>
-                                            <input type="text" class="tactic-endpoint w-full bg-gray-700 rounded-md p-2 text-sm" required>
+                                            <input type="text" class="tactic-endpoint w-full bg-gray-700 rounded-md p-2 text-sm" value="http://localhost:8080/adaptor/tactic" required>
                                         </div>
                                         <div class="flex items-end">
                                             <button type="button" class="remove-tactic-btn bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-md text-sm">Remove</button>
@@ -230,18 +253,17 @@
 
     <script>
         // === CONFIGURATION ===
-        const ACP_SERVER_URL = "http://localhost:5000"; // Make sure your acp_server/app.py is running here
-        const POLLING_INTERVAL = 5000; // Poll for new data every 5 seconds
-        const CHART_MAX_DATA_POINTS = 30; // Show a rolling window of 30 data points
+        const ACP_SERVER_URL = "http://localhost:5000";
+        const POLLING_INTERVAL = 5000;
+        const CHART_MAX_DATA_POINTS = 30;
 
         // === GLOBAL STATE ===
         let currentPolicyId = "";
         let pollingIntervalId = null;
-        let chartInstances = {}; // To store all our Chart.js objects
+        let chartInstances = {};
         let globalKnowledge = { telemetry_history: [] };
 
         // === DOM ELEMENTS ===
-        // --- These are the new elements for view switching ---
         const welcomeScreen = document.getElementById('welcome-screen');
         const dashboardWrapper = document.getElementById('dashboard-wrapper');
         const backToMenuBtn = document.getElementById('back-to-menu-btn');
@@ -260,46 +282,52 @@
         const downloadPolicyBtn = document.getElementById('download-policy-btn');
         const downloadTelemetryBtn = document.getElementById('download-telemetry-btn');
         
+        // ▼▼▼ 1. UPDATED PRESETS (WITH ENERGY) ▼▼▼
         const HARMONY_PRESETS = {
-            "harmone_score": {
-                policy_id: "harmone_score_policy",
-                quality_attribute: "score", // From monitor.py
-                adaptation_boundary: {
-                    condition: "LESS_THAN",
-                    threshold: 0.78, // From thresholds.json
-                    dynamic_logic: ""
-                },
-                tactics: [
-                    { tactic_id: "execute_mape_plan", priority: 1, tactic_endpoint: "http://localhost:8080/adaptor/tactic" } // From manage.py
-                ],
+            // --- REGRESSION PRESETS ---
+            "reg_harmone_score": {
+                policy_id: "reg_harmone_score",
+                quality_attribute: "score", 
+                adaptation_boundary: { condition: "LESS_THAN", threshold: 0.78 },
+                tactics: [ { tactic_id: "execute_mape_plan", priority: 1, tactic_endpoint: "http://localhost:8080/adaptor/tactic" } ],
                 associated_qas: ["r2_score", "normalized_energy", "model_used", "kl_div"]
             },
-            "harmone_drift": {
-                policy_id: "harmone_drift_policy",
-                quality_attribute: "kl_div", // From monitor.py
-                adaptation_boundary: {
-                    condition: "GREATER_THAN",
-                    threshold: 0.75, // From analyse.py
-                    dynamic_logic: ""
-                },
-                tactics: [
-                    { tactic_id: "handle_data_drift", priority: 1, tactic_endpoint: "http://localhost:8080/adaptor/tactic" } // From manage.py
-                ],
+            "reg_harmone_drift": {
+                policy_id: "reg_harmone_drift",
+                quality_attribute: "kl_div", 
+                adaptation_boundary: { condition: "GREATER_THAN", threshold: 0.75 },
+                tactics: [ { tactic_id: "handle_data_drift", priority: 1, tactic_endpoint: "http://localhost:8080/adaptor/tactic" } ],
                 associated_qas: ["kl_div", "model_used"]
             },
-            "simple_switch_r2": {
-                policy_id: "harmone_switch_r2_policy",
-                quality_attribute: "r2_score", // Watch the R² score
-                adaptation_boundary: {
-                    condition: "LESS_THAN",
-                    threshold: 0.70, // A simple, static threshold
-                    dynamic_logic: ""
-                },
-                tactics: [
-                    // This is a new tactic we will implement in the managed system
-                    { tactic_id: "switch_model_r2_baseline", priority: 1, tactic_endpoint: "http://localhost:8080/adaptor/tactic" }
-                ],
-                associated_qas: ["r2_score", "model_used"]
+            "reg_switch_r2": {
+                policy_id: "reg_switch_r2",
+                quality_attribute: "r2_score", 
+                adaptation_boundary: { condition: "LESS_THAN", threshold: 0.70 },
+                tactics: [ { tactic_id: "switch_model_r2_baseline", priority: 1, tactic_endpoint: "http://localhost:8080/adaptor/tactic" } ],
+                associated_qas: ["r2_score", "normalized_energy", "model_used"] // <-- ADDED ENERGY
+            },
+            
+            // --- CV PRESETS ---
+            "cv_harmone_score": {
+                policy_id: "cv_harmone_score",
+                quality_attribute: "score", 
+                adaptation_boundary: { condition: "LESS_THAN", threshold: 0.78 },
+                tactics: [ { tactic_id: "execute_mape_plan", priority: 1, tactic_endpoint: "http://localhost:8080/adaptor/tactic" } ],
+                associated_qas: ["confidence", "normalized_energy", "model_used", "kl_div"]
+            },
+            "cv_harmone_drift": {
+                policy_id: "cv_harmone_drift",
+                quality_attribute: "kl_div", 
+                adaptation_boundary: { condition: "GREATER_THAN", threshold: 0.07 },
+                tactics: [ { tactic_id: "handle_data_drift", priority: 1, tactic_endpoint: "http://localhost:8080/adaptor/tactic" } ],
+                associated_qas: ["kl_div", "model_used"]
+            },
+            "cv_switch_conf": {
+                policy_id: "cv_switch_confidence",
+                quality_attribute: "confidence", 
+                adaptation_boundary: { condition: "LESS_THAN", threshold: 0.70 },
+                tactics: [ { tactic_id: "switch_model_r2_baseline", priority: 1, tactic_endpoint: "http://localhost:8080/adaptor/tactic" } ],
+                associated_qas: ["confidence", "normalized_energy", "model_used"] // <-- ADDED ENERGY
             }
         };
 
@@ -312,12 +340,11 @@
                 dashboardWrapper.classList.add('hidden');
                 welcomeScreen.classList.remove('hidden');
                 
-                // Stop polling when we go back to the menu
                 if (pollingIntervalId) clearInterval(pollingIntervalId);
                 pollingIntervalId = null;
                 currentPolicyId = "";
-                policyIdInput.value = ""; // Clear the input box
-                document.getElementById('policy-title-dashboard').textContent = 'No Policy Loaded'; // Reset title
+                policyIdInput.value = ""; 
+                document.getElementById('policy-title-dashboard').textContent = 'No Policy Loaded';
                 showMessage("Polling stopped. Select an approach.", "info");
             }
         };
@@ -325,41 +352,69 @@
         // === INITIALIZATION ===
         document.addEventListener('DOMContentLoaded', () => {
 
-            // --- View Navigation Logic ---
+            // ▼▼▼ VIEW NAVIGATION LOGIC (WITH "single" FIX) ▼▼▼
             backToMenuBtn.addEventListener('click', () => {
                 showView('welcome');
             });
 
-            document.getElementById('modal-btn-harmone').addEventListener('click', () => {
-                populateFormWithPreset(HARMONY_PRESETS.harmone_score);
-                showMessage("Loaded 'HarmonE Demo' preset. Download the policy files and set 'approach.conf' to 'harmone_acp'", "info");
+            // REGRESSION BUTTONS
+            document.getElementById('modal-btn-reg-harmone').addEventListener('click', () => {
+                populateFormWithPreset(HARMONY_PRESETS.reg_harmone_score);
+                policyIdInput.value = HARMONY_PRESETS.reg_harmone_score.policy_id;
+                showMessage("Loaded 'REG: HarmonE Demo' preset. Download policies and set 'approach.conf' to 'reg_harmone'", "info");
                 showView('dashboard');
                 document.querySelector('.tab-btn[data-tab="policy"]').click();
             });
 
-            document.getElementById('modal-btn-switch').addEventListener('click', () => {
-                populateFormWithPreset(HARMONY_PRESETS.simple_switch_r2);
-                showMessage("Loaded 'Simple R² Switch' preset. Download the policy and set 'approach.conf' to 'switch_acp'", "info");
+            document.getElementById('modal-btn-reg-switch').addEventListener('click', () => {
+                populateFormWithPreset(HARMONY_PRESETS.reg_switch_r2);
+                policyIdInput.value = HARMONY_PRESETS.reg_switch_r2.policy_id;
+                showMessage("Loaded 'REG: Simple R² Switch' preset. Download policy and set 'approach.conf' to 'reg_switch'", "info");
                 showView('dashboard');
                 document.querySelector('.tab-btn[data-tab="policy"]').click();
             });
 
-            document.getElementById('modal-btn-single').addEventListener('click', () => {
-                // For single model, we just need to load and monitor, no policy form needed
-                policyIdInput.value = 'monitor_only_policy'; // A dummy ID to show a title
-                showMessage("Ready for 'Single Model'. Set 'approach.conf' to 'single_acp' and run your managed system.", "info");
+            document.getElementById('modal-btn-reg-single').addEventListener('click', () => {
+                showMessage("Ready for 'REG: Single Model'. Set 'approach.conf' to 'reg_single'", "info");
+                policyIdInput.value = 'reg_single'; // Use the dummy policy ID
                 showView('dashboard');
+                loadPolicy(); // Automatically load this policy
                 document.querySelector('.tab-btn[data-tab="dashboard"]').click();
             });
 
+            // CV BUTTONS
+            document.getElementById('modal-btn-cv-harmone').addEventListener('click', () => {
+                populateFormWithPreset(HARMONY_PRESETS.cv_harmone_score);
+                policyIdInput.value = HARMONY_PRESETS.cv_harmone_score.policy_id;
+                showMessage("Loaded 'CV: HarmonE Demo' preset. Download policies and set 'approach.conf' to 'cv_harmone'", "info");
+                showView('dashboard');
+                document.querySelector('.tab-btn[data-tab="policy"]').click();
+            });
+
+            document.getElementById('modal-btn-cv-switch').addEventListener('click', () => {
+                populateFormWithPreset(HARMONY_PRESETS.cv_switch_conf);
+                policyIdInput.value = HARMONY_PRESETS.cv_switch_conf.policy_id;
+                showMessage("Loaded 'CV: Simple Confidence Switch' preset. Download policy and set 'approach.conf' to 'cv_switch'", "info");
+                showView('dashboard');
+                document.querySelector('.tab-btn[data-tab="policy"]').click();
+            });
+
+            document.getElementById('modal-btn-cv-single').addEventListener('click', () => {
+                showMessage("Ready for 'CV: Single Model'. Set 'approach.conf' to 'cv_single'", "info");
+                policyIdInput.value = 'cv_single'; // Use the dummy policy ID
+                showView('dashboard');
+                loadPolicy(); // Automatically load this policy
+                document.querySelector('.tab-btn[data-tab="dashboard"]').click();
+            });
+
+            // CUSTOM BUTTON
             document.getElementById('modal-btn-custom').addEventListener('click', () => {
-                // For custom, clear the form first
-                populateFormWithPreset({ policy_id: "my_custom_policy" }); 
+                populateFormWithPreset({ policy_id: "my_custom_policy", tactics: [{tactic_id: "my_tactic", priority: 1, tactic_endpoint: "http://localhost:8080/adaptor/tactic"}] }); 
+                policyIdInput.value = "my_custom_policy";
                 showMessage("Ready to build a custom system. Define your policy below.", "info");
                 showView('dashboard');
                 document.querySelector('.tab-btn[data-tab="policy"]').click();
             });
-            
             // --- End View Navigation Logic ---
 
 
@@ -389,17 +444,15 @@
                 }
             });
             
-
             // Load Policy button
             loadPolicyBtn.addEventListener('click', loadPolicy);
 
             // Policy Form listeners
             policyForm.addEventListener('submit', handlePolicySubmit);
-            addTacticBtn.addEventListener('click', addTacticGroup);
+            addTacticBtn.addEventListener('click', () => addTacticGroup());
             downloadPolicyBtn.addEventListener('click', handlePolicyDownload);
             tacticsContainer.addEventListener('click', (e) => {
                 if (e.target.classList.contains('remove-tactic-btn')) {
-                    // Do not remove the last tactic
                     if (tacticsContainer.children.length > 1) {
                         e.target.closest('.tactic-group').remove();
                         updateTacticHeaders();
@@ -408,17 +461,15 @@
             });
 
             downloadTelemetryBtn.addEventListener('click', handleTelemetryDownload);
-            // Initialize charts with empty data
             initializeCharts();
+            document.querySelector('.tab-btn[data-tab="dashboard"]').click();
         });
         
         // === CHARTING (KR2) ===
 
-        /**
-         * Creates empty Chart.js instances on page load.
-         */
+        // ▼▼▼ 2. UPDATED INITIALIZE CHARTS ▼▼▼
         function initializeCharts() {
-            const chartConfig = (title) => ({
+            const lineChartConfig = (title) => ({
                 type: 'line',
                 data: { labels: [], datasets: [] },
                 options: {
@@ -439,56 +490,75 @@
                     },
                     plugins: {
                         legend: { labels: { color: '#e5e7eb' } },
-                        tooltip: {
-                            mode: 'index',
-                            intersect: false
-                        }
+                        tooltip: { mode: 'index', intersect: false }
                     },
-                    animation: {
-                        duration: 0 // No animation for real-time feel
-                    }
+                    animation: { duration: 0 }
+                }
+            });
+            
+            const doughnutChartConfig = (title) => ({
+                type: 'doughnut',
+                data: { labels: [], datasets: [] },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { 
+                            position: 'bottom',
+                            labels: { color: '#e5e7eb' }
+                        },
+                        title: { display: false, text: title }
+                    },
+                    animation: { duration: 0 }
                 }
             });
 
-            chartInstances.main = new Chart(document.getElementById('main-metric-chart'), chartConfig("Main Metric"));
-            chartInstances.qa1 = new Chart(document.getElementById('qa1-chart'), chartConfig("QA 1"));
-            chartInstances.qa2 = new Chart(document.getElementById('qa2-chart'), chartConfig("QA 2"));
-            chartInstances.qa3 = new Chart(document.getElementById('qa3-chart'), chartConfig("QA 3"));
+            chartInstances.main = new Chart(document.getElementById('main-metric-chart'), lineChartConfig("Main Metric"));
+            chartInstances.qa1 = new Chart(document.getElementById('qa1-chart'), lineChartConfig("QA 1"));
+            chartInstances.qa2 = new Chart(document.getElementById('qa2-chart'), lineChartConfig("QA 2"));
+            // Initialize the new chart
+            chartInstances.modelChart = new Chart(document.getElementById('model-chart'), doughnutChartConfig("Model Distribution"));
         }
 
-        /**
-         * Updates all dashboard charts with new data from the knowledge base.
-         */
+        // ▼▼▼ 3. UPDATED DASHBOARD CHARTS FUNCTION (ALL NEW LOGIC) ▼▼▼
         function updateDashboardCharts(data) {
             const policy = data.policy || {};
             const telemetry = data.telemetry_history || [];
             
-            // --- Main Chart (Main Metric + Threshold) ---
-            const mainMetric = policy.quality_attribute || "N/A";
+            let mainMetric = policy.quality_attribute || "N/A";
             const boundary = policy.adaptation_boundary || {};
-            const threshold = boundary.threshold;
-            
-            document.getElementById('main-chart-title').textContent = `Main Metric: ${mainMetric} (Target: ${boundary.condition || ''} ${threshold || ''})`;
-
+            let threshold = boundary.threshold;
+            let thresholdData = [];
             const labels = telemetry.map(t => new Date(t.timestamp * 1000));
+            
+            // --- "Single Mode" Main Chart Fix ---
+            const isSingleMode = currentPolicyId.includes('single');
+            if (isSingleMode && policy.associated_qas && policy.associated_qas.length > 0) {
+                // For 'single' mode, use the first QA as the "Main Metric"
+                mainMetric = policy.associated_qas[0];
+                document.getElementById('main-chart-title').textContent = `Main Metric: ${mainMetric} (Monitor-Only)`;
+                // No threshold line for single mode
+            } else {
+                // For all other modes, show the policy's metric and threshold
+                document.getElementById('main-chart-title').textContent = `Main Metric: ${mainMetric} (Target: ${boundary.condition || ''} ${threshold || ''})`;
+                thresholdData = labels.map(() => threshold); // Only create threshold data if not single mode
+            }
+            
             const mainMetricData = telemetry.map(t => t[mainMetric]);
             
-            // Create a static threshold line
-            const thresholdData = labels.map(() => threshold);
-
             updateChart(chartInstances.main, labels, [
                 {
                     label: mainMetric,
                     data: mainMetricData,
-                    borderColor: '#3b82f6', // blue-500
+                    borderColor: '#3b82f6',
                     backgroundColor: '#3b82f6',
                     tension: 0.1,
                     pointRadius: 2
                 },
                 {
                     label: 'Threshold',
-                    data: thresholdData,
-                    borderColor: '#ef4444', // red-500
+                    data: thresholdData, // This will be empty for single mode, hiding the line
+                    borderColor: '#ef4444',
                     backgroundColor: '#ef4444',
                     borderDash: [5, 5],
                     pointRadius: 0,
@@ -496,73 +566,96 @@
                 }
             ]);
 
-            // --- Associated QA Charts ---
-            const qaNames = policy.associated_qas || [];
+            // --- Pie Chart & QA Line Chart Logic ---
+            const qaNames = policy.associated_qas ? [...policy.associated_qas] : [];
             
-            // QA Chart 1
-            const qa1Name = qaNames[0];
-            document.getElementById('qa1-chart-title').textContent = qa1Name || "Associated QA 1";
-            if(qa1Name) {
-                const qa1Data = telemetry.map(t => t[qa1Name]);
-                updateChart(chartInstances.qa1, labels, [{
-                    label: qa1Name,
-                    data: qa1Data,
-                    borderColor: '#10b981', // green-500
-                    backgroundColor: '#10b981',
-                    tension: 0.1
-                }]);
-            }
+            // Check for 'model_used' and render the pie chart
+            const modelChartIndex = qaNames.indexOf('model_used');
+            if (modelChartIndex > -1) {
+                // Remove 'model_used' from qaNames so it doesn't also become a line chart
+                qaNames.splice(modelChartIndex, 1); 
+                
+                // Process data for the pie chart
+                const modelCounts = {};
+                telemetry.slice(-CHART_MAX_DATA_POINTS).forEach(t => { // Use rolling window for counts
+                    const model = t['model_used'];
+                    if (model) {
+                        modelCounts[model] = (modelCounts[model] || 0) + 1;
+                    }
+                });
+                const modelLabels = Object.keys(modelCounts);
+                const modelData = Object.values(modelCounts);
 
-            // QA Chart 2
-            const qa2Name = qaNames[1];
-            document.getElementById('qa2-chart-title').textContent = qa2Name || "Associated QA 2";
-             if(qa2Name) {
-                const qa2Data = telemetry.map(t => t[qa2Name]);
-                updateChart(chartInstances.qa2, labels, [{
-                    label: qa2Name,
-                    data: qa2Data,
-                    borderColor: '#eab308', // yellow-500
-                    backgroundColor: '#eab308',
-                    tension: 0.1
+                document.getElementById('model-chart-title').textContent = "Model Distribution";
+                updateChart(chartInstances.modelChart, modelLabels, [{
+                    label: 'Model Usage',
+                    data: modelData,
+                    backgroundColor: ['#3b82f6', '#10b981', '#eab308', '#a855f7', '#f472b6', '#6b7280'],
                 }]);
+            } else {
+                // No model_used data, so clear the chart
+                document.getElementById('model-chart-title').textContent = "Model Distribution";
+                updateChart(chartInstances.modelChart, [], []);
             }
+            
+            // --- Associated QA Line Charts ---
+            // These are now just the first 2 QAs *other* than 'model_used'
+            const qaCharts = [chartInstances.qa1, chartInstances.qa2];
+            const qaTitles = ['qa1-chart-title', 'qa2-chart-title'];
+            const qaColors = ['#10b981', '#eab308'];
 
-            // QA Chart 3
-            const qa3Name = qaNames[2];
-            document.getElementById('qa3-chart-title').textContent = qa3Name || "Associated QA 3";
-             if(qa3Name) {
-                const qa3Data = telemetry.map(t => t[qa3Name]);
-                updateChart(chartInstances.qa3, labels, [{
-                    label: qa3Name,
-                    data: qa3Data,
-                    borderColor: '#a855f7', // purple-500
-                    backgroundColor: '#a855f7',
-                    tension: 0.1
-                }]);
+            qaNames.forEach((qaName, index) => {
+                if (index < qaCharts.length) { // Only fill the 2 available line charts
+                    const qaChart = qaCharts[index];
+                    const qaTitle = qaTitles[index];
+                    if (qaChart && qaTitle) {
+                        document.getElementById(qaTitle).textContent = qaName || `Associated QA ${index+1}`;
+                        const qaData = telemetry.map(t => t[qaName]);
+                        updateChart(qaChart, labels, [{
+                            label: qaName,
+                            data: qaData,
+                            borderColor: qaColors[index],
+                            backgroundColor: qaColors[index],
+                            tension: 0.1
+                        }]);
+                    }
+                }
+            });
+
+            // Clear unused line charts
+            for (let i = qaNames.length; i < qaCharts.length; i++) {
+                const qaChart = qaCharts[i];
+                const qaTitle = qaTitles[i];
+                if (qaChart && qaTitle) {
+                    document.getElementById(qaTitle).textContent = `Associated QA ${i+1}`;
+                    updateChart(qaChart, [], []);
+                }
             }
         }
         
-        /**
-         * Helper to update a Chart.js instance with new data, limiting to CHART_MAX_DATA_POINTS.
-         */
+        // ▼▼▼ 4. UPDATED UPDATECHART FUNCTION (handles pie charts) ▼▼▼
         function updateChart(chart, labels, datasets) {
-            const dataLength = labels.length;
-            const sliceStart = Math.max(0, dataLength - CHART_MAX_DATA_POINTS);
-            
-            chart.data.labels = labels.slice(sliceStart);
-            chart.data.datasets = datasets.map(ds => ({
-                ...ds,
-                data: ds.data.slice(sliceStart)
-            }));
-            
+            // Handle doughnut charts (labels are part of data)
+            if (chart.config.type === 'doughnut') {
+                chart.data.labels = labels;
+                chart.data.datasets = datasets;
+            } 
+            // Handle line charts (labels are on x-axis)
+            else {
+                const dataLength = labels.length;
+                const sliceStart = Math.max(0, dataLength - CHART_MAX_DATA_POINTS);
+                
+                chart.data.labels = labels.slice(sliceStart);
+                chart.data.datasets = datasets.map(ds => ({
+                    ...ds,
+                    data: ds.data.slice(sliceStart)
+                }));
+            }
             chart.update();
         }
 
         // === API & DATA HANDLING ===
 
-        /**
-         * Main function to load/reload all data for a policy.
-         */
         async function loadPolicy() {
             const policyId = policyIdInput.value;
             if (!policyId) {
@@ -573,19 +666,14 @@
             currentPolicyId = policyId;
             document.getElementById('policy-title-dashboard').textContent = `Policy: ${policyId}`;
 
-            // Stop any existing polling
             if (pollingIntervalId) {
                 clearInterval(pollingIntervalId);
             }
 
-            // Fetch data immediately, then start polling
             await fetchKnowledge();
             pollingIntervalId = setInterval(fetchKnowledge, POLLING_INTERVAL);
         }
 
-        /**
-         * Fetches the complete knowledge base for the current policy.
-         */
         async function fetchKnowledge() {
             if (!currentPolicyId) return;
 
@@ -597,8 +685,8 @@
                     } else {
                         throw new Error(`Server error: ${response.statusText}`);
                     }
-                    // On 404, we get empty data to clear the dashboard
                     const data = { policy: { policy_id: currentPolicyId }, telemetry_history: [], intervention_logs: [] };
+                    globalKnowledge = data;
                     updateDashboardCharts(data);
                     updatePolicyForm(data);
                     updateHistoryFeed(data);
@@ -608,44 +696,39 @@
                 const data = await response.json();
                 globalKnowledge = data;
                 
-                // Update all 3 sections of the UI
                 updateDashboardCharts(data);
                 updatePolicyForm(data);
                 updateHistoryFeed(data);
 
-                showMessage(`Successfully loaded policy '${currentPolicyId}'. Last updated: ${new Date().toLocaleTimeString()}`, "success");
+                if (data.policy) {
+                    showMessage(`Successfully loaded policy '${currentPolicyId}'. Last updated: ${new Date().toLocaleTimeString()}`, "success");
+                }
 
             } catch (error) {
                 console.error("Failed to fetch knowledge:", error);
                 showMessage(`Failed to connect to ACP server at ${ACP_SERVER_URL}. Is it running?`, "error");
-                if (pollingIntervalId) clearInterval(pollingIntervalId); // Stop polling on critical error
+                if (pollingIntervalId) clearInterval(pollingIntervalId);
             }
         }
 
-        /**
-         * Helper to show status messages to the user.
-         */
         function showMessage(text, type = "info") {
             messageContainer.textContent = text;
-            messageContainer.classList.remove('hidden', 'bg-red-500', 'bg-green-500', 'bg-yellow-500');
+            messageContainer.classList.remove('hidden', 'bg-red-500', 'bg-green-500', 'bg-yellow-500', 'bg-blue-500');
             
+            let bgColor = 'bg-blue-500'; // default info
             if (type === "error") {
-                messageContainer.classList.add('bg-red-500');
+                bgColor = 'bg-red-500';
             } else if (type === "success") {
-                messageContainer.classList.add('bg-green-500');
+                bgColor = 'bg-green-500';
             } else if (type === "warning") {
-                messageContainer.classList.add('bg-yellow-500');
+                bgColor = 'bg-yellow-500';
             }
+            messageContainer.classList.add(bgColor);
             messageContainer.classList.remove('hidden');
         }
 
         // === POLICY MANAGEMENT (KR1) ===
 
-        /**
-         * Populates the Policy Management form with data loaded from the server.
-         */
-// This function builds the JSON from the form
-        // We'll call it from both our "submit" and "download" functions
         function getPolicyFromForm() {
             const policy = {
                 policy_id: document.getElementById('form-policy-id').value,
@@ -660,12 +743,11 @@
                 associated_qas: document.getElementById('form-qas').value.split(',').filter(qa => qa.trim() !== "").map(qa => qa.trim())
             };
 
-            // Collect tactics
             document.querySelectorAll('.tactic-group').forEach(group => {
                 policy.tactics.push({
                     tactic_id: group.querySelector('.tactic-id').value,
                     priority: parseInt(group.querySelector('.tactic-priority').value),
-                    tactic_type: "CORE", // Assuming CORE for now
+                    tactic_type: "CORE",
                     tactic_endpoint: group.querySelector('.tactic-endpoint').value
                 });
             });
@@ -685,12 +767,11 @@
             document.getElementById('form-threshold').value = boundary.threshold || 0;
             document.getElementById('form-dynamic-logic').value = boundary.dynamic_logic || '';
 
-            // Populate tactics
             const tactics = policy.tactics || [];
-            tacticsContainer.innerHTML = ''; // Clear existing
+            tacticsContainer.innerHTML = '';
             
             if (tactics.length === 0) {
-                addTacticGroup(); // Add one empty group if none exist
+                addTacticGroup();
             } else {
                 tactics.forEach((tactic, index) => {
                     addTacticGroup(tactic, index + 1);
@@ -698,18 +779,13 @@
             }
         }
         
-        /**
-         * Handles the "Create / Update Policy" form submission.
-         */
         async function handlePolicySubmit(event) {
             event.preventDefault();
             showMessage("Sending policy to server...", "info");
 
-            // Build the policy JSON from the form
             try {
                 const policy = getPolicyFromForm();
                 
-                // POST the new policy to the server
                 const response = await fetch(`${ACP_SERVER_URL}/api/policy`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -722,7 +798,6 @@
 
                 showMessage("Policy successfully created/updated!", "success");
                 
-                // If this is a new policy, load it
                 if (currentPolicyId !== policy.policy_id) {
                     policyIdInput.value = policy.policy_id;
                     loadPolicy();
@@ -733,10 +808,10 @@
                 showMessage(`Failed to submit policy: ${error.message}`, "error");
             }
         }
-        // --- ADD THIS NEW HELPER FUNCTION (alongside the other form functions) ---
+        
         function populateFormWithPreset(preset) {
-            document.getElementById('form-policy-id').value = preset.policy_id;
-            document.getElementById('form-metric').value = preset.quality_attribute;
+            document.getElementById('form-policy-id').value = preset.policy_id || '';
+            document.getElementById('form-metric').value = preset.quality_attribute || '';
             document.getElementById('form-qas').value = (preset.associated_qas || []).join(',');
         
             const boundary = preset.adaptation_boundary || {};
@@ -744,12 +819,11 @@
             document.getElementById('form-threshold').value = boundary.threshold || 0;
             document.getElementById('form-dynamic-logic').value = boundary.dynamic_logic || '';
         
-            // Populate tactics
             const tactics = preset.tactics || [];
-            tacticsContainer.innerHTML = ''; // Clear existing
+            tacticsContainer.innerHTML = '';
 
             if (tactics.length === 0) {
-                addTacticGroup(); // Add one empty group if none exist
+                addTacticGroup();
             } else {
                 tactics.forEach((tactic, index) => {
                     addTacticGroup(tactic, index + 1);
@@ -759,38 +833,23 @@
 
         function handlePolicyDownload() {
             try {
-                // 1. Get the policy data from the form
                 const policy = getPolicyFromForm();
-                
-                // --- THIS IS THE CRITICAL CHANGE ---
-                // Get the policy ID to use as the filename
                 const policyId = policy.policy_id;
 
                 if (!policyId || !policy.quality_attribute) {
                     showMessage("Please fill in at least 'Policy ID' and 'Metric to Watch'.", "error");
                     return;
                 }
-                // --- END OF CHANGE ---
 
-                // 2. Convert the JSON object to a formatted string
-                const policyString = JSON.stringify(policy, null, 2); // null, 2 formats it nicely
-
-                // 3. Create a "blob" (a file in memory)
+                const policyString = JSON.stringify(policy, null, 2);
                 const blob = new Blob([policyString], { type: 'application/json' });
-
-                // 4. Create a temporary invisible link to trigger the download
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
-                
-                // --- THIS IS THE OTHER HALF OF THE CHANGE ---
-                a.download = `${policyId}.json`; // This is the DYNAMIC file name
-                // --- END OF CHANGE ---
-
+                a.download = `${policyId}.json`;
                 document.body.appendChild(a);
-                a.click(); // Click the link
+                a.click();
                 
-                // 5. Clean up
                 document.body.removeChild(a);
                 URL.revokeObjectURL(url);
 
@@ -810,14 +869,20 @@
             }
         
             try {
-                const keys = Object.keys(telemetry[0]);
+                const allKeys = new Set();
+                telemetry.forEach(row => Object.keys(row).forEach(key => allKeys.add(key)));
+                const keys = Array.from(allKeys);
+
                 const csvContent = [
                     keys.join(','), // Header row
                     ...telemetry.map(row => 
                         keys.map(key => {
                             let cell = row[key];
+                            if (cell === undefined || cell === null) {
+                                return "";
+                            }
                             if (typeof cell === 'string' && cell.includes(',')) {
-                                return `"${cell}"`; // Handle commas in strings
+                                return `"${cell}"`;
                             }
                             return cell;
                         }).join(',')
@@ -828,7 +893,7 @@
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = `${currentPolicyId || 'telemetry'}.csv`; // Dynamic filename
+                a.download = `${currentPolicyId || 'telemetry'}.csv`;
                 document.body.appendChild(a);
                 a.click();
                 document.body.removeChild(a);
@@ -843,9 +908,6 @@
         }
 
 
-        /**
-         * Adds a new group of tactic form fields.
-         */
         function addTacticGroup(tactic = null, index = null) {
             const tacticCount = index || tacticsContainer.children.length + 1;
             const newTacticGroup = document.createElement('div');
@@ -863,7 +925,7 @@
                     </div>
                     <div class="md:col-span-2">
                         <label class="block text-sm font-medium mb-1">Tactic Endpoint URL</label>
-                        <input type="text" class="tactic-endpoint w-full bg-gray-700 rounded-md p-2 text-sm" value="${tactic?.tactic_endpoint || ''}" required>
+                        <input type="text" class="tactic-endpoint w-full bg-gray-700 rounded-md p-2 text-sm" value="${tactic?.tactic_endpoint || 'http://localhost:8080/adaptor/tactic'}" required>
                     </div>
                     <div class="flex items-end">
                         <button type="button" class="remove-tactic-btn bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-md text-sm">Remove</button>
@@ -873,9 +935,6 @@
             tacticsContainer.appendChild(newTacticGroup);
         }
 
-        /**
-         * Renumbers tactic headers (e.g., "Tactic 1", "Tactic 2") when one is removed.
-         */
         function updateTacticHeaders() {
             document.querySelectorAll('.tactic-group').forEach((group, index) => {
                 group.querySelector('h4').textContent = `Tactic ${index + 1}`;
@@ -886,9 +945,6 @@
 
         // === ADAPTATION HISTORY (KR3) ===
 
-        /**
-         * Renders the feed of adaptation events.
-         */
         function updateHistoryFeed(data) {
             const feed = document.getElementById('history-feed');
             const interventions = data.intervention_logs || [];
@@ -900,21 +956,17 @@
                 return;
             }
 
-            feed.innerHTML = ''; // Clear feed
+            feed.innerHTML = '';
             interventions.slice().reverse().forEach((event, index) => {
                 const card = createHistoryCard(event, index, telemetry, policy);
                 feed.appendChild(card);
             });
             
-            // After cards are in the DOM, render their charts
             interventions.slice().reverse().forEach((event, index) => {
                 renderHistoryChart(event, index, telemetry, policy);
             });
         }
         
-        /**
-         * Creates the HTML for a single event card.
-         */
         function createHistoryCard(event, index, telemetry, policy) {
             const card = document.createElement('div');
             card.className = 'bg-gray-800 p-6 rounded-lg shadow-lg';
@@ -922,6 +974,7 @@
             const statusColor = event.status === "CONFIRMED_SUCCESS" ? "text-green-500" : (event.status.includes("FAILED") ? "text-red-500" : "text-yellow-500");
             const boundary = policy.adaptation_boundary || {};
             const mainMetric = policy.quality_attribute;
+            const triggerValue = event.trigger_value ? parseFloat(event.trigger_value).toFixed(2) : 'N/A';
 
             card.innerHTML = `
                 <div class="flex justify-between items-center mb-4">
@@ -933,7 +986,7 @@
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                     <div>
                         <div class="text-xs text-gray-500 uppercase">Violation Trigger</div>
-                        <div class="text-lg font-semibold text-red-500">${mainMetric || 'N/A'} (${parseFloat(event.trigger_value).toFixed(2)})</div>
+                        <div class="text-lg font-semibold text-red-500">${mainMetric || 'N/A'} (${triggerValue})</div>
                         <div class="text-sm text-gray-400">Target: ${boundary.condition || ''} ${boundary.threshold || ''}</div>
                     </div>
                     <div>
@@ -952,9 +1005,6 @@
             return card;
         }
 
-        /**
-         * Renders the "Before and After" chart for a specific history card.
-         */
         function renderHistoryChart(event, index, telemetry, policy) {
             const canvas = document.getElementById(`history-chart-${index}`);
             if (!canvas) return;
@@ -962,20 +1012,18 @@
             const mainMetric = policy.quality_attribute;
             const eventTimestamp = event.timestamp;
             
-            // Find the index in telemetry data just before the event
             let eventIndex = telemetry.findIndex(t => t.timestamp >= eventTimestamp);
-            if (eventIndex === -1) eventIndex = telemetry.length; // Event is after all telemetry
+            if (eventIndex === -1) eventIndex = telemetry.length;
 
             const dataPointsToShow = 10;
             const startIndex = Math.max(0, eventIndex - dataPointsToShow);
-            const endIndex = Mth.min(telemetry.length, eventIndex + dataPointsToShow);
+            const endIndex = Math.min(telemetry.length, eventIndex + dataPointsToShow); // <-- Fixed typo 'Mth.min' to 'Math.min'
 
             const chartData = telemetry.slice(startIndex, endIndex);
             
             const labels = chartData.map(t => new Date(t.timestamp * 1000));
             const data = chartData.map(t => t[mainMetric]);
             
-            // Create a vertical line (annotation) for the event
             const eventLine = {
                 type: 'line',
                 mode: 'vertical',
@@ -1031,7 +1079,6 @@
                 }
             });
         }
-
 
     </script>
 </body>

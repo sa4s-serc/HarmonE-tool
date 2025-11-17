@@ -33,34 +33,6 @@
     </style>
 </head>
 <body class="h-full text-gray-200 font-sans">
-    <div id="welcome-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900 bg-opacity-80">
-        <div class="bg-gray-800 p-8 rounded-lg shadow-2xl max-w-lg w-full">
-            <h2 class="text-2xl font-bold text-white mb-4">Welcome to the Adaptation Control Plane</h2>
-            <p class="text-gray-400 mb-6">Choose an approach to begin. HarmonE is a pre-built demo system for sustainability-aware ML. You can also build your own.</p>
-            
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <button id="modal-btn-harmone" class="text-left p-4 bg-gray-700 hover:bg-blue-600 rounded-lg transition-colors">
-                    <h3 class="font-semibold text-white">Run HarmonE Demo</h3>
-                    <p class="text-sm text-gray-400">Full logic (score, drift, energy) orchestrated by the ACP.</p>
-                </button>
-                
-                <button id="modal-btn-switch" class="text-left p-4 bg-gray-700 hover:bg-blue-600 rounded-lg transition-colors">
-                    <h3 class="font-semibold text-white">Run Simple R² Switch Demo</h3>
-                    <p class="text-sm text-gray-400">A simple baseline that switches models if R² score drops.</p>
-                </button>
-    
-                <button id="modal-btn-single" class="text-left p-4 bg-gray-700 hover:bg-blue-600 rounded-lg transition-colors">
-                    <h3 class="font-semibold text-white">Run Single Model (Monitor-Only)</h3>
-                    <p class="text-sm text-gray-400">Runs one model (e.g., LSTM) and only monitors its performance.</p>
-                </button>
-    
-                <button id="modal-btn-custom" class="text-left p-4 bg-gray-700 hover:bg-blue-600 rounded-lg transition-colors">
-                    <h3 class="font-semibold text-white">Build Custom System</h3>
-                    <p class="text-sm text-gray-400">Go to the Policy Manager to define your own system from scratch.</p>
-                </button>
-            </div>
-        </div>
-    </div>
     <div class="flex flex-col h-screen">
 
         <!-- HEADER -->
@@ -84,8 +56,8 @@
                 <!-- TABS -->
                 <nav class="mb-6 border-b border-gray-700">
                     <ul class="flex space-x-8">
-                        <li><button class="tab-btn text-gray-400 hover:text-white py-2 border-b-2 border-transparent transition-colors" data-tab="policy">Policy Management (KR1)</button></li>
                         <li><button class="tab-btn text-gray-400 hover:text-white py-2 border-b-2 border-transparent transition-colors tab-active" data-tab="dashboard">Live Dashboard (KR2)</button></li>
+                        <li><button class="tab-btn text-gray-400 hover:text-white py-2 border-b-2 border-transparent transition-colors" data-tab="policy">Policy Management (KR1)</button></li>
                         <li><button class="tab-btn text-gray-400 hover:text-white py-2 border-b-2 border-transparent transition-colors" data-tab="history">Adaptation History (KR3)</button></li>
                     </ul>
                 </nav>
@@ -95,13 +67,7 @@
 
                 <!-- TAB CONTENT -->
                 <div class="tab-content" id="dashboard-content">
-                    <div class="flex justify-between items-center mb-4">
-                        <h2 class="text-xl font-semibold text-white">Live Telemetry: <span id="policy-title-dashboard" class="text-blue-400">No Policy Loaded</span></h2>
-                        
-                        <button id="download-telemetry-btn" class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-1.5 rounded-md text-sm font-medium transition-colors">
-                            Download Telemetry (CSV)
-                        </button>
-                    </div>
+                    <h2 class="text-xl font-semibold mb-4 text-white">Live Telemetry: <span id="policy-title-dashboard" class="text-blue-400">No Policy Loaded</span></h2>
                     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                         
                         <!-- Main Metric Chart (KR2) -->
@@ -128,14 +94,6 @@
 
                 <div class="tab-content hidden" id="policy-content">
                     <h2 class="text-xl font-semibold mb-4 text-white">Policy Management (KR1)</h2>
-                    <div class="mb-4">
-                        <label for="policy-presets" class="block text-sm font-medium mb-1">Load HarmonE Preset:</label>
-                        <select id="policy-presets" class="w-full bg-gray-700 rounded-md p-2 text-sm">
-                            <option value="">-- Select a preset --</option>
-                            <option value="harmone_score">HarmonE - Score Policy (For Energy Performance Tradeoff)</option>
-                            <option value="harmone_drift">HarmonE - Drift Policy (For Data Drift)</option>
-                        </select>
-                    </div>
                     <form id="policy-form" class="bg-gray-800 p-6 rounded-lg shadow-lg space-y-6">
                         
                         <!-- General Info -->
@@ -214,14 +172,6 @@
                         </fieldset>
                         
                         <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-md text-base font-medium transition-colors">Create / Update Policy</button>
-                        <div class="flex space-x-4">
-                            <button type="submit" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-md text-base font-medium transition-colors">
-                                Create / Update (Live)
-                            </button>
-                            <button type="button" id="download-policy-btn" class="flex-1 bg-gray-600 hover:bg-gray-700 text-white px-6 py-3 rounded-md text-base font-medium transition-colors">
-                                Generate & Download File
-                            </button>
-                        </div>
                     </form>
                 </div>
 
@@ -247,7 +197,6 @@
         let currentPolicyId = "";
         let pollingIntervalId = null;
         let chartInstances = {}; // To store all our Chart.js objects
-        let globalKnowledge = { telemetry_history: [] };
 
         // === DOM ELEMENTS ===
         const loadPolicyBtn = document.getElementById('load-policy-btn');
@@ -261,83 +210,8 @@
         const addTacticBtn = document.getElementById('add-tactic-btn');
         const tacticsContainer = document.getElementById('tactics-container');
 
-        const downloadPolicyBtn = document.getElementById('download-policy-btn');
-        const downloadTelemetryBtn = document.getElementById('download-telemetry-btn');
-        const HARMONY_PRESETS = {
-            "harmone_score": {
-                policy_id: "harmone_score_policy",
-                quality_attribute: "score", // From monitor.py
-                adaptation_boundary: {
-                    condition: "LESS_THAN",
-                    threshold: 0.78, // From thresholds.json
-                    dynamic_logic: ""
-                },
-                tactics: [
-                    { tactic_id: "execute_mape_plan", priority: 1, tactic_endpoint: "http://localhost:8080/adaptor/tactic" } // From manage.py
-                ],
-                associated_qas: ["r2_score", "normalized_energy", "model_used"] // All metrics from monitor.py
-            },
-            "harmone_drift": {
-                policy_id: "harmone_drift_policy",
-                quality_attribute: "kl_div", // From monitor.py
-                adaptation_boundary: {
-                    condition: "GREATER_THAN",
-                    threshold: 0.75, // From analyse.py
-                    dynamic_logic: ""
-                },
-                tactics: [
-                    { tactic_id: "handle_data_drift", priority: 1, tactic_endpoint: "http://localhost:8080/adaptor/tactic" } // From manage.py
-                ],
-                associated_qas: ["kl_div", "model_used"]
-            },
-            "simple_switch_r2": {
-                policy_id: "harmone_switch_r2_policy",
-                quality_attribute: "r2_score", // Watch the R² score
-                adaptation_boundary: {
-                    condition: "LESS_THAN",
-                    threshold: 0.70, // A simple, static threshold
-                    dynamic_logic: ""
-                },
-                tactics: [
-                    // This is a new tactic we will implement in the managed system
-                    { tactic_id: "switch_model_r2_baseline", priority: 1, tactic_endpoint: "http://localhost:8080/adaptor/tactic" }
-                ],
-                associated_qas: ["r2_score", "model_used"]
-            }
-        };
-
         // === INITIALIZATION ===
         document.addEventListener('DOMContentLoaded', () => {
-            const welcomeModal = document.getElementById('welcome-modal');
-
-            // --- Modal Button Logic ---
-            document.getElementById('modal-btn-harmone').addEventListener('click', () => {
-                populateFormWithPreset(HARMONY_PRESETS.harmone_score);
-                showMessage("Loaded 'HarmonE Demo' preset. Download the policy files and set 'approach.conf' to 'harmone_acp'", "info");
-                welcomeModal.classList.add('hidden');
-                // Go to Policy tab
-                document.querySelector('.tab-btn[data-tab="policy"]').click();
-            });
-
-            document.getElementById('modal-btn-switch').addEventListener('click', () => {
-                populateFormWithPreset(HARMONY_PRESETS.simple_switch_r2);
-                showMessage("Loaded 'Simple R² Switch' preset. Download the policy and set 'approach.conf' to 'switch_acp'", "info");
-                welcomeModal.classList.add('hidden');
-                // Go to Policy tab
-                document.querySelector('.tab-btn[data-tab="policy"]').click();
-            });
-
-            document.getElementById('modal-btn-single').addEventListener('click', () => {
-                showMessage("Ready for 'Single Model'. Set 'approach.conf' to 'single_acp' and run your managed system.", "info");
-                welcomeModal.classList.add('hidden');
-            });
-
-            document.getElementById('modal-btn-custom').addEventListener('click', () => {
-                showMessage("Ready to build a custom system. Define your policy below.", "info");
-                welcomeModal.classList.add('hidden');
-                // Go to Policy tab
-                document.querySelector('.tab-btn[data-tab="policy"]').click();
-            });
             // Tab switching logic
             tabs.forEach(tab => {
                 tab.addEventListener('click', () => {
@@ -353,16 +227,6 @@
                     });
                 });
             });
-            // --- ADD THIS LISTENER ---
-            const presetDropdown = document.getElementById('policy-presets');
-            presetDropdown.addEventListener('change', (e) => {
-                const presetKey = e.target.value;
-                if (presetKey && HARMONY_PRESETS[presetKey]) {
-                    populateFormWithPreset(HARMONY_PRESETS[presetKey]);
-                    showMessage(`Loaded preset '${presetKey}'. Review and click 'Generate File' or 'Update Live'.`, "info");
-                }
-            });
-            
 
             // Load Policy button
             loadPolicyBtn.addEventListener('click', loadPolicy);
@@ -370,7 +234,6 @@
             // Policy Form listeners
             policyForm.addEventListener('submit', handlePolicySubmit);
             addTacticBtn.addEventListener('click', addTacticGroup);
-            downloadPolicyBtn.addEventListener('click', handlePolicyDownload);
             tacticsContainer.addEventListener('click', (e) => {
                 if (e.target.classList.contains('remove-tactic-btn')) {
                     // Do not remove the last tactic
@@ -381,7 +244,6 @@
                 }
             });
 
-            downloadTelemetryBtn.addEventListener('click', handleTelemetryDownload);
             // Initialize charts with empty data
             initializeCharts();
         });
@@ -580,7 +442,6 @@
                 }
                 
                 const data = await response.json();
-                globalKnowledge = data;
                 
                 // Update all 3 sections of the UI
                 updateDashboardCharts(data);
@@ -618,35 +479,6 @@
         /**
          * Populates the Policy Management form with data loaded from the server.
          */
-// This function builds the JSON from the form
-        // We'll call it from both our "submit" and "download" functions
-        function getPolicyFromForm() {
-            const policy = {
-                policy_id: document.getElementById('form-policy-id').value,
-                quality_attribute: document.getElementById('form-metric').value,
-                adaptation_boundary: {
-                    type: document.getElementById('form-dynamic-logic').value ? "DYNAMIC_THRESHOLD" : "STATIC_THRESHOLD",
-                    condition: document.getElementById('form-condition').value,
-                    threshold: parseFloat(document.getElementById('form-threshold').value),
-                    dynamic_logic: document.getElementById('form-dynamic-logic').value || null
-                },
-                tactics: [],
-                associated_qas: document.getElementById('form-qas').value.split(',').filter(qa => qa.trim() !== "").map(qa => qa.trim())
-            };
-
-            // Collect tactics
-            document.querySelectorAll('.tactic-group').forEach(group => {
-                policy.tactics.push({
-                    tactic_id: group.querySelector('.tactic-id').value,
-                    priority: parseInt(group.querySelector('.tactic-priority').value),
-                    tactic_type: "CORE", // Assuming CORE for now
-                    tactic_endpoint: group.querySelector('.tactic-endpoint').value
-                });
-            });
-            
-            return policy;
-        }
-
         function updatePolicyForm(data) {
             const policy = data.policy || { policy_id: currentPolicyId };
             
@@ -681,7 +513,28 @@
 
             // Build the policy JSON from the form
             try {
-                const policy = getPolicyFromForm();
+                const policy = {
+                    policy_id: document.getElementById('form-policy-id').value,
+                    quality_attribute: document.getElementById('form-metric').value,
+                    adaptation_boundary: {
+                        type: document.getElementById('form-dynamic-logic').value ? "DYNAMIC_THRESHOLD" : "STATIC_THRESHOLD",
+                        condition: document.getElementById('form-condition').value,
+                        threshold: parseFloat(document.getElementById('form-threshold').value),
+                        dynamic_logic: document.getElementById('form-dynamic-logic').value || null
+                    },
+                    tactics: [],
+                    associated_qas: document.getElementById('form-qas').value.split(',').filter(qa => qa.trim() !== "").map(qa => qa.trim())
+                };
+
+                // Collect tactics
+                document.querySelectorAll('.tactic-group').forEach(group => {
+                    policy.tactics.push({
+                        tactic_id: group.querySelector('.tactic-id').value,
+                        priority: parseInt(group.querySelector('.tactic-priority').value),
+                        tactic_type: "CORE", // Assuming CORE for now
+                        tactic_endpoint: group.querySelector('.tactic-endpoint').value
+                    });
+                });
                 
                 // POST the new policy to the server
                 const response = await fetch(`${ACP_SERVER_URL}/api/policy`, {
@@ -707,115 +560,6 @@
                 showMessage(`Failed to submit policy: ${error.message}`, "error");
             }
         }
-        // --- ADD THIS NEW HELPER FUNCTION (alongside the other form functions) ---
-        function populateFormWithPreset(preset) {
-            document.getElementById('form-policy-id').value = preset.policy_id;
-            document.getElementById('form-metric').value = preset.quality_attribute;
-            document.getElementById('form-qas').value = (preset.associated_qas || []).join(',');
-        
-            const boundary = preset.adaptation_boundary || {};
-            document.getElementById('form-condition').value = boundary.condition || 'LESS_THAN';
-            document.getElementById('form-threshold').value = boundary.threshold || 0;
-            document.getElementById('form-dynamic-logic').value = boundary.dynamic_logic || '';
-        
-            // Populate tactics
-            const tactics = preset.tactics || [];
-            tacticsContainer.innerHTML = ''; // Clear existing
-
-            if (tactics.length === 0) {
-                addTacticGroup(); // Add one empty group if none exist
-            } else {
-                tactics.forEach((tactic, index) => {
-                    addTacticGroup(tactic, index + 1);
-                });
-            }
-        }
-
-        function handlePolicyDownload() {
-            try {
-                // 1. Get the policy data from the form
-                const policy = getPolicyFromForm();
-                
-                // --- THIS IS THE CRITICAL CHANGE ---
-                // Get the policy ID to use as the filename
-                const policyId = policy.policy_id;
-
-                if (!policyId || !policy.quality_attribute) {
-                    showMessage("Please fill in at least 'Policy ID' and 'Metric to Watch'.", "error");
-                    return;
-                }
-                // --- END OF CHANGE ---
-
-                // 2. Convert the JSON object to a formatted string
-                const policyString = JSON.stringify(policy, null, 2); // null, 2 formats it nicely
-
-                // 3. Create a "blob" (a file in memory)
-                const blob = new Blob([policyString], { type: 'application/json' });
-
-                // 4. Create a temporary invisible link to trigger the download
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                
-                // --- THIS IS THE OTHER HALF OF THE CHANGE ---
-                a.download = `${policyId}.json`; // This is the DYNAMIC file name
-                // --- END OF CHANGE ---
-
-                document.body.appendChild(a);
-                a.click(); // Click the link
-                
-                // 5. Clean up
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-
-                showMessage(`${policyId}.json downloaded! Move it to your 'policies' folder.`, "success");
-
-            } catch (error) {
-                console.error("Failed to generate policy:", error);
-                showMessage(`Failed to generate policy: ${error.message}`, "error");
-            }
-        }
-
-        function handleTelemetryDownload() {
-            const telemetry = globalKnowledge.telemetry_history;
-            if (!telemetry || telemetry.length === 0) {
-                showMessage("No telemetry data to download.", "warning");
-                return;
-            }
-        
-            try {
-                const keys = Object.keys(telemetry[0]);
-                const csvContent = [
-                    keys.join(','), // Header row
-                    ...telemetry.map(row => 
-                        keys.map(key => {
-                            let cell = row[key];
-                            if (typeof cell === 'string' && cell.includes(',')) {
-                                return `"${cell}"`; // Handle commas in strings
-                            }
-                            return cell;
-                        }).join(',')
-                    )
-                ].join('\n');
-        
-                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `${currentPolicyId || 'telemetry'}.csv`; // Dynamic filename
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-                
-                showMessage("Telemetry CSV downloaded!", "success");
-        
-            } catch (error) {
-                console.error("Failed to generate telemetry CSV:", error);
-                showMessage(`Failed to generate CSV: ${error.message}`, "error");
-            }
-        }
-
 
         /**
          * Adds a new group of tactic form fields.

@@ -18,7 +18,6 @@ KNOWLEDGE_BASE = {
     "intervention_logs": {}
 }
 
-
 # --- Helper Functions ---
 def get_historical_average(policy_id, metric_key):
     """Calculates the historical average for a given metric from the Knowledge Base."""
@@ -195,11 +194,6 @@ def get_knowledge(policy_id):
         "telemetry_history": KNOWLEDGE_BASE["telemetry_data"].get(policy_id, []),
         "intervention_history": KNOWLEDGE_BASE["intervention_logs"].get(policy_id, [])
     })
-
-# --- Root Route ---
-@app.route('/')
-def home():
-    return "Welcome to the ACP Server!", 200
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)

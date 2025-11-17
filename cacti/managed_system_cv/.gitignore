@@ -1,0 +1,11 @@
+data
+models
+models_cached
+base_models
+clear_models
+versionedMR
+runs_artifact
+runs_artifact_storeaway
+knowledge
+*/__pycache__
+semi_base_models
