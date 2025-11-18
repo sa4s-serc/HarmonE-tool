@@ -9,7 +9,7 @@
 
 ```bash
 # Navigate to the project directory
-cd /home/ananyahalgatti/Desktop/working_tool/HarmonE-tool/tool
+cd /home/user/<path>/HarmonE-tool/tool
 
 # Create virtual environment
 python3 -m venv harmone_env
@@ -51,7 +51,7 @@ sudo chmod -R 777 /sys/class/powercap/intel-rapl/
 ### 4.1 Start the Main Application (ACP Server + Manager)
 ```bash
 # Make sure you're in the main directory and venv is active
-cd /home/ananyahalgatti/Desktop/working_tool/HarmonE-tool/tool
+cd /home/user/<path>/HarmonE-tool/tool
 source harmone_env/bin/activate
 
 # Start the main application
@@ -65,7 +65,7 @@ This will start:
 ### 4.2 Open the Web Dashboard
 ```bash
 # Open your web browser and navigate to:
-# file:///home/ananyahalgatti/Desktop/working_tool/HarmonE-tool/tool/frontend/acp_dashboard.html
+
 
 # Or use a simple HTTP server:
 cd frontend
@@ -118,7 +118,7 @@ In a new terminal (keep the main app.py running):
 
 ```bash
 # Navigate to project directory
-cd /home/ananyahalgatti/Desktop/working_tool/HarmonE-tool/tool
+cd /home/user/<path>/HarmonE-tool/tool
 
 # Activate virtual environment
 source harmone_env/bin/activate
@@ -183,7 +183,7 @@ This will start the appropriate managed system based on your `approach.conf` set
 
 ```bash
 # 1. Setup
-cd /home/ananyahalgatti/Desktop/working_tool/HarmonE-tool/tool
+cd /home/user/<path>/HarmonE-tool/tool
 python3 -m venv harmone_env
 source harmone_env/bin/activate
 pip install -r requirements.txt \
@@ -195,7 +195,7 @@ sudo chmod -R 777 /sys/class/powercap/intel-rapl/
 python3 app.py &
 
 # 3. Open dashboard (in browser)
-file:///home/ananyahalgatti/Desktop/working_tool/HarmonE-tool/tool/frontend/acp_dashboard.html
+
 
 # 4. Configure approach.conf and policies/ folder
 
