@@ -64,10 +64,7 @@ This will start:
 
 ### 4.2 Open the Web Dashboard
 ```bash
-# Open your web browser and navigate to:
 
-
-# Or use a simple HTTP server:
 cd frontend
 python3 -m http.server 8000
 # Then open: http://localhost:8000/acp_dashboard.html
