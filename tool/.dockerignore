@@ -1,0 +1,10 @@
+# Docker Ignore File
+
+venv/
+.venv/
+__pycache__/
+*.pyc
+
+.git/
+.gitignore
+.DS_Store
