@@ -27,16 +27,9 @@ The project has multiple requirements files for different components. Install th
 
 ```bash
 # Install main system dependencies
-pip install -r requirements.txt
+pip install -r requirements.txt \
+  --extra-index-url https://download.pytorch.org/whl/cpu
 
-# Install ACP server dependencies (some overlap, but ensures all are covered)
-pip install -r acp_server/requirements.txt
-
-# Install managed system dependencies
-pip install -r managed_system_regression/requirements.txt
-
-# Install additional dependencies that might be missing
-pip install ultralytics opencv-python matplotlib seaborn
 ```
 
 ## Step 3: Set PyRAPL Permissions (Energy Monitoring)
@@ -193,7 +186,9 @@ This will start the appropriate managed system based on your `approach.conf` set
 cd /home/ananyahalgatti/Desktop/working_tool/HarmonE-tool/tool
 python3 -m venv harmone_env
 source harmone_env/bin/activate
-pip install -r requirements.txt
+pip install -r requirements.txt \
+  --extra-index-url https://download.pytorch.org/whl/cpu
+
 sudo chmod -R 777 /sys/class/powercap/intel-rapl/
 
 # 2. Start system
