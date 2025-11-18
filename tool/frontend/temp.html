@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-gray-900">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Adaptation Control Plane (ACP) Dashboard</title>
+    <!-- 1. Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 2. Chart.js for real-time graphs -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation"></script>
+    <style>
+        /* Custom scrollbar for a more modern look */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1f2937; /* gray-800 */
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #4b5563; /* gray-600 */
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #6b7280; /* gray-500 */
+        }
+        .tab-active {
+            border-bottom-color: #3b82f6 !important; /* blue-500 */
+            color: #3b82f6;
+        }
+    </style>
+</head>
+<body class="h-full text-gray-200 font-sans">
+    <div class="flex flex-col h-screen">
+
+        <!-- HEADER -->
+        <header class="bg-gray-800 shadow-md z-10">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center h-16">
+                <h1 class="text-2xl font-bold text-white">Adaptation Control Plane (ACP) Dashboard</h1>
+                
+                <!-- Global Policy Selector -->
+                <div class="flex items-center space-x-2">
+                    <label for="policy-id-input" class="text-sm font-medium">Policy ID:</label>
+                    <input type="text" id="policy-id-input" value="harmone_score_policy_demo" class="bg-gray-700 text-white px-3 py-1.5 rounded-md text-sm w-64 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter policy ID to load...">
+                    <button id="load-policy-btn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded-md text-sm font-medium transition-colors">Load</button>
+                </div>
+            </div>
+        </header>
+
+        <!-- MAIN CONTENT -->
+        <main class="flex-1 overflow-y-auto bg-gray-900 p-4 lg:p-8">
+            <div class="max-w-7xl mx-auto">
+                
+                <!-- TABS -->
+                <nav class="mb-6 border-b border-gray-700">
+                    <ul class="flex space-x-8">
+                        <li><button class="tab-btn text-gray-400 hover:text-white py-2 border-b-2 border-transparent transition-colors tab-active" data-tab="dashboard">Live Dashboard (KR2)</button></li>
+                        <li><button class="tab-btn text-gray-400 hover:text-white py-2 border-b-2 border-transparent transition-colors" data-tab="policy">Policy Management (KR1)</button></li>
+                        <li><button class="tab-btn text-gray-400 hover:text-white py-2 border-b-2 border-transparent transition-colors" data-tab="history">Adaptation History (KR3)</button></li>
+                    </ul>
+                </nav>
+
+                <!-- Loading/Error State -->
+                <div id="message-container" class="hidden text-center p-4 rounded-md mb-4"></div>
+
+                <!-- TAB CONTENT -->
+                <div class="tab-content" id="dashboard-content">
+                    <h2 class="text-xl font-semibold mb-4 text-white">Live Telemetry: <span id="policy-title-dashboard" class="text-blue-400">No Policy Loaded</span></h2>
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        
+                        <!-- Main Metric Chart (KR2) -->
+                        <div class="lg:col-span-3 bg-gray-800 p-6 rounded-lg shadow-lg">
+                            <h3 id="main-chart-title" class="text-lg font-medium mb-4">Main Metric</h3>
+                            <div class="h-80"><canvas id="main-metric-chart"></canvas></div>
+                        </div>
+                        
+                        <!-- Associated QA Charts -->
+                        <div class="bg-gray-800 p-6 rounded-lg shadow-lg">
+                            <h3 id="qa1-chart-title" class="text-lg font-medium mb-4">Associated QA 1</h3>
+                            <div class="h-60"><canvas id="qa1-chart"></canvas></div>
+                        </div>
+                        <div class="bg-gray-800 p-6 rounded-lg shadow-lg">
+                            <h3 id="qa2-chart-title" class="text-lg font-medium mb-4">Associated QA 2</h3>
+                            <div class="h-60"><canvas id="qa2-chart"></canvas></div>
+                        </div>
+                        <div class="bg-gray-800 p-6 rounded-lg shadow-lg">
+                            <h3 id="qa3-chart-title" class="text-lg font-medium mb-4">Associated QA 3</h3>
+                            <div class="h-60"><canvas id="qa3-chart"></canvas></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tab-content hidden" id="policy-content">
+                    <h2 class="text-xl font-semibold mb-4 text-white">Policy Management (KR1)</h2>
+                    <form id="policy-form" class="bg-gray-800 p-6 rounded-lg shadow-lg space-y-6">
+                        
+                        <!-- General Info -->
+                        <fieldset class="border border-gray-700 p-4 rounded-md">
+                            <legend class="text-lg font-medium px-2">General</legend>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+                                <div>
+                                    <label for="form-policy-id" class="block text-sm font-medium mb-1">Policy ID</label>
+                                    <input type="text" id="form-policy-id" class="w-full bg-gray-700 rounded-md p-2 text-sm" required>
+                                </div>
+                                <div>
+                                    <label for="form-metric" class="block text-sm font-medium mb-1">Metric to Watch (quality_attribute)</label>
+                                    <input type="text" id="form-metric" class="w-full bg-gray-700 rounded-md p-2 text-sm" required>
+                                </div>
+                            </div>
+                        </fieldset>
+
+                        <!-- Adaptation Boundary -->
+                        <fieldset class="border border-gray-700 p-4 rounded-md">
+                            <legend class="text-lg font-medium px-2">Adaptation Boundary</legend>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">
+                                <div>
+                                    <label for="form-condition" class="block text-sm font-medium mb-1">Condition</label>
+                                    <select id="form-condition" class="w-full bg-gray-700 rounded-md p-2 text-sm">
+                                        <option value="LESS_THAN">LESS_THAN</option>
+                                        <option value="GREATER_THAN">GREATER_THAN</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label for="form-threshold" class="block text-sm font-medium mb-1">Static Threshold</label>
+                                    <input type="number" step="0.01" id="form-threshold" class="w-full bg-gray-700 rounded-md p-2 text-sm" required>
+                                </div>
+                                <div>
+                                    <label for="form-dynamic-logic" class="block text-sm font-medium mb-1">Dynamic Logic (Optional)</label>
+                                    <input type="text" id="form-dynamic-logic" class="w-full bg-gray-700 rounded-md p-2 text-sm" placeholder="e.g., value > historic_avg * 1.2">
+                                </div>
+                            </div>
+                        </fieldset>
+                        
+                        <!-- Tactics -->
+                        <fieldset class="border border-gray-700 p-4 rounded-md">
+                            <legend class="text-lg font-medium px-2">Tactics</legend>
+                            <div id="tactics-container" class="space-y-4 mt-2">
+                                <!-- Tactic 1 (template) -->
+                                <div class="tactic-group border border-gray-600 p-3 rounded-md space-y-2">
+                                    <h4 class="font-medium text-gray-300">Tactic 1</h4>
+                                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        <div>
+                                            <label class="block text-sm font-medium mb-1">Tactic ID</label>
+                                            <input type="text" class="tactic-id w-full bg-gray-700 rounded-md p-2 text-sm" required>
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium mb-1">Priority</label>
+                                            <input type="number" value="1" class="tactic-priority w-full bg-gray-700 rounded-md p-2 text-sm" required>
+                                        </div>
+                                        <div class="md:col-span-2">
+                                            <label class="block text-sm font-medium mb-1">Tactic Endpoint URL</label>
+                                            <input type="text" class="tactic-endpoint w-full bg-gray-700 rounded-md p-2 text-sm" required>
+                                        </div>
+                                        <div class="flex items-end">
+                                            <button type="button" class="remove-tactic-btn bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-md text-sm">Remove</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <button type="button" id="add-tactic-btn" class="mt-4 bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-md text-sm">+ Add Tactic</button>
+                        </fieldset>
+
+                        <!-- Associated QAs -->
+                        <fieldset class="border border-gray-700 p-4 rounded-md">
+                            <legend class="text-lg font-medium px-2">Associated QAs</legend>
+                             <div>
+                                <label for="form-qas" class="block text-sm font-medium mb-1">Associated Metrics (comma-separated)</label>
+                                <input type="text" id="form-qas" class="w-full bg-gray-700 rounded-md p-2 text-sm" placeholder="e.g., r2_score,normalized_energy,model_used">
+                            </div>
+                        </fieldset>
+                        
+                        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-md text-base font-medium transition-colors">Create / Update Policy</button>
+                    </form>
+                </div>
+
+                <div class="tab-content hidden" id="history-content">
+                    <h2 class="text-xl font-semibold mb-4 text-white">Adaptation History & Analysis (KR3)</h2>
+                    <div id="history-feed" class="space-y-6">
+                        <!-- History items will be dynamically inserted here by JavaScript -->
+                        <div class="text-gray-400">No adaptation events recorded yet.</div>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // === CONFIGURATION ===
+        const ACP_SERVER_URL = "http://localhost:5000"; // Make sure your acp_server/app.py is running here
+        const POLLING_INTERVAL = 5000; // Poll for new data every 5 seconds
+        const CHART_MAX_DATA_POINTS = 30; // Show a rolling window of 30 data points
+
+        // === GLOBAL STATE ===
+        let currentPolicyId = "";
+        let pollingIntervalId = null;
+        let chartInstances = {}; // To store all our Chart.js objects
+
+        // === DOM ELEMENTS ===
+        const loadPolicyBtn = document.getElementById('load-policy-btn');
+        const policyIdInput = document.getElementById('policy-id-input');
+        const messageContainer = document.getElementById('message-container');
+        
+        const tabs = document.querySelectorAll('.tab-btn');
+        const tabContents = document.querySelectorAll('.tab-content');
+        
+        const policyForm = document.getElementById('policy-form');
+        const addTacticBtn = document.getElementById('add-tactic-btn');
+        const tacticsContainer = document.getElementById('tactics-container');
+
+        // === INITIALIZATION ===
+        document.addEventListener('DOMContentLoaded', () => {
+            // Tab switching logic
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    tabs.forEach(t => t.classList.remove('tab-active', 'text-blue-500'));
+                    tab.classList.add('tab-active', 'text-blue-500');
+                    
+                    const tabId = tab.getAttribute('data-tab');
+                    tabContents.forEach(content => {
+                        content.classList.add('hidden');
+                        if (content.id === `${tabId}-content`) {
+                            content.classList.remove('hidden');
+                        }
+                    });
+                });
+            });
+
+            // Load Policy button
+            loadPolicyBtn.addEventListener('click', loadPolicy);
+
+            // Policy Form listeners
+            policyForm.addEventListener('submit', handlePolicySubmit);
+            addTacticBtn.addEventListener('click', addTacticGroup);
+            tacticsContainer.addEventListener('click', (e) => {
+                if (e.target.classList.contains('remove-tactic-btn')) {
+                    // Do not remove the last tactic
+                    if (tacticsContainer.children.length > 1) {
+                        e.target.closest('.tactic-group').remove();
+                        updateTacticHeaders();
+                    }
+                }
+            });
+
+            // Initialize charts with empty data
+            initializeCharts();
+        });
+        
+        // === CHARTING (KR2) ===
+
+        /**
+         * Creates empty Chart.js instances on page load.
+         */
+        function initializeCharts() {
+            const chartConfig = (title) => ({
+                type: 'line',
+                data: { labels: [], datasets: [] },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { 
+                            type: 'time',
+                            time: { unit: 'second', displayFormats: { second: 'HH:mm:ss' } },
+                            ticks: { color: '#9ca3af' },
+                            grid: { color: '#374151' }
+                        },
+                        y: { 
+                            ticks: { color: '#9ca3af' },
+                            grid: { color: '#374151' },
+                            beginAtZero: false
+                        }
+                    },
+                    plugins: {
+                        legend: { labels: { color: '#e5e7eb' } },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false
+                        }
+                    },
+                    animation: {
+                        duration: 0 // No animation for real-time feel
+                    }
+                }
+            });
+
+            chartInstances.main = new Chart(document.getElementById('main-metric-chart'), chartConfig("Main Metric"));
+            chartInstances.qa1 = new Chart(document.getElementById('qa1-chart'), chartConfig("QA 1"));
+            chartInstances.qa2 = new Chart(document.getElementById('qa2-chart'), chartConfig("QA 2"));
+            chartInstances.qa3 = new Chart(document.getElementById('qa3-chart'), chartConfig("QA 3"));
+        }
+
+        /**
+         * Updates all dashboard charts with new data from the knowledge base.
+         */
+        function updateDashboardCharts(data) {
+            const policy = data.policy || {};
+            const telemetry = data.telemetry_history || [];
+            
+            // --- Main Chart (Main Metric + Threshold) ---
+            const mainMetric = policy.quality_attribute || "N/A";
+            const boundary = policy.adaptation_boundary || {};
+            const threshold = boundary.threshold;
+            
+            document.getElementById('main-chart-title').textContent = `Main Metric: ${mainMetric} (Target: ${boundary.condition || ''} ${threshold || ''})`;
+
+            const labels = telemetry.map(t => new Date(t.timestamp * 1000));
+            const mainMetricData = telemetry.map(t => t[mainMetric]);
+            
+            // Create a static threshold line
+            const thresholdData = labels.map(() => threshold);
+
+            updateChart(chartInstances.main, labels, [
+                {
+                    label: mainMetric,
+                    data: mainMetricData,
+                    borderColor: '#3b82f6', // blue-500
+                    backgroundColor: '#3b82f6',
+                    tension: 0.1,
+                    pointRadius: 2
+                },
+                {
+                    label: 'Threshold',
+                    data: thresholdData,
+                    borderColor: '#ef4444', // red-500
+                    backgroundColor: '#ef4444',
+                    borderDash: [5, 5],
+                    pointRadius: 0,
+                    fill: false
+                }
+            ]);
+
+            // --- Associated QA Charts ---
+            const qaNames = policy.associated_qas || [];
+            
+            // QA Chart 1
+            const qa1Name = qaNames[0];
+            document.getElementById('qa1-chart-title').textContent = qa1Name || "Associated QA 1";
+            if(qa1Name) {
+                const qa1Data = telemetry.map(t => t[qa1Name]);
+                updateChart(chartInstances.qa1, labels, [{
+                    label: qa1Name,
+                    data: qa1Data,
+                    borderColor: '#10b981', // green-500
+                    backgroundColor: '#10b981',
+                    tension: 0.1
+                }]);
+            }
+
+            // QA Chart 2
+            const qa2Name = qaNames[1];
+            document.getElementById('qa2-chart-title').textContent = qa2Name || "Associated QA 2";
+             if(qa2Name) {
+                const qa2Data = telemetry.map(t => t[qa2Name]);
+                updateChart(chartInstances.qa2, labels, [{
+                    label: qa2Name,
+                    data: qa2Data,
+                    borderColor: '#eab308', // yellow-500
+                    backgroundColor: '#eab308',
+                    tension: 0.1
+                }]);
+            }
+
+            // QA Chart 3
+            const qa3Name = qaNames[2];
+            document.getElementById('qa3-chart-title').textContent = qa3Name || "Associated QA 3";
+             if(qa3Name) {
+                const qa3Data = telemetry.map(t => t[qa3Name]);
+                updateChart(chartInstances.qa3, labels, [{
+                    label: qa3Name,
+                    data: qa3Data,
+                    borderColor: '#a855f7', // purple-500
+                    backgroundColor: '#a855f7',
+                    tension: 0.1
+                }]);
+            }
+        }
+        
+        /**
+         * Helper to update a Chart.js instance with new data, limiting to CHART_MAX_DATA_POINTS.
+         */
+        function updateChart(chart, labels, datasets) {
+            const dataLength = labels.length;
+            const sliceStart = Math.max(0, dataLength - CHART_MAX_DATA_POINTS);
+            
+            chart.data.labels = labels.slice(sliceStart);
+            chart.data.datasets = datasets.map(ds => ({
+                ...ds,
+                data: ds.data.slice(sliceStart)
+            }));
+            
+            chart.update();
+        }
+
+        // === API & DATA HANDLING ===
+
+        /**
+         * Main function to load/reload all data for a policy.
+         */
+        async function loadPolicy() {
+            const policyId = policyIdInput.value;
+            if (!policyId) {
+                showMessage("Please enter a Policy ID.", "error");
+                return;
+            }
+            
+            currentPolicyId = policyId;
+            document.getElementById('policy-title-dashboard').textContent = `Policy: ${policyId}`;
+
+            // Stop any existing polling
+            if (pollingIntervalId) {
+                clearInterval(pollingIntervalId);
+            }
+
+            // Fetch data immediately, then start polling
+            await fetchKnowledge();
+            pollingIntervalId = setInterval(fetchKnowledge, POLLING_INTERVAL);
+        }
+
+        /**
+         * Fetches the complete knowledge base for the current policy.
+         */
+        async function fetchKnowledge() {
+            if (!currentPolicyId) return;
+
+            try {
+                const response = await fetch(`${ACP_SERVER_URL}/api/knowledge/${currentPolicyId}`);
+                if (!response.ok) {
+                    if (response.status === 404) {
+                        showMessage(`Policy '${currentPolicyId}' not found on server. You can create it in the Policy Management tab.`, "warning");
+                    } else {
+                        throw new Error(`Server error: ${response.statusText}`);
+                    }
+                    // On 404, we get empty data to clear the dashboard
+                    const data = { policy: { policy_id: currentPolicyId }, telemetry_history: [], intervention_logs: [] };
+                    updateDashboardCharts(data);
+                    updatePolicyForm(data);
+                    updateHistoryFeed(data);
+                    return;
+                }
+                
+                const data = await response.json();
+                
+                // Update all 3 sections of the UI
+                updateDashboardCharts(data);
+                updatePolicyForm(data);
+                updateHistoryFeed(data);
+
+                showMessage(`Successfully loaded policy '${currentPolicyId}'. Last updated: ${new Date().toLocaleTimeString()}`, "success");
+
+            } catch (error) {
+                console.error("Failed to fetch knowledge:", error);
+                showMessage(`Failed to connect to ACP server at ${ACP_SERVER_URL}. Is it running?`, "error");
+                if (pollingIntervalId) clearInterval(pollingIntervalId); // Stop polling on critical error
+            }
+        }
+
+        /**
+         * Helper to show status messages to the user.
+         */
+        function showMessage(text, type = "info") {
+            messageContainer.textContent = text;
+            messageContainer.classList.remove('hidden', 'bg-red-500', 'bg-green-500', 'bg-yellow-500');
+            
+            if (type === "error") {
+                messageContainer.classList.add('bg-red-500');
+            } else if (type === "success") {
+                messageContainer.classList.add('bg-green-500');
+            } else if (type === "warning") {
+                messageContainer.classList.add('bg-yellow-500');
+            }
+            messageContainer.classList.remove('hidden');
+        }
+
+        // === POLICY MANAGEMENT (KR1) ===
+
+        /**
+         * Populates the Policy Management form with data loaded from the server.
+         */
+        function updatePolicyForm(data) {
+            const policy = data.policy || { policy_id: currentPolicyId };
+            
+            document.getElementById('form-policy-id').value = policy.policy_id || currentPolicyId;
+            document.getElementById('form-metric').value = policy.quality_attribute || '';
+            document.getElementById('form-qas').value = (policy.associated_qas || []).join(',');
+
+            const boundary = policy.adaptation_boundary || {};
+            document.getElementById('form-condition').value = boundary.condition || 'LESS_THAN';
+            document.getElementById('form-threshold').value = boundary.threshold || 0;
+            document.getElementById('form-dynamic-logic').value = boundary.dynamic_logic || '';
+
+            // Populate tactics
+            const tactics = policy.tactics || [];
+            tacticsContainer.innerHTML = ''; // Clear existing
+            
+            if (tactics.length === 0) {
+                addTacticGroup(); // Add one empty group if none exist
+            } else {
+                tactics.forEach((tactic, index) => {
+                    addTacticGroup(tactic, index + 1);
+                });
+            }
+        }
+        
+        /**
+         * Handles the "Create / Update Policy" form submission.
+         */
+        async function handlePolicySubmit(event) {
+            event.preventDefault();
+            showMessage("Sending policy to server...", "info");
+
+            // Build the policy JSON from the form
+            try {
+                const policy = {
+                    policy_id: document.getElementById('form-policy-id').value,
+                    quality_attribute: document.getElementById('form-metric').value,
+                    adaptation_boundary: {
+                        type: document.getElementById('form-dynamic-logic').value ? "DYNAMIC_THRESHOLD" : "STATIC_THRESHOLD",
+                        condition: document.getElementById('form-condition').value,
+                        threshold: parseFloat(document.getElementById('form-threshold').value),
+                        dynamic_logic: document.getElementById('form-dynamic-logic').value || null
+                    },
+                    tactics: [],
+                    associated_qas: document.getElementById('form-qas').value.split(',').filter(qa => qa.trim() !== "").map(qa => qa.trim())
+                };
+
+                // Collect tactics
+                document.querySelectorAll('.tactic-group').forEach(group => {
+                    policy.tactics.push({
+                        tactic_id: group.querySelector('.tactic-id').value,
+                        priority: parseInt(group.querySelector('.tactic-priority').value),
+                        tactic_type: "CORE", // Assuming CORE for now
+                        tactic_endpoint: group.querySelector('.tactic-endpoint').value
+                    });
+                });
+                
+                // POST the new policy to the server
+                const response = await fetch(`${ACP_SERVER_URL}/api/policy`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(policy)
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Server responded with status ${response.status}`);
+                }
+
+                showMessage("Policy successfully created/updated!", "success");
+                
+                // If this is a new policy, load it
+                if (currentPolicyId !== policy.policy_id) {
+                    policyIdInput.value = policy.policy_id;
+                    loadPolicy();
+                }
+
+            } catch (error) {
+                console.error("Failed to submit policy:", error);
+                showMessage(`Failed to submit policy: ${error.message}`, "error");
+            }
+        }
+
+        /**
+         * Adds a new group of tactic form fields.
+         */
+        function addTacticGroup(tactic = null, index = null) {
+            const tacticCount = index || tacticsContainer.children.length + 1;
+            const newTacticGroup = document.createElement('div');
+            newTacticGroup.className = 'tactic-group border border-gray-600 p-3 rounded-md space-y-2';
+            newTacticGroup.innerHTML = `
+                <h4 class="font-medium text-gray-300">Tactic ${tacticCount}</h4>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Tactic ID</label>
+                        <input type="text" class="tactic-id w-full bg-gray-700 rounded-md p-2 text-sm" value="${tactic?.tactic_id || ''}" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Priority</label>
+                        <input type="number" value="${tactic?.priority || tacticCount}" class="tactic-priority w-full bg-gray-700 rounded-md p-2 text-sm" required>
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium mb-1">Tactic Endpoint URL</label>
+                        <input type="text" class="tactic-endpoint w-full bg-gray-700 rounded-md p-2 text-sm" value="${tactic?.tactic_endpoint || ''}" required>
+                    </div>
+                    <div class="flex items-end">
+                        <button type="button" class="remove-tactic-btn bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-md text-sm">Remove</button>
+                    </div>
+                </div>
+            `;
+            tacticsContainer.appendChild(newTacticGroup);
+        }
+
+        /**
+         * Renumbers tactic headers (e.g., "Tactic 1", "Tactic 2") when one is removed.
+         */
+        function updateTacticHeaders() {
+            document.querySelectorAll('.tactic-group').forEach((group, index) => {
+                group.querySelector('h4').textContent = `Tactic ${index + 1}`;
+                group.querySelector('.tactic-priority').value = index + 1;
+            });
+        }
+
+
+        // === ADAPTATION HISTORY (KR3) ===
+
+        /**
+         * Renders the feed of adaptation events.
+         */
+        function updateHistoryFeed(data) {
+            const feed = document.getElementById('history-feed');
+            const interventions = data.intervention_logs || [];
+            const telemetry = data.telemetry_history || [];
+            const policy = data.policy || {};
+
+            if (interventions.length === 0) {
+                feed.innerHTML = '<div class="text-gray-400">No adaptation events recorded yet.</div>';
+                return;
+            }
+
+            feed.innerHTML = ''; // Clear feed
+            interventions.slice().reverse().forEach((event, index) => {
+                const card = createHistoryCard(event, index, telemetry, policy);
+                feed.appendChild(card);
+            });
+            
+            // After cards are in the DOM, render their charts
+            interventions.slice().reverse().forEach((event, index) => {
+                renderHistoryChart(event, index, telemetry, policy);
+            });
+        }
+        
+        /**
+         * Creates the HTML for a single event card.
+         */
+        function createHistoryCard(event, index, telemetry, policy) {
+            const card = document.createElement('div');
+            card.className = 'bg-gray-800 p-6 rounded-lg shadow-lg';
+            
+            const statusColor = event.status === "CONFIRMED_SUCCESS" ? "text-green-500" : (event.status.includes("FAILED") ? "text-red-500" : "text-yellow-500");
+            const boundary = policy.adaptation_boundary || {};
+            const mainMetric = policy.quality_attribute;
+
+            card.innerHTML = `
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-medium text-white">Adaptation Event</h3>
+                    <span class="text-sm font-mono ${statusColor}">${event.status}</span>
+                </div>
+                <div class="text-sm text-gray-400 mb-4">${new Date(event.timestamp * 1000).toLocaleString()}</div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                    <div>
+                        <div class="text-xs text-gray-500 uppercase">Violation Trigger</div>
+                        <div class="text-lg font-semibold text-red-500">${mainMetric || 'N/A'} (${parseFloat(event.trigger_value).toFixed(2)})</div>
+                        <div class="text-sm text-gray-400">Target: ${boundary.condition || ''} ${boundary.threshold || ''}</div>
+                    </div>
+                    <div>
+                        <div class="text-xs text-gray-500 uppercase">Action Taken</div>
+                        <div class="text-lg font-semibold text-blue-400">${event.tactic_id}</div>
+                    </div>
+                </div>
+                
+                <!-- KR3: Before and After Chart -->
+                <div class="mt-4">
+                    <h4 class="text-sm font-medium text-gray-300 mb-2">Before & After Performance (${mainMetric || ''})</h4>
+                    <div class="h-40 bg-gray-700 p-2 rounded-md">
+                        <canvas id="history-chart-${index}"></canvas>
+                    </div>
+                </div>
+            `;
+            return card;
+        }
+
+        /**
+         * Renders the "Before and After" chart for a specific history card.
+         */
+        function renderHistoryChart(event, index, telemetry, policy) {
+            const canvas = document.getElementById(`history-chart-${index}`);
+            if (!canvas) return;
+
+            const mainMetric = policy.quality_attribute;
+            const eventTimestamp = event.timestamp;
+            
+            // Find the index in telemetry data just before the event
+            let eventIndex = telemetry.findIndex(t => t.timestamp >= eventTimestamp);
+            if (eventIndex === -1) eventIndex = telemetry.length; // Event is after all telemetry
+
+            const dataPointsToShow = 10;
+            const startIndex = Math.max(0, eventIndex - dataPointsToShow);
+            const endIndex = Math.min(telemetry.length, eventIndex + dataPointsToShow);
+
+            const chartData = telemetry.slice(startIndex, endIndex);
+            
+            const labels = chartData.map(t => new Date(t.timestamp * 1000));
+            const data = chartData.map(t => t[mainMetric]);
+            
+            // Create a vertical line (annotation) for the event
+            const eventLine = {
+                type: 'line',
+                mode: 'vertical',
+                scaleID: 'x',
+                value: new Date(eventTimestamp * 1000),
+                borderColor: '#ef4444',
+                borderWidth: 2,
+                borderDash: [5, 5],
+                label: {
+                    content: 'Adaptation Event',
+                    enabled: true,
+                    position: 'start',
+                    backgroundColor: '#ef4444'
+                }
+            };
+
+            new Chart(canvas, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: mainMetric,
+                        data: data,
+                        borderColor: '#3b82f6',
+                        tension: 0.1,
+                        pointRadius: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { 
+                            type: 'time',
+                            time: { unit: 'second', displayFormats: { second: 'HH:mm:ss' } },
+                            ticks: { color: '#9ca3af', maxTicksLimit: 6 },
+                            grid: { color: '#374151' }
+                        },
+                        y: { 
+                            ticks: { color: '#9ca3af', maxTicksLimit: 5 },
+                            grid: { color: '#374151' }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        annotation: {
+                            annotations: {
+                                eventLine
+                            }
+                        }
+                    },
+                    animation: { duration: 0 }
+                }
+            });
+        }
+
+
+    </script>
+</body>
+</html>
