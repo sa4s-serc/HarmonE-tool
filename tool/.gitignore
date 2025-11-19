@@ -1,7 +1,5 @@
 venv/
 
-managed_system/policies/
-
 __pycache__/
 *.pyc
 
