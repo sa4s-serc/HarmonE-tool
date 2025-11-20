@@ -11,6 +11,7 @@ The system consists of two main components that run independently:
 # HarmonE Tool - Setup and Running Instructions
 
 ## Prerequisites
+- Linux based OS
 - Python 3.8+ installed on Linux
 - Sudo access (for pyRAPL energy monitoring permissions)
 - Git (optional, for cloning)
@@ -158,15 +159,13 @@ This will start the appropriate managed system based on your `approach.conf` set
 - Regression systems use `managed_system_regression/`
 - Computer Vision systems use `managed_system_cv/`
 
-## Step 7: Monitor the System
+## Step 7: Monitor the System on website - Navigate to `Live Dashboard` tab and click `load` (on the top right)
 
 1. **Dashboard**: Watch real-time metrics and charts in the web dashboard
-2. **Console Output**: Monitor both terminal windows for system logs
-3. **Knowledge Folder**: Check the `knowledge/` folders for saved data:
-   - `model.csv` - Model performance metrics
+2. **Inference results for download**: Click on `Download Telemetry` to obtain the CSV file of predictions.
+3. **Console Output**: Monitor both terminal windows for system logs
+4. **Knowledge Folder**: Check the `knowledge/` folders for saved data:
    - `predictions.csv` - System predictions  
-   - `mape_log.csv` - MAPE-K loop execution logs
-   - `event_log.csv` - Adaptation events
 
 ## Troubleshooting
 
@@ -228,77 +227,3 @@ python3 app.py
 # 5. Start managed system
 python3 run_managed_system.py
 ```
-
-
-
-## Project Structure
-
-
-```
-.
-.
-├── acp_server/
-│   ├── app.py
-│   └── requirements.txt
-│
-├── managed_system/
-│   ├── knowledge/
-│   │   ├── dataset.csv
-│   │   ├── model.csv
-│   │   ├── mape_info.json
-│   │   └── thresholds.json  # Used by local mode
-│   │
-│   ├── models/
-│   │   ├── lstm.pth
-│   │   ├── linear.pkl
-│   │   └── svm.pkl
-│   │
-│   ├── mape_logic/
-│   │   ├── manage.py        # Refactored to be command-driven
-│   │   ├── monitor.py       # Used for rich telemetry
-│   │   ├── execute.py       # Refactored to execute specific tactics
-│   │   ├── analyse.py       # Only used in local mode
-│   │   └── plan.py          # Only used in local mode
-│   │
-│   ├── inference.py         # Your original inference script (unchanged)
-│   ├── run_managed_system.py# The master script to control run modes
-│   ├── approach.conf        # Config: 'single', 'harmone_local', or 'harmone_acp'
-│   └── policy.json          # The single source of truth for ACP-driven adaptation
-│
-└── README.md
-```
-
-
-
-*[Monitor] Phase:* The managed_system terminal will show logs for each telemetry packet it sends (e.g., [MONITOR] Pushing telemetry: {'energy_consumption_mj': ...}). The acp_server terminal will show when it receives this data.
-
-*[Analyze] Phase:* When the simulated energy_consumption_mj from the managed system spikes above the 500mJ static threshold and also violates the dynamic threshold (20% above the historical average), the acp_server will log a [ANALYZE] Static threshold violated and [ANALYZE] Dynamic logic condition MET message.
-
-*[Plan] & [Execute] Phases:*
-
-Immediately after the violation, the acp_server will enter the Plan phase, logging which tactic it has selected ([PLAN] Tactic selected: 'apply_model_quantization').
-
-It will then enter the Execute phase, logging that it is sending a POST request to the managed system's endpoint ([EXECUTE] Sending POST request...).
-
-### Tactic Execution:
-
-The managed_system terminal will show that it has received the command (Received command to execute tactic...) and will simulate changing its internal state from LARGE_FP32 to QUANTIZED_INT8.
-
-### Post-Adaptation:
-
-After the adaptation, the managed_system will start sending new telemetry data reflecting its "quantized" state: lower energy consumption and slightly lower model accuracy.
-
-The acp_server will continue to receive and analyze this new data, which will no longer violate the adaptation boundary, and the system will remain stable in its new, optimized state.
-
-By following this flow, you can observe the complete, autonomous MAPE-K loop as the system identifies a problem, plans a solution, and executes a corrective action, all orchestrated through simple RESTful APIs.
-
-Using the ACP and a Local MAPE Loop
-
-This project provides a flexible framework for running a managed system (inference.py) in one of two modes, controlled by the approach.conf file.
-
-single (Monitor-Only): Uses the ACP tool to collect and observe performance metrics from your inference.py script without making any changes.
-
-harmone (MAPE Mode): Runs a completely local, decoupled self-adaptation loop using the provided MAPE files (manage.py, etc.) to automatically switch models based on performance. The ACP continues to monitor in the background.
-
-
-
