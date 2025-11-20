@@ -1,21 +1,21 @@
 {
-  "policy_id": "reg_harmone_score",
-  "quality_attribute": "score",
+  "policy_id": "cv_switch_confidence",
+  "quality_attribute": "confidence",
   "adaptation_boundary": {
     "type": "STATIC_THRESHOLD",
     "condition": "LESS_THAN",
-    "threshold": 0.78
+    "threshold": 0.7
   },
   "tactics": [
     {
-      "tactic_id": "execute_mape_plan",
+      "tactic_id": "switch_model_r2_baseline",
       "priority": 1,
       "tactic_type": "CORE",
       "tactic_endpoint": "http://localhost:8080/adaptor/tactic"
     }
   ],
   "associated_qas": [
-    "r2_score",
+    "confidence",
     "normalized_energy",
     "model_used"
   ]

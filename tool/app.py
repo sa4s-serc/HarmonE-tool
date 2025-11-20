@@ -4,6 +4,7 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS  # <-- IMPORT THE NEW LIBRARY
 import requests
 import logging
+import os
 
 # --- Basic Setup ---
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - [ACP] - %(levelname)s - %(message)s')
@@ -204,6 +205,69 @@ def get_knowledge(policy_id):
         "telemetry_history": KNOWLEDGE_BASE["telemetry_data"].get(policy_id, []),
         "intervention_history": KNOWLEDGE_BASE["intervention_logs"].get(policy_id, [])
     })
+
+@app.route('/api/write-approach', methods=['POST'])
+def write_approach_config():
+    """API endpoint to write the approach.conf file based on user selection."""
+    try:
+        data = request.get_json()
+        approach = data.get('approach')
+        
+        if not approach:
+            return jsonify({"error": "No approach specified"}), 400
+        
+        # Map dashboard selections to approach.conf values
+        approach_mapping = {
+            'reg_harmone_score': 'reg_harmone',
+            'reg_switch_r2': 'reg_switch', 
+            'reg_single': 'reg_single',
+            'cv_harmone_score': 'cv_harmone',
+            'cv_switch_conf': 'cv_switch',
+            'cv_single': 'cv_single'
+        }
+        
+        config_value = approach_mapping.get(approach, approach)
+        
+        # Write to approach.conf file
+        with open('approach.conf', 'w') as f:
+            f.write(config_value)
+        
+        logging.info(f"Approach configuration written: {config_value}")
+        return jsonify({"message": f"Approach set to '{config_value}'"}), 200
+        
+    except Exception as e:
+        logging.error(f"Error writing approach config: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/save-policy', methods=['POST'])
+def save_policy_to_file():
+    """API endpoint to save policy JSON directly to the policies/ directory."""
+    try:
+        policy_data = request.get_json()
+        
+        if not policy_data or 'policy_id' not in policy_data:
+            return jsonify({"error": "Invalid policy data"}), 400
+        
+        policy_id = policy_data['policy_id']
+        
+        # Ensure policies directory exists
+        policies_dir = 'policies'
+        os.makedirs(policies_dir, exist_ok=True)
+        
+        # Write policy to file
+        policy_filename = f"{policy_id}.json"
+        policy_path = os.path.join(policies_dir, policy_filename)
+        
+        with open(policy_path, 'w') as f:
+            import json
+            json.dump(policy_data, f, indent=2)
+        
+        logging.info(f"Policy file saved: {policy_path}")
+        return jsonify({"message": f"Policy saved to {policy_filename}"}), 200
+        
+    except Exception as e:
+        logging.error(f"Error saving policy file: {e}")
+        return jsonify({"error": str(e)}), 500
 
 # --- Root Route ---
 @app.route('/')

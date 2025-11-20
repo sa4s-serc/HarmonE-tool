@@ -21,7 +21,7 @@ log_file = os.path.join(KNOWLEDGE_DIR, "mape_log.csv")
 predictions_file = os.path.join(KNOWLEDGE_DIR, "predictions.csv")
 drift_file = os.path.join(KNOWLEDGE_DIR, "drift.csv")
 COMMAND_FILE_PATH = os.path.join(KNOWLEDGE_DIR, "command.txt")
-config_file = os.path.join(BASE_DIR, "approach.conf")
+config_file = os.path.join("approach.conf")
 
 # --- Setup Logging ---
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - [CV-Manage] - %(levelname)s - %(message)s')

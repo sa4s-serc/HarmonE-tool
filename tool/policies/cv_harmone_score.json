@@ -1,10 +1,11 @@
 {
-  "policy_id": "reg_harmone_score",
+  "policy_id": "cv_harmone_score",
   "quality_attribute": "score",
   "adaptation_boundary": {
     "type": "STATIC_THRESHOLD",
     "condition": "LESS_THAN",
-    "threshold": 0.78
+    "threshold": 0.78,
+    "dynamic_logic": null
   },
   "tactics": [
     {
@@ -15,8 +16,9 @@
     }
   ],
   "associated_qas": [
-    "r2_score",
+    "confidence",
     "normalized_energy",
-    "model_used"
+    "model_used",
+    "kl_div"
   ]
 }

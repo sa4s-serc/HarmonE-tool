@@ -87,9 +87,9 @@ def register_policies_with_acp(policy_prefix):
     Registers policies from the POLICY_DIR that match the prefix
     (e.g., 'cv_harmone' prefix will load 'cv_harmone_score.json').
     """
-    # if 'single' in policy_prefix:
-    #     logging.info("Running in 'single' mode. No policies will be registered.")
-    #     return True
+    if 'single' in policy_prefix:
+        logging.info("Running in 'single' mode. No policies will be registered.")
+        return True
 
     try:
         policy_files = [
@@ -101,8 +101,9 @@ def register_policies_with_acp(policy_prefix):
         return False
         
     if not policy_files:
-        logging.warning(f"No policies found in '{POLICY_DIR}' with prefix '{policy_prefix}'.")
-        return True # Not fatal
+        logging.error(f"FATAL: No policies found in '{POLICY_DIR}' with prefix '{policy_prefix}'. Required for non-single modes.")
+        logging.error(f"Expected policy file like: '{policy_prefix}_score.json' or similar in '{POLICY_DIR}' directory.")
+        return False # Make this fatal for non-single modes
 
     logging.info(f"Found {len(policy_files)} policies to register: {policy_files}")
     
