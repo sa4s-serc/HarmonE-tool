@@ -186,13 +186,21 @@ def receive_telemetry():
 @app.route('/api/knowledge/<policy_id>', methods=['GET'])
 def get_knowledge(policy_id):
     """A debug endpoint to view all knowledge associated with a policy."""
+    # Also allow fetching unassigned data
+    if policy_id == "unassigned":
+        return jsonify({
+            "policy": {"policy_id": "unassigned", "quality_attribute": "score"}, # Provide a mock policy
+            "telemetry_history": KNOWLEDGE_BASE["telemetry_data"].get("unassigned", []),
+            "intervention_logs": []
+        })
+
     if policy_id not in KNOWLEDGE_BASE["policies"]:
         return jsonify({"error": "Policy not found"}), 404
         
     return jsonify({
         "policy": KNOWLEDGE_BASE["policies"].get(policy_id),
         "telemetry_history": KNOWLEDGE_BASE["telemetry_data"].get(policy_id, []),
-        "intervention_history": KNOWLEDGE_BASE["intervention_logs"].get(policy_id, [])
+        "intervention_logs": KNOWLEDGE_BASE["intervention_logs"].get(policy_id, [])
     })
 
 if __name__ == '__main__':

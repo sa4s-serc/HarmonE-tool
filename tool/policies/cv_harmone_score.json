@@ -4,8 +4,7 @@
   "adaptation_boundary": {
     "type": "STATIC_THRESHOLD",
     "condition": "LESS_THAN",
-    "threshold": 0.78,
-    "dynamic_logic": null
+    "threshold": 0.78
   },
   "tactics": [
     {
@@ -18,7 +17,6 @@
   "associated_qas": [
     "confidence",
     "normalized_energy",
-    "model_used",
-    "kl_div"
+    "model_used"
   ]
 }
