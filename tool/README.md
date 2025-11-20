@@ -229,13 +229,7 @@ python3 app.py
 python3 run_managed_system.py
 ```
 
-## This project provides a framework for running a managed system (inference.py) in one of three modes, controlled by approach.conf.
 
-`single` (Monitor-Only): Uses the ACP tool to collect performance metrics without making changes.
-
-`harmone_local` (Local Adaptation): Runs the original, fully-local HarmonE MAPE loop. The ACP can observe, but does not interfere.
-
-`harmone_acp` (Tool-Driven Adaptation): The ACP acts as the central brain, using a policy.json file to make decisions. The local HarmonE scripts act as the hands, executing the commands sent by the ACP.
 
 ## Project Structure
 
@@ -273,69 +267,8 @@ python3 run_managed_system.py
 │
 └── README.md
 ```
-## Requirements
 
-- Python 3.7+
 
-- pip for installing packages
-
-### Setup Instructions
-
-- First, clone or download the project files into a local directory. Then, you will need to set up the Python environment for both components.
-
-- Set up the acp_server:
-Open a terminal, navigate to the acp_server directory, and install the required packages.
-
-```
-cd acp_server
-pip install -r requirements.txt
-cd ..
-```
-
-- Set up the managed_system:
-Open a second terminal, navigate to the managed_system directory, and install its required packages.
-
-```
-cd managed_system
-pip install -r requirements.txt
-cd ..
-```
-
-### Running the Simulation
-
-- You must have two separate terminal windows open to run both systems simultaneously.
-
-- Step 1: Start the Adaptation Control Plane (ACP)
-
-    In your first terminal, navigate to the acp_server directory and run the Flask application.
-```
-cd acp_server
-python app.py
-```
-
-- You should see output indicating that the Flask server is running on port 5000. This server is now listening for incoming telemetry and policy configurations.
-
-- Step 2: Start the Managed System Simulator
-
-    In your second terminal, navigate to the managed_system directory and run the simulator script.
-```
-cd managed_system
-python simulator.py
-```
-
-- Upon starting, the simulator will:
-
-    - Read its configuration from policy.json.
-
-    - Immediately post this adaptation policy to the ACP to configure it.
-
-    - Start its own local server on port 8080 to listen for adaptation commands.
-
-    - Begin a monitoring loop, generating and pushing telemetry data to the ACP every 5 seconds.
-
-- Observing the MAPE-K Loop
-
-    - Watch the output in both terminals to see the self-adaptation process in action.
 
 *[Monitor] Phase:* The managed_system terminal will show logs for each telemetry packet it sends (e.g., [MONITOR] Pushing telemetry: {'energy_consumption_mj': ...}). The acp_server terminal will show when it receives this data.
 
@@ -369,49 +302,3 @@ harmone (MAPE Mode): Runs a completely local, decoupled self-adaptation loop usi
 
 
 
-# How to Run
-
-You will need two terminals. First, start the ACP server as always.
-
-# create env
-- `python3 -m venv venv`
-- `source venv/bin/activate`
-
-# In Terminal 1
-cd acp_server
-python app.py
-
-
-To Run in Monitor-Only Mode:
-
-Edit the managed_system/approach.conf file and make sure its content is single.
-
-In your second terminal, run the master wrapper script.
-
-# In Terminal 2
-cd managed_system
-sudo python run_managed_system.py
-
-
-Result: Your inference.py script will run using only the LSTM model. The wrapper will send its performance data to the ACP. No model switching will occur.
-
-To Run in Self-Adaptation (MAPE) Mode:
-
-Edit the managed_system/approach.conf file and change its content to harmone.
-
-In your second terminal, run the same master wrapper script.
-
-# In Terminal 2
-cd managed_system
-sudo python run_managed_system.py
-
-
-Result: The wrapper will start two background processes: inference.py and mape_logic/manage.py.
-
-inference.py will start with the LSTM model.
-
-mape_logic/manage.py will begin monitoring the output in predictions.csv. When it detects a performance violation (based on its own internal logic), it will command a model switch by overwriting knowledge/model.csv.
-
-inference.py will pick up the change and switch to a more efficient model.
-
-Throughout this entire process, the wrapper continues to send all telemetry to the ACP, giving you a complete, non-invasive view of the self-adapting system.
