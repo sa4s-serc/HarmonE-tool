@@ -7,6 +7,7 @@ import os
 import json
 import importlib.util
 import sys
+import shutil
 from flask import Flask, request, jsonify
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - [MasterWrapper] - %(levelname)s - %(message)s')
@@ -22,6 +23,16 @@ LOGIC_PATH = ""
 COMMAND_FILE_PATH = ""
 monitor_mape = None
 monitor_drift = None
+
+def get_python_command():
+    """Detect whether to use 'python' or 'python3' command."""
+    if shutil.which("python3"):
+        return "python3"
+    elif shutil.which("python"):
+        return "python"
+    else:
+        logging.critical("FATAL: Neither 'python' nor 'python3' command found in PATH.")
+        exit(1)
 
 # --- Adaptation Handler API (Listens for commands from ACP) ---
 handler_app = Flask(__name__)
@@ -201,8 +212,9 @@ if __name__ == '__main__':
     # 6. Start Subprocesses from the correct logic path
     subprocesses = []
     try:
-        inference_cmd = ["python", "-u", "inference.py"]
-        manage_cmd = ["python", "-u", "mape_logic/manage.py"]
+        python_cmd = get_python_command()
+        inference_cmd = [python_cmd, "-u", "inference.py"]
+        manage_cmd = [python_cmd, "-u", "mape_logic/manage.py"]
 
         # Pass the logic path as a working directory so all file paths are correct
         subprocesses.append(subprocess.Popen(inference_cmd, cwd=LOGIC_PATH))
