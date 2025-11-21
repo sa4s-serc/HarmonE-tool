@@ -311,7 +311,7 @@
             "cv_harmone_score": {
                 policy_id: "cv_harmone_score",
                 quality_attribute: "score", 
-                adaptation_boundary: { condition: "LESS_THAN", threshold: 0.78 },
+                adaptation_boundary: { condition: "LESS_THAN", threshold: 0.54 },
                 tactics: [ { tactic_id: "execute_mape_plan", priority: 1, tactic_endpoint: "http://localhost:8080/adaptor/tactic" } ],
                 associated_qas: ["confidence", "normalized_energy", "model_used"]
             },
