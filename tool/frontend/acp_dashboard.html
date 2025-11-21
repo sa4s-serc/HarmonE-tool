@@ -584,7 +584,7 @@
                 // No threshold line for single mode
             } else {
                 // For all other modes, show the policy's metric and threshold
-                document.getElementById('main-chart-title').textContent = `Main Metric: ${mainMetric} (Target: ${boundary.condition || ''} ${threshold || ''})`;
+                document.getElementById('main-chart-title').textContent = `Main Metric: ${mainMetric} (Adapt when ${boundary.condition || ''} ${threshold || ''})`;
                 thresholdData = labels.map(() => threshold); // Only create threshold data if not single mode
             }
             
@@ -1055,7 +1055,7 @@
                     <div>
                         <div class="text-xs text-gray-500 uppercase">Violation Trigger</div>
                         <div class="text-lg font-semibold text-red-500">${mainMetric || 'N/A'} (${triggerValue})</div>
-                        <div class="text-sm text-gray-400">Target: ${boundary.condition || ''} ${boundary.threshold || ''}</div>
+                        <div class="text-sm text-gray-400">Adapt when ${boundary.condition || ''} ${boundary.threshold || ''}</div>
                     </div>
                     <div>
                         <div class="text-xs text-gray-500 uppercase">Action Taken</div>
