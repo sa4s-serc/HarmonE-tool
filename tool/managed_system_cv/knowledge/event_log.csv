@@ -25,3 +25,9 @@ switch,4625,yolo_s,,
 switch,4693,yolo_n,,
 switch,4801,yolo_s,,
 switch,4998,yolo_n,,
+switch,5095,yolo_s,,
+switch,5137,yolo_m,,R2_baseline_switch
+switch,5157,yolo_n,,R2_baseline_switch
+switch,5221,yolo_m,,R2_baseline_switch
+switch,5227,yolo_s,,R2_baseline_switch
+switch,5236,yolo_n,,R2_baseline_switch

@@ -4,12 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Adaptation Control Plane (ACP) Dashboard</title>
-    <!-- <script src="https://cdn.tailwindcss.com"></script> -->
     <script src="https://unpkg.com/tailwindcss-jit-cdn@latest"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+    <!-- Fixed Chart.js CDN links -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
     
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation"></script>
     <style>
         ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-track { background: #1f2937; }
@@ -71,6 +71,29 @@
                 </div>
             </div>
 
+        </div>
+    </div>
+    
+    <!-- Single Model Selection Modal -->
+    <div id="model-selection-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-gray-800 p-8 rounded-lg shadow-2xl max-w-md w-full mx-4">
+            <h3 class="text-xl font-bold text-white mb-4">Select Model to Run</h3>
+            <p class="text-gray-400 mb-6">Choose which model you want to run in single model mode:</p>
+            
+            <div class="space-y-3">
+                <select id="model-dropdown" class="w-full bg-gray-700 text-white px-3 py-2 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <!-- Options will be populated dynamically -->
+                </select>
+            </div>
+            
+            <div class="flex space-x-3 mt-6">
+                <button id="confirm-model-btn" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors">
+                    Start Single Model Run
+                </button>
+                <button id="cancel-model-btn" class="flex-1 bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors">
+                    Cancel
+                </button>
+            </div>
         </div>
     </div>
     
@@ -262,11 +285,16 @@
         let pollingIntervalId = null;
         let chartInstances = {};
         let globalKnowledge = { telemetry_history: [] };
+        let currentSystemType = ""; // Track current system type for modal
 
         // === DOM ELEMENTS ===
         const welcomeScreen = document.getElementById('welcome-screen');
         const dashboardWrapper = document.getElementById('dashboard-wrapper');
         const backToMenuBtn = document.getElementById('back-to-menu-btn');
+        const modelSelectionModal = document.getElementById('model-selection-modal');
+        const modelDropdown = document.getElementById('model-dropdown');
+        const confirmModelBtn = document.getElementById('confirm-model-btn');
+        const cancelModelBtn = document.getElementById('cancel-model-btn');
 
         const loadPolicyBtn = document.getElementById('load-policy-btn');
         const policyIdInput = document.getElementById('policy-id-input');
@@ -380,20 +408,9 @@
                 await writeApproachConfig('reg_switch_r2');
             });
 
-            document.getElementById('modal-btn-reg-single').addEventListener('click', async () => {
-                // Load a minimal preset for single mode with associated QAs for monitoring
-                const singlePreset = {
-                    policy_id: 'reg_single',
-                    quality_attribute: 'r2_score',
-                    associated_qas: ['r2_score', 'normalized_energy', 'model_used']
-                };
-                populateFormWithPreset(singlePreset);
-                policyIdInput.value = 'reg_single';
-                showMessage("Ready for 'REG: Single Model'. Set 'approach.conf' to 'reg_single'", "info");
-                showView('dashboard');
-                loadPolicy(); // Automatically load this policy
-                document.querySelector('.tab-btn[data-tab="dashboard"]').click();
-                await writeApproachConfig('reg_single');
+            document.getElementById('modal-btn-reg-single').addEventListener('click', () => {
+                currentSystemType = "regression";
+                showModelSelectionModal();
             });
 
             // CV BUTTONS
@@ -419,20 +436,9 @@
                 await writeApproachConfig('cv_switch_conf');
             });
 
-            document.getElementById('modal-btn-cv-single').addEventListener('click', async () => {
-                // Load a minimal preset for CV single mode with associated QAs for monitoring
-                const cvSinglePreset = {
-                    policy_id: 'cv_single',
-                    quality_attribute: 'confidence',
-                    associated_qas: ['confidence', 'normalized_energy', 'model_used']
-                };
-                populateFormWithPreset(cvSinglePreset);
-                policyIdInput.value = 'cv_single';
-                showMessage("Ready for 'CV: Single Model'. Set 'approach.conf' to 'cv_single'", "info");
-                showView('dashboard');
-                loadPolicy(); // Automatically load this policy
-                document.querySelector('.tab-btn[data-tab="dashboard"]').click();
-                await writeApproachConfig('cv_single');
+            document.getElementById('modal-btn-cv-single').addEventListener('click', () => {
+                currentSystemType = "cv";
+                showModelSelectionModal();
             });
 
             // CUSTOM BUTTON
@@ -455,8 +461,16 @@
                 setFieldsEditability(true);
             });
 
-            // --- End View Navigation Logic ---
-
+            // Modal event handlers
+            confirmModelBtn.addEventListener('click', handleModelSelection);
+            cancelModelBtn.addEventListener('click', hideModelSelectionModal);
+            
+            // Close modal when clicking outside
+            modelSelectionModal.addEventListener('click', (e) => {
+                if (e.target === modelSelectionModal) {
+                    hideModelSelectionModal();
+                }
+            });
 
             // Tab switching logic
             tabs.forEach(tab => {
@@ -1197,6 +1211,147 @@
                 console.error('Error saving policy:', error);
                 showMessage(` Failed to save policy file: ${error.message}`, "error");
                 return false;
+            }
+        }
+
+        // === MODAL FUNCTIONS FOR SINGLE MODEL SELECTION ===
+        function showModelSelectionModal() {
+            // Populate dropdown based on system type
+            const modelOptions = getModelOptions(currentSystemType);
+            modelDropdown.innerHTML = '';
+            
+            modelOptions.forEach(model => {
+                const option = document.createElement('option');
+                option.value = model.value;
+                option.textContent = model.label;
+                modelDropdown.appendChild(option);
+            });
+            
+            modelSelectionModal.classList.remove('hidden');
+        }
+
+        function hideModelSelectionModal() {
+            modelSelectionModal.classList.add('hidden');
+            currentSystemType = "";
+        }
+
+        function getModelOptions(systemType) {
+            if (systemType === "regression") {
+                return [
+                    { value: "svm", label: "SVM - Support Vector Machine" },
+                    { value: "lstm", label: "LSTM - Long Short-Term Memory" },
+                    { value: "linear", label: "Linear - Linear Regression" }
+                ];
+            } else if (systemType === "cv") {
+                return [
+                    { value: "yolo_n", label: "YOLO Nano - Fast & Lightweight" },
+                    { value: "yolo_s", label: "YOLO Small - Balanced" },
+                    { value: "yolo_m", label: "YOLO Medium - High Accuracy" }
+                ];
+            }
+            return [];
+        }
+
+        async function handleModelSelection() {
+            const selectedModel = modelDropdown.value;
+            if (!selectedModel) {
+                showMessage("Please select a model.", "error");
+                return;
+            }
+
+            // Create single model policy based on system type
+            let singlePreset;
+            let approachConfig;
+            
+            if (currentSystemType === "regression") {
+                singlePreset = {
+                    policy_id: `reg_single_${selectedModel}`,
+                    quality_attribute: 'r2_score', // Main metric for regression
+                    adaptation_boundary: { condition: "LESS_THAN", threshold: 0.0 }, // No adaptation threshold for single mode
+                    tactics: [], // No tactics for single mode
+                    associated_qas: ['r2_score', 'normalized_energy', 'model_used'] // Attribute 1: r2_score, Attribute 2: normalized_energy, Model: model_used
+                };
+                approachConfig = 'reg_single';
+            } else if (currentSystemType === "cv") {
+                singlePreset = {
+                    policy_id: `cv_single_${selectedModel}`,
+                    quality_attribute: 'confidence', // Main metric for CV
+                    adaptation_boundary: { condition: "LESS_THAN", threshold: 0.0 }, // No adaptation threshold for single mode
+                    tactics: [], // No tactics for single mode
+                    associated_qas: ['confidence', 'normalized_energy', 'model_used'] // Attribute 1: confidence, Attribute 2: normalized_energy, Model: model_used
+                };
+                approachConfig = 'cv_single';
+            }
+
+            try {
+                showMessage(`Configuring single model mode with ${selectedModel.toUpperCase()}...`, "info");
+
+                // Step 1: Set the selected model in the managed system
+                await setSelectedModel(selectedModel, currentSystemType);
+                
+                // Step 2: Configure the UI with the policy
+                populateFormWithPreset(singlePreset);
+                policyIdInput.value = singlePreset.policy_id;
+                
+                // Step 3: Create the policy on the ACP server
+                const policyResponse = await fetch(`${ACP_SERVER_URL}/api/policy`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(singlePreset)
+                });
+
+                if (!policyResponse.ok) {
+                    throw new Error(`Failed to create policy: ${policyResponse.statusText}`);
+                }
+
+                // Step 4: Write approach config
+                await writeApproachConfig(approachConfig);
+                
+                // Step 5: Hide modal and show dashboard
+                hideModelSelectionModal();
+                showView('dashboard');
+                
+                // Step 6: Load the policy and switch to dashboard tab
+                currentPolicyId = singlePreset.policy_id;
+                document.getElementById('policy-title-dashboard').textContent = `Policy: ${singlePreset.policy_id}`;
+                
+                // Start polling for telemetry
+                if (pollingIntervalId) {
+                    clearInterval(pollingIntervalId);
+                }
+                await fetchKnowledge();
+                pollingIntervalId = setInterval(fetchKnowledge, POLLING_INTERVAL);
+                
+                // Switch to dashboard tab
+                document.querySelector('.tab-btn[data-tab="dashboard"]').click();
+                
+                showMessage(`Single model mode configured successfully! Using ${selectedModel.toUpperCase()} - monitoring ${singlePreset.quality_attribute}, r2_score/confidence, normalized_energy, and model_used.`, "success");
+                
+            } catch (error) {
+                console.error('Error configuring single model:', error);
+                showMessage(`Failed to configure single model: ${error.message}`, "error");
+                hideModelSelectionModal();
+            }
+        }
+
+        async function setSelectedModel(modelName, systemType) {
+            try {
+                const response = await fetch(`${ACP_SERVER_URL}/api/set-model`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ model: modelName, system: systemType })
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    console.log(`Model set successfully: ${result.message}`);
+                } else {
+                    throw new Error(`Failed to set model: ${response.statusText}`);
+                }
+                
+            } catch (error) {
+                console.error('Error setting model:', error);
+                showMessage(`Failed to set model: ${error.message}`, "warning");
             }
         }
 

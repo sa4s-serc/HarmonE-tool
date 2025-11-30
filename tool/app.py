@@ -269,6 +269,39 @@ def save_policy_to_file():
         logging.error(f"Error saving policy file: {e}")
         return jsonify({"error": str(e)}), 500
 
+@app.route('/api/set-model', methods=['POST'])
+def set_model_for_single_run():
+    """API endpoint to set the selected model for single mode runs."""
+    try:
+        data = request.get_json()
+        model_name = data.get('model')
+        system_type = data.get('system')
+        
+        if not model_name or not system_type:
+            return jsonify({"error": "Missing model or system parameter"}), 400
+        
+        # Determine the correct model file path based on system type
+        if system_type == "regression":
+            model_file_path = os.path.join('managed_system_regression', 'knowledge', 'model.csv')
+        elif system_type == "cv":
+            model_file_path = os.path.join('managed_system_cv', 'knowledge', 'model.csv')
+        else:
+            return jsonify({"error": "Invalid system type"}), 400
+        
+        # Create the knowledge directory if it doesn't exist
+        os.makedirs(os.path.dirname(model_file_path), exist_ok=True)
+        
+        # Write the selected model to the model.csv file
+        with open(model_file_path, 'w') as f:
+            f.write(model_name)
+        
+        logging.info(f"Model set to '{model_name}' for {system_type} system at {model_file_path}")
+        return jsonify({"message": f"Model set to {model_name}"}), 200
+        
+    except Exception as e:
+        logging.error(f"Error setting model: {e}")
+        return jsonify({"error": str(e)}), 500
+
 # --- Root Route ---
 @app.route('/')
 def home():

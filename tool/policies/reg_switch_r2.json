@@ -4,8 +4,7 @@
   "adaptation_boundary": {
     "type": "STATIC_THRESHOLD",
     "condition": "LESS_THAN",
-    "threshold": 0.7,
-    "dynamic_logic": null
+    "threshold": 0.7
   },
   "tactics": [
     {
