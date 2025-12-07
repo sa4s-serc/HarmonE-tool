@@ -6,6 +6,7 @@ from flask_cors import CORS
 import requests
 import logging
 import os
+import subprocess
 
 # --- Basic Setup ---
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - [ACP] - %(levelname)s - %(message)s')
@@ -335,6 +336,14 @@ def home():
 @app.route('/favicon.ico')
 def favicon():
     return "", 204
+
+@app.route("/api/start-managed-system", methods=["POST"])
+def start_managed_system():
+    try:
+        subprocess.Popen(["python3", "run_managed_system.py"])
+        return jsonify({"status": "ok", "message": "Managed system started"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 
 # ============================================================

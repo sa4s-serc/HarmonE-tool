@@ -135,6 +135,13 @@
                             Download Telemetry (CSV)
                         </button>
                     </div>
+
+                    <div id="adaptive-start-container" class="mb-4 hidden">
+                        <button id="adaptive-start-btn" class="w-full bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-md text-base font-medium transition-colors">
+                            Start Managed System
+                        </button>
+                    </div>
+                    
                     
                     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                         
@@ -436,23 +443,25 @@
             document.getElementById('modal-btn-reg-harmone').addEventListener('click', async () => {
                 populateFormWithPreset(HARMONY_PRESETS.reg_harmone_score);
                 policyIdInput.value = HARMONY_PRESETS.reg_harmone_score.policy_id;
-                // Auto-select the corresponding preset in dropdown
                 document.getElementById('policy-presets').value = 'reg_harmone_score';
-                showMessage("Loaded 'REG: HarmonE Demo' preset. Navigate to Live Dashboard (KR2)", "info");
+                showMessage("Loaded 'REG: HarmonE Demo' preset. Click 'Start Managed System' to begin", "info");
                 showView('dashboard');
                 document.querySelector('.tab-btn[data-tab="policy"]').click();
                 await writeApproachConfig('reg_harmone_score');
+                await savePolicyToFolder(); // Auto-save the policy
+                document.getElementById("adaptive-start-container").classList.remove("hidden");
             });
 
             document.getElementById('modal-btn-reg-switch').addEventListener('click', async () => {
                 populateFormWithPreset(HARMONY_PRESETS.reg_switch_r2);
                 policyIdInput.value = HARMONY_PRESETS.reg_switch_r2.policy_id;
-                // Auto-select the corresponding preset in dropdown
                 document.getElementById('policy-presets').value = 'reg_switch_r2';
-                showMessage("Loaded 'REG: Simple R² Switch' preset. Navigate to Live Dashboard (KR2)", "info");
+                showMessage("Loaded 'REG: Simple R² Switch' preset. Click 'Start Managed System' to begin", "info");
                 showView('dashboard');
                 document.querySelector('.tab-btn[data-tab="policy"]').click();
                 await writeApproachConfig('reg_switch_r2');
+                await savePolicyToFolder(); // Auto-save the policy
+                document.getElementById("adaptive-start-container").classList.remove("hidden");
             });
 
             document.getElementById('modal-btn-reg-single').addEventListener('click', () => {
@@ -464,23 +473,25 @@
             document.getElementById('modal-btn-cv-harmone').addEventListener('click', async () => {
                 populateFormWithPreset(HARMONY_PRESETS.cv_harmone_score);
                 policyIdInput.value = HARMONY_PRESETS.cv_harmone_score.policy_id;
-                // Auto-select the corresponding preset in dropdown
                 document.getElementById('policy-presets').value = 'cv_harmone_score';
-                showMessage("Loaded 'CV: HarmonE Demo' preset. Navigate to Live Dashboard (KR2)", "info");
+                showMessage("Loaded 'CV: HarmonE Demo' preset. Click 'Start Managed System' to begin", "info");
                 showView('dashboard');
                 document.querySelector('.tab-btn[data-tab="policy"]').click();
                 await writeApproachConfig('cv_harmone_score');
+                await savePolicyToFolder(); // Auto-save the policy
+                document.getElementById("adaptive-start-container").classList.remove("hidden");
             });
 
             document.getElementById('modal-btn-cv-switch').addEventListener('click', async () => {
                 populateFormWithPreset(HARMONY_PRESETS.cv_switch_conf);
                 policyIdInput.value = HARMONY_PRESETS.cv_switch_conf.policy_id;
-                // Auto-select the corresponding preset in dropdown
                 document.getElementById('policy-presets').value = 'cv_switch_conf';
-                showMessage("Loaded 'CV: Simple Confidence Switch' preset. Navigate to Live Dashboard (KR2)", "info");
+                showMessage("Loaded 'CV: Simple Confidence Switch' preset. Click 'Start Managed System' to begin", "info");
                 showView('dashboard');
                 document.querySelector('.tab-btn[data-tab="policy"]').click();
                 await writeApproachConfig('cv_switch_conf');
+                await savePolicyToFolder(); // Auto-save the policy
+                document.getElementById("adaptive-start-container").classList.remove("hidden");
             });
 
             document.getElementById('modal-btn-cv-single').addEventListener('click', () => {
@@ -678,10 +689,10 @@
                         backgroundColor: 'rgba(16, 185, 129, 0.9)',
                         color: '#ffffff',  // Add explicit white color
                         font: { 
-                            size: 11,
+                            size: 8,
                             weight: 'bold'
                         },
-                        padding: 4,
+                        padding: 0,
                         rotation: -90
                     }
                     
@@ -1477,13 +1488,27 @@
             return [];
         }
 
+        async function runManagedSystem() {
+            try {
+                const response = await fetch("http://localhost:5000/api/start-managed-system", {
+                    method: "POST",
+                });
+        
+                const data = await response.json();
+                showMessage(data.message, "success");
+            } catch (err) {
+                showMessage("Could not start managed system: " + err, "error");
+            }
+        }
+        
+
         async function handleModelSelection() {
             const selectedModel = modelDropdown.value;
             if (!selectedModel) {
                 showMessage("Please select a model.", "error");
                 return;
             }
-
+        
             // Create single model policy based on system type
             let singlePreset;
             let approachConfig;
@@ -1491,28 +1516,28 @@
             if (currentSystemType === "regression") {
                 singlePreset = {
                     policy_id: `reg_single_${selectedModel}`,
-                    quality_attribute: 'r2_score', // Main metric for regression
-                    adaptation_boundary: { condition: "LESS_THAN", threshold: 0.0 }, // No adaptation threshold for single mode
-                    tactics: [], // No tactics for single mode
+                    quality_attribute: 'r2_score',
+                    adaptation_boundary: { condition: "LESS_THAN", threshold: 0.0 },
+                    tactics: [],
                     secondary_boundaries: [],
-                    associated_qas: ['r2_score', 'normalized_energy', 'model_used'] // Attribute 1: r2_score, Attribute 2: normalized_energy, Model: model_used
+                    associated_qas: ['r2_score', 'normalized_energy', 'model_used']
                 };
                 approachConfig = 'reg_single';
             } else if (currentSystemType === "cv") {
                 singlePreset = {
                     policy_id: `cv_single_${selectedModel}`,
-                    quality_attribute: 'confidence', // Main metric for CV
-                    adaptation_boundary: { condition: "LESS_THAN", threshold: 0.0 }, // No adaptation threshold for single mode
-                    tactics: [], // No tactics for single mode
+                    quality_attribute: 'confidence',
+                    adaptation_boundary: { condition: "LESS_THAN", threshold: 0.0 },
+                    tactics: [],
                     secondary_boundaries: [],
-                    associated_qas: ['confidence', 'normalized_energy', 'model_used'] // Attribute 1: confidence, Attribute 2: normalized_energy, Model: model_used
+                    associated_qas: ['confidence', 'normalized_energy', 'model_used']
                 };
                 approachConfig = 'cv_single';
             }
-
+        
             try {
                 showMessage(`Configuring single model mode with ${selectedModel.toUpperCase()}...`, "info");
-
+        
                 // Step 1: Set the selected model in the managed system
                 await setSelectedModel(selectedModel, currentSystemType);
                 
@@ -1526,19 +1551,26 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(singlePreset)
                 });
-
+        
                 if (!policyResponse.ok) {
                     throw new Error(`Failed to create policy: ${policyResponse.statusText}`);
                 }
-
+        
                 // Step 4: Write approach config
                 await writeApproachConfig(approachConfig);
                 
-                // Step 5: Hide modal and show dashboard
+                // Step 5: Save policy to file
+                await savePolicyToFolder();
+                
+                // Step 6: Start the managed system automatically
+                showMessage("Starting managed system...", "info");
+                await runManagedSystem();
+                
+                // Step 7: Hide modal and show dashboard
                 hideModelSelectionModal();
                 showView('dashboard');
                 
-                // Step 6: Load the policy and switch to dashboard tab
+                // Step 8: Load the policy and switch to dashboard tab
                 currentPolicyId = singlePreset.policy_id;
                 document.getElementById('policy-title-dashboard').textContent = `Policy: ${singlePreset.policy_id}`;
                 
@@ -1552,7 +1584,7 @@
                 // Switch to dashboard tab
                 document.querySelector('.tab-btn[data-tab="dashboard"]').click();
                 
-                showMessage(`Single model mode configured successfully! Using ${selectedModel.toUpperCase()} - monitoring ${singlePreset.quality_attribute}, r2_score/confidence, normalized_energy, and model_used.`, "success");
+                showMessage(`Single model mode started! Using ${selectedModel.toUpperCase()} - monitoring ${singlePreset.quality_attribute}`, "success");
                 
             } catch (error) {
                 console.error('Error configuring single model:', error);
@@ -1581,6 +1613,33 @@
                 showMessage(`Failed to set model: ${error.message}`, "warning");
             }
         }
+
+        document.getElementById("adaptive-start-btn").addEventListener("click", async () => {
+            showMessage("Starting managed system...", "info");
+            await runManagedSystem();
+            
+            // Hide the start button after clicking
+            document.getElementById("adaptive-start-container").classList.add("hidden");
+            
+            // Automatically load the policy and start monitoring
+            if (policyIdInput.value) {
+                currentPolicyId = policyIdInput.value;
+                document.getElementById('policy-title-dashboard').textContent = `Policy: ${currentPolicyId}`;
+                
+                if (pollingIntervalId) {
+                    clearInterval(pollingIntervalId);
+                }
+                
+                await fetchKnowledge();
+                pollingIntervalId = setInterval(fetchKnowledge, POLLING_INTERVAL);
+                
+                // Switch to dashboard tab
+                document.querySelector('.tab-btn[data-tab="dashboard"]').click();
+                
+                showMessage(`Managed system started! Monitoring policy: ${currentPolicyId}`, "success");
+            }
+        });
+        
 
     </script>
 </body>

@@ -1,9 +1,9 @@
 {
-    "last_line": 5714,
+    "last_line": 5982,
     "current_energy_threshold": -0.0333804894406792,
     "ema_scores": {
         "yolo_n": 0.48599338610984544,
-        "yolo_s": 0.6101093519587415,
+        "yolo_s": 0.6090851505229413,
         "yolo_m": 0.4983113767495929
     },
     "recovery_cycles": 1,
