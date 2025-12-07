@@ -14,9 +14,18 @@
       "tactic_endpoint": "http://localhost:8080/adaptor/tactic"
     }
   ],
+  "secondary_boundaries": [
+    {
+      "quality_attribute": "kl_div",
+      "condition": "GREATER_THAN",
+      "threshold": 0.07,
+      "tactic_id": "handle_data_drift"
+    }
+  ],
   "associated_qas": [
     "confidence",
     "normalized_energy",
+    "kl_div",
     "model_used"
   ]
 }

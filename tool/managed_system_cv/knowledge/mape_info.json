@@ -1,10 +1,19 @@
 {
-    "last_line": 5271,
+    "last_line": 5714,
     "current_energy_threshold": -0.0333804894406792,
     "ema_scores": {
-        "yolo_n": 0.5302320010955883,
-        "yolo_s": 0.5811293638657915,
-        "yolo_m": 0.5909101205378156
+        "yolo_n": 0.48599338610984544,
+        "yolo_s": 0.6101093519587415,
+        "yolo_m": 0.4983113767495929
     },
-    "recovery_cycles": 1
+    "recovery_cycles": 1,
+    "event_counters": {
+        "model_switches": 10,
+        "retrains": 1,
+        "vmr_events": 0,
+        "mape_k_energy_uJ": 57461215.0
+    },
+    "simple_switch_counters": {
+        "simple_switches": 0
+    }
 }

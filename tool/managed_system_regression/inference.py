@@ -20,6 +20,7 @@ energy_meter = pyRAPL.Measurement("inference")
 print("Loading synthetic data stream...")
 
 df = pd.read_csv("knowledge/dataset.csv")
+# df = pd.read_csv("knowledge/test_data.csv")
 data = df["flow"].values
 
 # Normalize data

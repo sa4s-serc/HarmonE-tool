@@ -31,3 +31,9 @@ switch,5157,yolo_n,,R2_baseline_switch
 switch,5221,yolo_m,,R2_baseline_switch
 switch,5227,yolo_s,,R2_baseline_switch
 switch,5236,yolo_n,,R2_baseline_switch
+retrain,5284,,,Retraining triggered by drift detection.
+switch,5303,yolo_m,,
+switch,5313,yolo_s,,
+switch,5336,yolo_n,,
+switch,5355,yolo_m,,
+switch,5423,yolo_s,,

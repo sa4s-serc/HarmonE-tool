@@ -44,7 +44,35 @@ def monitor_mape():
         df = pd.read_csv(predictions_file, skiprows=range(1, last_line+1))
         if df.empty:
             print("[MAPE] No new predictions to monitor.")
-            return None
+            # Return cached values with event counters when no new data
+            event_counters = info.get("event_counters", {
+                "model_switches": 0,
+                "retrains": 0,
+                "vmr_events": 0,
+                "mape_k_energy_uJ": 0.0
+            })
+            
+            # Include simple switch counters
+            simple_switch_counters = info.get("simple_switch_counters", {
+                "simple_switches": 0
+            })
+            
+            # Use cached EMA score
+            final_score = info["ema_scores"].get(current_model, 0.5)
+            
+            print(f"📊 Event Counters - Switches: {event_counters['model_switches']}, Retrains: {event_counters['retrains']}, VMR: {event_counters['vmr_events']}, MAPE-K Energy: {event_counters['mape_k_energy_uJ']:.2f} µJ")
+            
+            return {
+                "confidence": 0.5,  # Default value
+                "normalized_energy": 0.5,  # Default value
+                "score": final_score,
+                "model_used": current_model,
+                "model_switches": event_counters["model_switches"],
+                "retrains": event_counters["retrains"],
+                "vmr_events": event_counters["vmr_events"],
+                "mape_k_energy_uJ": round(event_counters["mape_k_energy_uJ"], 2),
+                "simple_switches": simple_switch_counters["simple_switches"]
+            }
     except FileNotFoundError:
         print("[MAPE] Predictions file not found.")
         return None
@@ -77,13 +105,38 @@ def monitor_mape():
 
     info["ema_scores"][current_model] = final_score
     info["last_line"] += len(df)
+    
+    # Ensure event counters exist
+    if "event_counters" not in info:
+        info["event_counters"] = {
+            "model_switches": 0,
+            "retrains": 0,
+            "vmr_events": 0,
+            "mape_k_energy_uJ": 0.0
+        }
+    
     save_mape_info(info)
+
+    # Include event counters in telemetry
+    event_counters = info["event_counters"]
+    
+    # Include simple switch counters
+    simple_switch_counters = info.get("simple_switch_counters", {
+        "simple_switches": 0
+    })
+    
+    print(f"📊 Event Counters - Switches: {event_counters['model_switches']}, Retrains: {event_counters['retrains']}, VMR: {event_counters['vmr_events']}, MAPE-K Energy: {event_counters['mape_k_energy_uJ']:.2f} µJ, Simple Switches: {simple_switch_counters['simple_switches']}")
 
     return {
         "confidence": avg_conf,
         "normalized_energy": energy_norm,
         "score": final_score,
-        "model_used": current_model
+        "model_used": current_model,
+        "model_switches": event_counters["model_switches"],
+        "retrains": event_counters["retrains"],
+        "vmr_events": event_counters["vmr_events"],
+        "mape_k_energy_uJ": round(event_counters["mape_k_energy_uJ"], 2),
+        "simple_switches": simple_switch_counters["simple_switches"]
     }
 
 def monitor_drift():

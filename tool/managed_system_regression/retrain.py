@@ -119,7 +119,7 @@ def retrain():
         model = Ridge(alpha=200)
         model.fit(X_train, y_train)
     elif model_name == "svm":
-        model = SVR(kernel="linear", C=0.05, tol=0.16)
+        model = SVR(kernel="linear", C=0.08, tol=0.16)
         model.fit(X_train, y_train)
     elif model_name == "lstm":
         model = train_lstm(X_train, y_train)

@@ -75,11 +75,29 @@ def monitor_mape():
                     
                     print(f"🔄 Using recent data: R²={r2:.4f}, Energy={energy_normalized:.4f}, Score={final_score:.4f}")
                     
+                    # Include event counters in telemetry
+                    event_counters = info.get("event_counters", {
+                        "model_switches": 0,
+                        "retrains": 0, 
+                        "vmr_events": 0,
+                        "mape_k_energy_uJ": 0.0
+                    })
+                    
+                    # Include simple switch counters
+                    simple_switch_counters = info.get("simple_switch_counters", {
+                        "simple_switches": 0
+                    })
+                    
                     return {
                         "r2_score": round(r2, 4),
                         "normalized_energy": round(energy_normalized, 4),
                         "score": round(final_score, 4),
-                        "model_used": current_model
+                        "model_used": current_model,
+                        "model_switches": event_counters["model_switches"],
+                        "retrains": event_counters["retrains"],
+                        "vmr_events": event_counters["vmr_events"],
+                        "mape_k_energy_uJ": round(event_counters["mape_k_energy_uJ"], 2),
+                        "simple_switches": simple_switch_counters["simple_switches"]
                     }
                 else:
                     print("⚠️ Required columns missing in recent data")
@@ -133,11 +151,31 @@ def monitor_mape():
 
     save_mape_info(info)
 
+    # Include event counters in telemetry
+    event_counters = info.get("event_counters", {
+        "model_switches": 0,
+        "retrains": 0,
+        "vmr_events": 0,
+        "mape_k_energy_uJ": 0.0
+    })
+    
+    # Include simple switch counters
+    simple_switch_counters = info.get("simple_switch_counters", {
+        "simple_switches": 0
+    })
+    
+    print(f"📊 Event Counters - Switches: {event_counters['model_switches']}, Retrains: {event_counters['retrains']}, VMR: {event_counters['vmr_events']}, MAPE-K Energy: {event_counters['mape_k_energy_uJ']:.2f} µJ")
+
     return {
         "r2_score": round(r2, 4),
         "normalized_energy": round(energy_normalized, 4),
         "score": round(final_score, 4),
-        "model_used": current_model
+        "model_used": current_model,
+        "model_switches": event_counters["model_switches"],
+        "retrains": event_counters["retrains"],
+        "vmr_events": event_counters["vmr_events"],
+        "mape_k_energy_uJ": round(event_counters["mape_k_energy_uJ"], 2),
+        "simple_switches": simple_switch_counters["simple_switches"]
     }
 
 def monitor_drift():

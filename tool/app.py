@@ -1,7 +1,8 @@
 import time
 import statistics
+import threading
 from flask import Flask, request, jsonify
-from flask_cors import CORS  # <-- IMPORT THE NEW LIBRARY
+from flask_cors import CORS
 import requests
 import logging
 import os
@@ -10,7 +11,7 @@ import os
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - [ACP] - %(levelname)s - %(message)s')
 
 app = Flask(__name__)
-CORS(app)  # <-- ENABLE CORS FOR YOUR ENTIRE APP
+CORS(app)
 
 # --- In-Memory Knowledge Base (K) ---
 KNOWLEDGE_BASE = {
@@ -19,8 +20,10 @@ KNOWLEDGE_BASE = {
     "intervention_logs": {}
 }
 
+# ============================================================
+# -----------------  HELPER FUNCTIONS  ------------------------
+# ============================================================
 
-# --- Helper Functions ---
 def get_historical_average(policy_id, metric_key):
     """Calculates the historical average for a given metric from the Knowledge Base."""
     if policy_id not in KNOWLEDGE_BASE["telemetry_data"]:
@@ -34,10 +37,11 @@ def get_historical_average(policy_id, metric_key):
     
     return statistics.mean(metric_values) if metric_values else None
 
+
 def analyze_telemetry(policy, metric_value, metric_key):
     """
-    Analyzes incoming telemetry against the policy's adaptation boundary.
-    Returns True if a violation is detected, False otherwise.
+    Analyzes telemetry against the policy's primary adaptation boundary.
+    Only handles the *primary* boundary here. Secondary boundaries are handled separately.
     """
     boundary = policy.get("adaptation_boundary", {})
     condition = boundary.get("condition")
@@ -45,267 +49,304 @@ def analyze_telemetry(policy, metric_value, metric_key):
     dynamic_logic_str = boundary.get("dynamic_logic")
 
     violation = False
-    
-    # 1. Static Threshold Check
+
+    # ---- STATIC THRESHOLD CHECK ----
     if condition == "GREATER_THAN":
         if metric_value > static_threshold:
             logging.info(f"[ANALYZE] Static threshold VIOLATED: {metric_value} > {static_threshold}")
             violation = True
         else:
             logging.info(f"[ANALYZE] Static threshold NOT violated: {metric_value} <= {static_threshold}")
-            return False # No violation
+            return False
+
     elif condition == "LESS_THAN":
         if metric_value < static_threshold:
             logging.info(f"[ANALYZE] Static threshold VIOLATED: {metric_value} < {static_threshold}")
             violation = True
         else:
             logging.info(f"[ANALYZE] Static threshold NOT violated: {metric_value} >= {static_threshold}")
-            return False # No violation
+            return False
+
     else:
         logging.warning(f"[ANALYZE] Unknown condition '{condition}'. No action taken.")
         return False
 
-    # 2. Dynamic Logic Check (if static threshold was met)
+    # ---- DYNAMIC LOGIC CHECK (OPTIONAL) ----
     if violation and dynamic_logic_str:
         logging.info(f"[ANALYZE] Checking dynamic logic: '{dynamic_logic_str}'")
         avg = get_historical_average(policy['policy_id'], metric_key)
+
         if avg is not None:
-            # A simple, safe evaluation of the dynamic logic string
-            if "historic_avg" in dynamic_logic_str and "*" in dynamic_logic_str:
-                try:
-                    factor = float(dynamic_logic_str.split('*')[1].strip())
-                    dynamic_threshold = avg * factor
-                    if (condition == "GREATER_THAN" and metric_value > dynamic_threshold) or \
-                       (condition == "LESS_THAN" and metric_value < dynamic_threshold):
-                        logging.info(f"[ANALYZE] Dynamic logic condition MET: {metric_value} vs {dynamic_threshold:.2f} (avg: {avg:.2f})")
-                        return True # Confirmed violation
-                    else:
-                        logging.info(f"[ANALYZE] Dynamic logic condition NOT MET: {metric_value} vs {dynamic_threshold:.2f} (avg: {avg:.2f})")
-                        return False # Retract violation
-                except (ValueError, IndexError) as e:
-                    logging.error(f"Could not parse dynamic_logic: {e}")
+            try:
+                # parse "historic_avg * factor"
+                factor = float(dynamic_logic_str.split('*')[1].strip())
+                dynamic_threshold = avg * factor
+
+                if (condition == "GREATER_THAN" and metric_value > dynamic_threshold) or \
+                   (condition == "LESS_THAN" and metric_value < dynamic_threshold):
+                    logging.info(f"[ANALYZE] Dynamic condition MET: {metric_value} vs {dynamic_threshold}")
+                    return True
+                else:
+                    logging.info(f"[ANALYZE] Dynamic condition NOT MET: {metric_value} vs {dynamic_threshold}")
                     return False
+
+            except:
+                logging.error("[ANALYZE] Error parsing dynamic logic string.")
+                return False
+
         else:
-            logging.warning("[ANALYZE] Not enough historical data for dynamic check. Relying on static threshold.")
-            return True # Cannot disprove violation, so it stands
+            logging.warning("[ANALYZE] No historical data for dynamic logic. Using static threshold only.")
+            return True
 
     return violation
 
-def plan_and_execute(policy, trigger_value):
-    """Selects the highest priority tactic and sends the execution request."""
-    # PLAN: Select the highest priority tactic
+
+def plan_and_execute(policy, trigger_value, trigger_metric=None):
+    """Executes the given tactic from a policy."""
     tactics = sorted(policy.get("tactics", []), key=lambda t: t['priority'])
     if not tactics:
         logging.warning(f"[PLAN] No tactics found for policy '{policy['policy_id']}'")
         return
 
     selected_tactic = tactics[0]
-    logging.info(f"[PLAN] Tactic selected: '{selected_tactic['tactic_id']}' with priority {selected_tactic['priority']}")
 
-    # EXECUTE: Trigger the adaptation
-    # 1. Log the planned intervention
+    logging.info(f"[PLAN] Tactic selected: '{selected_tactic['tactic_id']}'")
+
     intervention_record = {
         "timestamp": time.time(),
-        "policy_id": policy['policy_id'],
-        "tactic_id": selected_tactic['tactic_id'],
+        "policy_id": policy["policy_id"],
+        "tactic_id": selected_tactic["tactic_id"],
         "trigger_value": trigger_value,
+        "trigger_metric": trigger_metric or policy.get("quality_attribute", "unknown"),
         "status": "TRIGGERED"
     }
-    KNOWLEDGE_BASE["intervention_logs"].setdefault(policy['policy_id'], []).append(intervention_record)
-    logging.info(f"[KNOWLEDGE] Logged planned intervention: {selected_tactic['tactic_id']}")
 
-    # 2. Send the execution request to the managed system
+    KNOWLEDGE_BASE["intervention_logs"].setdefault(policy["policy_id"], []).append(intervention_record)
+
+    payload = {
+        "tactic_id": selected_tactic["tactic_id"],
+        "trigger_value": trigger_value,
+        "trigger_timestamp": intervention_record["timestamp"]
+    }
+
     try:
-        payload = {
-            "tactic_id": selected_tactic['tactic_id'],
-            "trigger_value": trigger_value,
-            "trigger_timestamp": intervention_record['timestamp']
-        }
-        endpoint = selected_tactic['tactic_endpoint']
-        
-        logging.info(f"[EXECUTE] Sending POST request to endpoint: {endpoint} with payload: {payload}")
+        endpoint = selected_tactic["tactic_endpoint"]
+        logging.info(f"[EXECUTE] Posting to {endpoint} with payload {payload}")
         response = requests.post(endpoint, json=payload, timeout=5)
-        
+
         if response.status_code == 200:
-            logging.info(f"[EXECUTE] Successfully executed tactic '{selected_tactic['tactic_id']}'. Response: {response.json()}")
+            logging.info(f"[EXECUTE] SUCCESS: {response.json()}")
             intervention_record["status"] = "CONFIRMED_SUCCESS"
         else:
-            logging.error(f"[EXECUTE] Failed to execute tactic. Status: {response.status_code}, Response: {response.text}")
+            logging.error(f"[EXECUTE] FAILED: {response.text}")
             intervention_record["status"] = "CONFIRMED_FAILED"
 
-    except requests.exceptions.RequestException as e:
-        logging.error(f"[EXECUTE] Error during tactic execution request: {e}")
+    except Exception as e:
+        logging.error(f"[EXECUTE] ERROR during request: {e}")
         intervention_record["status"] = "REQUEST_FAILED"
 
-# --- API Endpoints ---
+# ============================================================
+# ---- PERIODIC SECONDARY BOUNDARY CHECKER (KL DRIFT) --------
+# ============================================================
+
+def periodic_secondary_checks(interval=30):
+    """
+    Periodically evaluate secondary boundaries (like KL divergence)
+    even when the primary metric (score) violates often.
+    """
+    logging.info(f"[SECONDARY] Starting periodic evaluator every {interval}s")
+
+    while True:
+        time.sleep(interval)
+
+        for policy_id, policy in KNOWLEDGE_BASE["policies"].items():
+
+            secondary = policy.get("secondary_boundaries", [])
+            if not secondary:
+                continue
+
+            telemetry_history = KNOWLEDGE_BASE["telemetry_data"].get(policy_id, [])
+            if not telemetry_history:
+                continue
+
+            latest = telemetry_history[-1]
+
+            for sec in secondary:
+                qa = sec["quality_attribute"]
+                if qa not in latest:
+                    continue
+
+                value = latest[qa]
+                condition = sec["condition"]
+                threshold = sec["threshold"]
+                tactic_id = sec["tactic_id"]
+
+                violated = (
+                    (condition == "GREATER_THAN" and value > threshold)
+                    or
+                    (condition == "LESS_THAN" and value < threshold)
+                )
+
+                if violated:
+                    logging.info(f"[SECONDARY] KL DRIFT DETECTED: {qa}={value} {condition} {threshold}")
+
+                    endpoint = policy["tactics"][0]["tactic_endpoint"]
+
+                    drift_policy = {
+                        "policy_id": policy_id,
+                        "tactics": [
+                            {
+                                "tactic_id": tactic_id,
+                                "priority": 1,
+                                "tactic_endpoint": endpoint
+                            }
+                        ]
+                    }
+
+                    plan_and_execute(drift_policy, value, qa)
+
+# ============================================================
+# ---------------------- API ENDPOINTS ------------------------
+# ============================================================
+
 @app.route('/api/policy', methods=['POST'])
 def add_policy():
-    """Endpoint to upload a new adaptation policy to the Knowledge Base."""
     policy = request.json
-    if not policy or "policy_id" not in policy:
-        return jsonify({"error": "Invalid policy format"}), 400
-    
     policy_id = policy["policy_id"]
+
     KNOWLEDGE_BASE["policies"][policy_id] = policy
-    logging.info(f"[KNOWLEDGE] New policy added/updated: '{policy_id}'")
-    return jsonify({"message": f"Policy '{policy_id}' added successfully"}), 201
+
+    logging.info(f"[KNOWLEDGE] Policy '{policy_id}' added.")
+    return jsonify({"message": "Policy added"}), 201
+
 
 @app.route('/api/telemetry', methods=['POST'])
 def receive_telemetry():
-    """
-    Main endpoint to receive telemetry data and trigger the MAPE-K loop.
-    """
     telemetry = request.json
     logging.info(f"[MONITOR] Received telemetry: {telemetry}")
-    
-    # KNOWLEDGE: Store incoming telemetry
-    # We find the right policy to associate it with
+
     policy_found = False
+
     for policy_id, policy in KNOWLEDGE_BASE["policies"].items():
+
         metric_key = policy.get("quality_attribute")
-        if metric_key in telemetry:
-            policy_found = True
-            
-            # Store data
-            KNOWLEDGE_BASE["telemetry_data"].setdefault(policy_id, []).append(telemetry)
-            logging.info(f"[KNOWLEDGE] Stored telemetry under policy '{policy_id}'")
-            
-            # ANALYZE: Check if the adaptation boundary is violated
-            metric_value = telemetry[metric_key]
-            is_violation = analyze_telemetry(policy, metric_value, metric_key)
-            
-            if is_violation:
-                # PLAN & EXECUTE
-                plan_and_execute(policy, metric_value)
-            else:
-                logging.info(f"[ANALYZE] No violation detected for '{policy_id}'. No action needed.")
-    
+        if metric_key not in telemetry:
+            continue
+
+        policy_found = True
+
+        KNOWLEDGE_BASE["telemetry_data"].setdefault(policy_id, []).append(telemetry)
+        logging.info(f"[KNOWLEDGE] Stored telemetry under '{policy_id}'")
+
+        value = telemetry[metric_key]
+
+        # PRIMARY CHECK (score)
+        primary_violation = analyze_telemetry(policy, value, metric_key)
+
+        if primary_violation:
+            plan_and_execute(policy, value, metric_key)
+            continue
+
+        logging.info(f"[ANALYZE] No primary violation for '{policy_id}'")
+
     if not policy_found:
-        logging.warning(f"Received telemetry but no matching policy found. Storing under 'unassigned'. Data: {telemetry}")
         KNOWLEDGE_BASE["telemetry_data"].setdefault("unassigned", []).append(telemetry)
 
     return jsonify({"message": "Telemetry received"}), 200
 
+
 @app.route('/api/knowledge/<policy_id>', methods=['GET'])
 def get_knowledge(policy_id):
-    """A debug endpoint to view all knowledge associated with a policy."""
-    # Also allow fetching unassigned data
+
     if policy_id == "unassigned":
         return jsonify({
-            "policy": {"policy_id": "unassigned", "quality_attribute": "score"}, # Provide a mock policy
+            "policy": {"policy_id": "unassigned"},
             "telemetry_history": KNOWLEDGE_BASE["telemetry_data"].get("unassigned", []),
-            "intervention_history": []
+            "intervention_logs": []
         })
 
-    if policy_id not in KNOWLEDGE_BASE["policies"]:
-        return jsonify({"error": "Policy not found"}), 404
-        
     return jsonify({
         "policy": KNOWLEDGE_BASE["policies"].get(policy_id),
         "telemetry_history": KNOWLEDGE_BASE["telemetry_data"].get(policy_id, []),
-        "intervention_history": KNOWLEDGE_BASE["intervention_logs"].get(policy_id, [])
+        "intervention_logs": KNOWLEDGE_BASE["intervention_logs"].get(policy_id, [])
     })
+
 
 @app.route('/api/write-approach', methods=['POST'])
 def write_approach_config():
-    """API endpoint to write the approach.conf file based on user selection."""
-    try:
-        data = request.get_json()
-        approach = data.get('approach')
-        
-        if not approach:
-            return jsonify({"error": "No approach specified"}), 400
-        
-        # Map dashboard selections to approach.conf values
-        approach_mapping = {
-            'reg_harmone_score': 'reg_harmone',
-            'reg_switch_r2': 'reg_switch', 
-            'reg_single': 'reg_single',
-            'cv_harmone_score': 'cv_harmone',
-            'cv_switch_conf': 'cv_switch',
-            'cv_single': 'cv_single'
-        }
-        
-        config_value = approach_mapping.get(approach, approach)
-        
-        # Write to approach.conf file
-        with open('approach.conf', 'w') as f:
-            f.write(config_value)
-        
-        logging.info(f"Approach configuration written: {config_value}")
-        return jsonify({"message": f"Approach set to '{config_value}'"}), 200
-        
-    except Exception as e:
-        logging.error(f"Error writing approach config: {e}")
-        return jsonify({"error": str(e)}), 500
+    data = request.json
+    approach = data.get("approach")
+
+    mapping = {
+        'reg_harmone_score': 'reg_harmone',
+        'reg_switch_r2': 'reg_switch',
+        'reg_single': 'reg_single',
+        'cv_harmone_score': 'cv_harmone',
+        'cv_switch_conf': 'cv_switch',
+        'cv_single': 'cv_single'
+    }
+
+    config_val = mapping.get(approach, approach)
+
+    with open("approach.conf", "w") as f:
+        f.write(config_val)
+
+    logging.info(f"Approach updated: {config_val}")
+    return jsonify({"message": "Approach written"}), 200
+
 
 @app.route('/api/save-policy', methods=['POST'])
-def save_policy_to_file():
-    """API endpoint to save policy JSON directly to the policies/ directory."""
-    try:
-        policy_data = request.get_json()
-        
-        if not policy_data or 'policy_id' not in policy_data:
-            return jsonify({"error": "Invalid policy data"}), 400
-        
-        policy_id = policy_data['policy_id']
-        
-        # Ensure policies directory exists
-        policies_dir = 'policies'
-        os.makedirs(policies_dir, exist_ok=True)
-        
-        # Write policy to file
-        policy_filename = f"{policy_id}.json"
-        policy_path = os.path.join(policies_dir, policy_filename)
-        
-        with open(policy_path, 'w') as f:
-            import json
-            json.dump(policy_data, f, indent=2)
-        
-        logging.info(f"Policy file saved: {policy_path}")
-        return jsonify({"message": f"Policy saved to {policy_filename}"}), 200
-        
-    except Exception as e:
-        logging.error(f"Error saving policy file: {e}")
-        return jsonify({"error": str(e)}), 500
+def save_policy_file():
+    policy = request.json
+    pid = policy["policy_id"]
+
+    os.makedirs("policies", exist_ok=True)
+    with open(f"policies/{pid}.json", "w") as f:
+        import json
+        json.dump(policy, f, indent=2)
+
+    return jsonify({"message": "Policy saved"}), 200
+
 
 @app.route('/api/set-model', methods=['POST'])
-def set_model_for_single_run():
-    """API endpoint to set the selected model for single mode runs."""
-    try:
-        data = request.get_json()
-        model_name = data.get('model')
-        system_type = data.get('system')
-        
-        if not model_name or not system_type:
-            return jsonify({"error": "Missing model or system parameter"}), 400
-        
-        # Determine the correct model file path based on system type
-        if system_type == "regression":
-            model_file_path = os.path.join('managed_system_regression', 'knowledge', 'model.csv')
-        elif system_type == "cv":
-            model_file_path = os.path.join('managed_system_cv', 'knowledge', 'model.csv')
-        else:
-            return jsonify({"error": "Invalid system type"}), 400
-        
-        # Create the knowledge directory if it doesn't exist
-        os.makedirs(os.path.dirname(model_file_path), exist_ok=True)
-        
-        # Write the selected model to the model.csv file
-        with open(model_file_path, 'w') as f:
-            f.write(model_name)
-        
-        logging.info(f"Model set to '{model_name}' for {system_type} system at {model_file_path}")
-        return jsonify({"message": f"Model set to {model_name}"}), 200
-        
-    except Exception as e:
-        logging.error(f"Error setting model: {e}")
-        return jsonify({"error": str(e)}), 500
+def set_model():
+    data = request.json
+    model = data["model"]
+    system = data["system"]
 
-# --- Root Route ---
+    if system == "regression":
+        path = "managed_system_regression/knowledge/model.csv"
+    else:
+        path = "managed_system_cv/knowledge/model.csv"
+
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+
+    with open(path, "w") as f:
+        f.write(model)
+
+    return jsonify({"message": "Model set"}), 200
+
+
 @app.route('/')
 def home():
-    return "Welcome to the ACP Server!", 200
+    return "Welcome to ACP Server!", 200
 
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+
+@app.route('/favicon.ico')
+def favicon():
+    return "", 204
+
+
+# ============================================================
+# -------------------------- MAIN -----------------------------
+# ============================================================
+
+if __name__ == "__main__":
+    # Start periodic drift monitor
+    threading.Thread(
+        target=periodic_secondary_checks,
+        args=(30,),
+        daemon=True
+    ).start()
+
+    app.run(host="0.0.0.0", port=5000)

@@ -5,10 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Adaptation Control Plane (ACP) Dashboard</title>
     <script src="https://unpkg.com/tailwindcss-jit-cdn@latest"></script>
-    <!-- Fixed Chart.js CDN links -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
+    <link rel="icon" href="data:,">
+
     
     <style>
         ::-webkit-scrollbar { width: 8px; }
@@ -74,7 +75,6 @@
         </div>
     </div>
     
-    <!-- Single Model Selection Modal -->
     <div id="model-selection-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
         <div class="bg-gray-800 p-8 rounded-lg shadow-2xl max-w-md w-full mx-4">
             <h3 class="text-xl font-bold text-white mb-4">Select Model to Run</h3>
@@ -82,8 +82,7 @@
             
             <div class="space-y-3">
                 <select id="model-dropdown" class="w-full bg-gray-700 text-white px-3 py-2 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    <!-- Options will be populated dynamically -->
-                </select>
+                    </select>
             </div>
             
             <div class="flex space-x-3 mt-6">
@@ -123,8 +122,7 @@
                     <ul class="flex space-x-8">
                         <li><button class="tab-btn text-gray-400 hover:text-white py-2 border-b-2 border-transparent transition-colors" data-tab="policy">Policy Management (KR1)</button></li>
                         <li><button class="tab-btn text-gray-400 hover:text-white py-2 border-b-2 border-transparent transition-colors tab-active" data-tab="dashboard">Live Dashboard (KR2)</button></li>
-                        <!-- <li><button class="tab-btn text-gray-400 hover:text-white py-2 border-b-2 border-transparent transition-colors" data-tab="history">Adaptation History (KR3)</button></li> -->
-                    </ul>
+                        </ul>
                 </nav>
 
                 <div id="message-container" class="hidden text-center p-4 rounded-md mb-4"></div>
@@ -170,12 +168,10 @@
                             <option value="">-- Select a preset --</option>
                             <optgroup label="Regression Presets">
                                 <option value="reg_harmone_score">REG: HarmonE Score Policy</option>
-                                <!-- <option value="reg_harmone_drift">REG: HarmonE Drift Policy</option> -->
                                 <option value="reg_switch_r2">REG: Simple R² Switch Policy</option>
                             </optgroup>
                             <optgroup label="Computer Vision Presets">
                                 <option value="cv_harmone_score">CV: HarmonE Score Policy</option>
-                                <!-- <option value="cv_harmone_drift">CV: HarmonE Drift Policy</option> -->
                                 <option value="cv_switch_conf">CV: Simple Confidence Switch</option>
                             </optgroup>
                         </select>
@@ -198,7 +194,7 @@
                         </fieldset>
 
                         <fieldset class="border border-gray-700 p-4 rounded-md">
-                            <legend class="text-lg font-medium px-2">Adaptation Boundary</legend>
+                            <legend class="text-lg font-medium px-2">Adaptation Boundary (Primary)</legend>
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
                                 <div>
                                     <label for="form-condition" class="block text-sm font-medium mb-1">Condition</label>
@@ -213,9 +209,42 @@
                                 </div>
                             </div>
                         </fieldset>
-                        
+
                         <fieldset class="border border-gray-700 p-4 rounded-md">
-                            <legend class="text-lg font-medium px-2">Tactics</legend>
+                            <legend class="text-lg font-medium px-2">Adaptation Boundary (Secondary)</legend>
+                            <div id="secondary-boundaries-container" class="space-y-4 mt-2">
+                                <div class="secondary-boundary-group border border-gray-600 p-3 rounded-md space-y-2">
+                                    <h4 class="font-medium text-gray-300">Secondary Boundary 1</h4>
+                                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                        <div>
+                                            <label class="block text-sm font-medium mb-1">Metric (QA)</label>
+                                            <input type="text" class="sec-boundary-metric w-full bg-gray-700 rounded-md p-2 text-sm" required>
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium mb-1">Condition</label>
+                                            <select class="sec-boundary-condition w-full bg-gray-700 rounded-md p-2 text-sm">
+                                                <option value="LESS_THAN">LESS_THAN</option>
+                                                <option value="GREATER_THAN">GREATER_THAN</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium mb-1">Threshold</label>
+                                            <input type="number" step="0.01" class="sec-boundary-threshold w-full bg-gray-700 rounded-md p-2 text-sm" required>
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium mb-1">Tactic ID</label>
+                                            <input type="text" class="sec-boundary-tactic-id w-full bg-gray-700 rounded-md p-2 text-sm" required>
+                                        </div>
+                                    </div>
+                                    <div class="flex justify-end">
+                                        <button type="button" class="remove-sec-boundary-btn bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-md text-sm">Remove</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <button type="button" id="add-sec-boundary-btn" class="mt-4 bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-md text-sm">+ Add Secondary Boundary</button>
+                        </fieldset>
+                        <fieldset class="border border-gray-700 p-4 rounded-md">
+                            <legend class="text-lg font-medium px-2">Tactics (Primary)</legend>
                             <div id="tactics-container" class="space-y-4 mt-2">
                                 <div class="tactic-group border border-gray-600 p-3 rounded-md space-y-2">
                                     <h4 class="font-medium text-gray-300">Tactic 1</h4>
@@ -250,9 +279,6 @@
                         </fieldset>
                         
                         <div class="flex space-x-4">
-                            <!-- <button type="submit" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-md text-base font-medium transition-colors">
-                                Create / Update (Live)
-                            </button> -->
                             <button type="button" id="save-policy-folder-btn" class="flex-1 bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-md text-base font-medium transition-colors">
                                  Save as Policy
                             </button>
@@ -307,18 +333,31 @@
         const addTacticBtn = document.getElementById('add-tactic-btn');
         const tacticsContainer = document.getElementById('tactics-container');
 
+        // NEW SECONDARY BOUNDARY ELEMENTS
+        const addSecBoundaryBtn = document.getElementById('add-sec-boundary-btn');
+        const secondaryBoundariesContainer = document.getElementById('secondary-boundaries-container');
+
+
         const downloadPolicyBtn = document.getElementById('download-policy-btn');
         const downloadTelemetryBtn = document.getElementById('download-telemetry-btn');
         
-        // ▼▼▼ 1. UPDATED PRESETS (WITH ENERGY) ▼▼▼
+        // ▼▼▼ 1. UPDATED PRESETS (WITH CORRECTED SECONDARY_BOUNDARIES FOR HARMONE) ▼▼▼
         const HARMONY_PRESETS = {
             // --- REGRESSION PRESETS ---
             "reg_harmone_score": {
                 policy_id: "reg_harmone_score",
                 quality_attribute: "score", 
-                adaptation_boundary: { condition: "LESS_THAN", threshold: 0.78 },
+                adaptation_boundary: { type: "STATIC_THRESHOLD", condition: "LESS_THAN", threshold: 0.78 },
                 tactics: [ { tactic_id: "execute_mape_plan", priority: 1, tactic_endpoint: "http://localhost:8080/adaptor/tactic" } ],
-                associated_qas: ["r2_score", "normalized_energy", "model_used"]
+                secondary_boundaries: [ // ADDED KL_DIV SECONDARY BOUNDARY
+                    {
+                        quality_attribute: "kl_div",
+                        condition: "GREATER_THAN", 
+                        threshold: 0.10, // Changed threshold to 0.10 as per request
+                        tactic_id: "handle_data_drift"
+                    }
+                ],
+                associated_qas: ["r2_score", "normalized_energy", "kl_div", "model_used"]
             },
             "reg_harmone_drift": {
                 policy_id: "reg_harmone_drift",
@@ -332,16 +371,24 @@
                 quality_attribute: "r2_score", 
                 adaptation_boundary: { condition: "LESS_THAN", threshold: 0.70 },
                 tactics: [ { tactic_id: "switch_model_r2_baseline", priority: 1, tactic_endpoint: "http://localhost:8080/adaptor/tactic" } ],
-                associated_qas: ["r2_score", "normalized_energy", "model_used"] // <-- ADDED ENERGY
+                associated_qas: ["r2_score", "normalized_energy", "model_used"] // Simple switch - no kl_div needed
             },
             
             // --- CV PRESETS ---
             "cv_harmone_score": {
                 policy_id: "cv_harmone_score",
                 quality_attribute: "score", 
-                adaptation_boundary: { condition: "LESS_THAN", threshold: 0.54 },
+                adaptation_boundary: { type: "STATIC_THRESHOLD", condition: "LESS_THAN", threshold: 0.54 },
                 tactics: [ { tactic_id: "execute_mape_plan", priority: 1, tactic_endpoint: "http://localhost:8080/adaptor/tactic" } ],
-                associated_qas: ["confidence", "normalized_energy", "model_used"]
+                secondary_boundaries: [
+                    {
+                        quality_attribute: "kl_div",
+                        condition: "GREATER_THAN", 
+                        threshold: 0.07,
+                        tactic_id: "handle_data_drift"
+                    }
+                ],
+                associated_qas: ["confidence", "normalized_energy", "kl_div", "model_used"]
             },
             "cv_harmone_drift": {
                 policy_id: "cv_harmone_drift",
@@ -355,7 +402,7 @@
                 quality_attribute: "confidence", 
                 adaptation_boundary: { condition: "LESS_THAN", threshold: 0.70 },
                 tactics: [ { tactic_id: "switch_model_r2_baseline", priority: 1, tactic_endpoint: "http://localhost:8080/adaptor/tactic" } ],
-                associated_qas: ["confidence", "normalized_energy", "model_used"] // <-- ADDED ENERGY
+                associated_qas: ["confidence", "normalized_energy", "model_used"] // Simple switch - no kl_div needed
             }
         };
 
@@ -448,6 +495,7 @@
                     policy_id: "my_custom_policy",
                     quality_attribute: "",
                     adaptation_boundary: { condition: "LESS_THAN", threshold: 0.7 },
+                    secondary_boundaries: [], // Set empty for custom
                     tactics: [{tactic_id: "my_tactic", priority: 1, tactic_endpoint: "http://localhost:8080/adaptor/tactic"}],
                     associated_qas: []
                 };
@@ -509,6 +557,8 @@
             addTacticBtn.addEventListener('click', () => addTacticGroup());
             downloadPolicyBtn.addEventListener('click', handlePolicyDownload);
             document.getElementById('save-policy-folder-btn').addEventListener('click', savePolicyToFolder);
+            
+            // Tactic removal logic
             tacticsContainer.addEventListener('click', (e) => {
                 if (e.target.classList.contains('remove-tactic-btn')) {
                     if (tacticsContainer.children.length > 1) {
@@ -518,6 +568,16 @@
                 }
             });
 
+            // NEW: Secondary Boundary Logic
+            addSecBoundaryBtn.addEventListener('click', () => addSecBoundaryGroup());
+            secondaryBoundariesContainer.addEventListener('click', (e) => {
+                if (e.target.classList.contains('remove-sec-boundary-btn')) {
+                    e.target.closest('.secondary-boundary-group').remove();
+                    updateSecBoundaryHeaders();
+                }
+            });
+
+
             downloadTelemetryBtn.addEventListener('click', handleTelemetryDownload);
             initializeCharts();
             document.querySelector('.tab-btn[data-tab="dashboard"]').click();
@@ -525,7 +585,7 @@
         
         // === CHARTING (KR2) ===
 
-        // ▼▼▼ 2. UPDATED INITIALIZE CHARTS ▼▼▼
+        // ▼▼▼ 2. UPDATED INITIALIZE CHARTS (Added annotation plugin to options) ▼▼▼
         function initializeCharts() {
             const lineChartConfig = (title) => ({
                 type: 'line',
@@ -548,7 +608,10 @@
                     },
                     plugins: {
                         legend: { labels: { color: '#e5e7eb' } },
-                        tooltip: { mode: 'index', intersect: false }
+                        tooltip: { mode: 'index', intersect: false },
+                        annotation: { // Include annotation plugin here
+                            annotations: {}
+                        }
                     },
                     animation: { duration: 0 }
                 }
@@ -578,10 +641,11 @@
             chartInstances.modelChart = new Chart(document.getElementById('model-chart'), doughnutChartConfig("Model Distribution"));
         }
 
-        // ▼▼▼ 3. UPDATED DASHBOARD CHARTS FUNCTION (ALL NEW LOGIC) ▼▼▼
+        // ▼▼▼ 3. UPDATED DASHBOARD CHARTS FUNCTION (INCLUDING ANNOTATIONS) ▼▼▼
         function updateDashboardCharts(data) {
             const policy = data.policy || {};
             const telemetry = data.telemetry_history || [];
+            const interventions = data.intervention_logs || []; // <-- NEW: Load intervention logs
             
             let mainMetric = policy.quality_attribute || "N/A";
             const boundary = policy.adaptation_boundary || {};
@@ -589,20 +653,55 @@
             let thresholdData = [];
             const labels = telemetry.map(t => new Date(t.timestamp * 1000));
             
+            // --- 1. Generate Annotations for the Main Chart ---
+            const annotations = {};
+            let annotationCount = 0;
+            
+            // Filter for successful interventions and create annotations
+            interventions.filter(i => i.status === "CONFIRMED_SUCCESS").forEach(i => {
+                const timestamp = new Date(i.timestamp * 1000);
+                const tacticId = i.tactic_id.replace(/_/g, ' '); // Clean up for display
+                
+                // Add a vertical line annotation
+                annotations[`line${annotationCount}`] = {
+                    type: 'line',
+                    mode: 'vertical',
+                    scaleID: 'x',
+                    value: timestamp,
+                    borderColor: '#10b981', // Green line for success
+                    borderWidth: 2,
+                    borderDash: [6, 6],
+                    label: {
+                        display: true,  // CORRECT for Chart.js annotation v3
+                        content: tacticId.toUpperCase(),
+                        position: 'start',
+                        backgroundColor: 'rgba(16, 185, 129, 0.9)',
+                        color: '#ffffff',  // Add explicit white color
+                        font: { 
+                            size: 11,
+                            weight: 'bold'
+                        },
+                        padding: 4,
+                        rotation: -90
+                    }
+                    
+                };
+                annotationCount++;
+            });
+
+            // --- 2. Main Chart Update (with new annotations) ---
+            
             // --- "Single Mode" Main Chart Fix ---
             const isSingleMode = currentPolicyId.includes('single');
             if (isSingleMode && policy.associated_qas && policy.associated_qas.length > 0) {
-                // For 'single' mode, use the first QA as the "Main Metric"
                 mainMetric = policy.associated_qas[0];
                 document.getElementById('main-chart-title').textContent = `Main Metric: ${mainMetric} (Monitor-Only)`;
-                // No threshold line for single mode
             } else {
-                // For all other modes, show the policy's metric and threshold
-                document.getElementById('main-chart-title').textContent = `Main Metric: ${mainMetric} (Adapt when ${boundary.condition || ''} ${threshold || ''})`;
-                thresholdData = labels.map(() => threshold); // Only create threshold data if not single mode
+                document.getElementById('main-chart-title').textContent = `Main Metric: ${mainMetric}`;
+                thresholdData = labels.map(() => threshold);
             }
             
-            const mainMetricData = telemetry.map(t => t[mainMetric]);
+          const mainMetricData = telemetry.map(t => t[mainMetric]);
             
             updateChart(chartInstances.main, labels, [
                 {
@@ -615,22 +714,27 @@
                 },
                 {
                     label: 'Threshold',
-                    data: thresholdData, // This will be empty for single mode, hiding the line
+                    data: thresholdData,
                     borderColor: '#ef4444',
                     backgroundColor: '#ef4444',
                     borderDash: [5, 5],
                     pointRadius: 0,
                     fill: false
                 }
-            ]);
+            ], { 
+                plugins: { 
+                    annotation: { 
+                        annotations: annotations 
+                    } 
+                }
+            });
 
-            // --- Pie Chart & QA Line Chart Logic ---
+            // --- 3. Pie Chart & QA Line Chart Logic (Unchanged) ---
             const qaNames = policy.associated_qas ? [...policy.associated_qas] : [];
             
             // Check for 'model_used' and render the pie chart
             const modelChartIndex = qaNames.indexOf('model_used');
             if (modelChartIndex > -1) {
-                // Remove 'model_used' from qaNames so it doesn't also become a line chart
                 qaNames.splice(modelChartIndex, 1); 
                 
                 // Process data for the pie chart
@@ -657,7 +761,6 @@
             }
             
             // --- Associated QA Line Charts ---
-            // These are now just the first 2 QAs *other* than 'model_used'
             const qaCharts = [chartInstances.qa1, chartInstances.qa2];
             const qaTitles = ['qa1-chart-title', 'qa2-chart-title'];
             const qaColors = ['#10b981', '#eab308'];
@@ -691,8 +794,8 @@
             }
         }
         
-        // ▼▼▼ 4. UPDATED UPDATECHART FUNCTION (handles pie charts) ▼▼▼
-        function updateChart(chart, labels, datasets) {
+        // ▼▼▼ 4. UPDATED UPDATECHART FUNCTION (accepts options for annotations) ▼▼▼
+        function updateChart(chart, labels, datasets, extraOptions = {}) {
             // Handle doughnut charts (labels are part of data)
             if (chart.config.type === 'doughnut') {
                 chart.data.labels = labels;
@@ -708,6 +811,14 @@
                     ...ds,
                     data: ds.data.slice(sliceStart)
                 }));
+                
+                // --- CRITICAL FIX: Ensure annotation options are correctly merged/overwritten ---
+                if (extraOptions.plugins && extraOptions.plugins.annotation) {
+                    chart.options.plugins.annotation.annotations = extraOptions.plugins.annotation.annotations;
+                } else if (chart.options.plugins.annotation) {
+                    // Clear annotations if none are provided
+                     chart.options.plugins.annotation.annotations = {};
+                }
             }
             chart.update();
         }
@@ -787,6 +898,7 @@
 
         // === POLICY MANAGEMENT (KR1) ===
 
+        // MODIFIED: Added logic for secondary_boundaries
         function getPolicyFromForm() {
             const policy = {
                 policy_id: document.getElementById('form-policy-id').value,
@@ -797,9 +909,11 @@
                     threshold: parseFloat(document.getElementById('form-threshold').value)
                 },
                 tactics: [],
+                secondary_boundaries: [], // Initialize secondary boundaries array
                 associated_qas: document.getElementById('form-qas').value.split(',').filter(qa => qa.trim() !== "").map(qa => qa.trim())
             };
 
+            // Process Primary Tactics
             document.querySelectorAll('.tactic-group').forEach(group => {
                 policy.tactics.push({
                     tactic_id: group.querySelector('.tactic-id').value,
@@ -808,10 +922,25 @@
                     tactic_endpoint: group.querySelector('.tactic-endpoint').value
                 });
             });
+
+            // Process Secondary Boundaries
+            document.querySelectorAll('.secondary-boundary-group').forEach(group => {
+                const metric = group.querySelector('.sec-boundary-metric').value;
+                // Only include the boundary if a metric is specified
+                if (metric) {
+                    policy.secondary_boundaries.push({
+                        quality_attribute: metric,
+                        condition: group.querySelector('.sec-boundary-condition').value,
+                        threshold: parseFloat(group.querySelector('.sec-boundary-threshold').value),
+                        tactic_id: group.querySelector('.sec-boundary-tactic-id').value
+                    });
+                }
+            });
             
             return policy;
         }
 
+        // MODIFIED: Added logic for secondary_boundaries
         function updatePolicyForm(data) {
             const policy = data.policy || { policy_id: currentPolicyId };
             
@@ -831,6 +960,19 @@
             } else {
                 tactics.forEach((tactic, index) => {
                     addTacticGroup(tactic, index + 1);
+                });
+            }
+
+            // Populate Secondary Boundaries
+            const secBoundaries = policy.secondary_boundaries || [];
+            secondaryBoundariesContainer.innerHTML = '';
+
+            if (secBoundaries.length === 0) {
+                addSecBoundaryGroup(null, 1); // Add a default empty one
+                secondaryBoundariesContainer.querySelector('.secondary-boundary-group').remove(); // Then remove it to start clean
+            } else {
+                secBoundaries.forEach((boundary, index) => {
+                    addSecBoundaryGroup(boundary, index + 1);
                 });
             }
         }
@@ -865,6 +1007,7 @@
             }
         }
         
+        // MODIFIED: Added logic for secondary_boundaries
         function populateFormWithPreset(preset) {
             document.getElementById('form-policy-id').value = preset.policy_id || '';
             document.getElementById('form-metric').value = preset.quality_attribute || '';
@@ -885,6 +1028,20 @@
                 });
             }
 
+            // Populate Secondary Boundaries
+            const secBoundaries = preset.secondary_boundaries || [];
+            secondaryBoundariesContainer.innerHTML = '';
+
+            if (secBoundaries.length === 0) {
+                // Keep the container clean for presets that don't use it
+                // Do nothing. The addSecBoundaryGroup will be called later if needed for custom.
+            } else {
+                secBoundaries.forEach((boundary, index) => {
+                    addSecBoundaryGroup(boundary, index + 1);
+                });
+            }
+            updateSecBoundaryHeaders();
+
             // Set fields as readonly for presets (not custom)
             setFieldsEditability(false);
         }
@@ -902,6 +1059,9 @@
                 metricField.classList.remove('bg-gray-600', 'cursor-not-allowed');
                 policyIdField.classList.add('bg-gray-700');
                 metricField.classList.add('bg-gray-700');
+                // Enable secondary boundary additions/removals
+                addSecBoundaryBtn.classList.remove('hidden');
+                document.querySelectorAll('.remove-sec-boundary-btn').forEach(btn => btn.classList.remove('hidden'));
             } else {
                 // Preset mode: fields are readonly
                 policyIdField.setAttribute('readonly', true);
@@ -910,6 +1070,9 @@
                 metricField.classList.remove('bg-gray-700');
                 policyIdField.classList.add('bg-gray-600', 'cursor-not-allowed');
                 metricField.classList.add('bg-gray-600', 'cursor-not-allowed');
+                // Disable secondary boundary additions/removals
+                addSecBoundaryBtn.classList.add('hidden');
+                document.querySelectorAll('.remove-sec-boundary-btn').forEach(btn => btn.classList.add('hidden'));
             }
         }
 
@@ -1024,6 +1187,51 @@
             });
         }
 
+        // NEW FUNCTION: Add Secondary Boundary Group
+        function addSecBoundaryGroup(boundary = null, index = null) {
+            const boundaryCount = index || secondaryBoundariesContainer.children.length + 1;
+            const newBoundaryGroup = document.createElement('div');
+            newBoundaryGroup.className = 'secondary-boundary-group border border-gray-600 p-3 rounded-md space-y-2';
+            newBoundaryGroup.innerHTML = `
+                <h4 class="font-medium text-gray-300">Secondary Boundary ${boundaryCount}</h4>
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Metric (QA)</label>
+                        <input type="text" class="sec-boundary-metric w-full bg-gray-700 rounded-md p-2 text-sm" value="${boundary?.quality_attribute || ''}" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Condition</label>
+                        <select class="sec-boundary-condition w-full bg-gray-700 rounded-md p-2 text-sm">
+                            <option value="LESS_THAN" ${boundary?.condition === 'LESS_THAN' ? 'selected' : ''}>LESS_THAN</option>
+                            <option value="GREATER_THAN" ${boundary?.condition === 'GREATER_THAN' ? 'selected' : ''}>GREATER_THAN</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Threshold</label>
+                        <input type="number" step="0.01" class="sec-boundary-threshold w-full bg-gray-700 rounded-md p-2 text-sm" value="${boundary?.threshold || ''}" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Tactic ID</label>
+                        <input type="text" class="sec-boundary-tactic-id w-full bg-gray-700 rounded-md p-2 text-sm" value="${boundary?.tactic_id || ''}" required>
+                    </div>
+                </div>
+                <div class="flex justify-end">
+                    <button type="button" class="remove-sec-boundary-btn bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-md text-sm">Remove</button>
+                </div>
+            `;
+            secondaryBoundariesContainer.appendChild(newBoundaryGroup);
+
+            // Re-apply editability logic in case we're in preset mode
+            setFieldsEditability(currentPolicyId === "my_custom_policy" || !Object.keys(HARMONY_PRESETS).includes(currentPolicyId));
+        }
+
+        // NEW FUNCTION: Update Secondary Boundary Headers
+        function updateSecBoundaryHeaders() {
+            document.querySelectorAll('.secondary-boundary-group').forEach((group, index) => {
+                group.querySelector('h4').textContent = `Secondary Boundary ${index + 1}`;
+            });
+        }
+
 
         // === ADAPTATION HISTORY (KR3) ===
 
@@ -1054,8 +1262,25 @@
             card.className = 'bg-gray-800 p-6 rounded-lg shadow-lg';
             
             const statusColor = event.status === "CONFIRMED_SUCCESS" ? "text-green-500" : (event.status.includes("FAILED") ? "text-red-500" : "text-yellow-500");
-            const boundary = policy.adaptation_boundary || {};
-            const mainMetric = policy.quality_attribute;
+            
+            // Check if the trigger was from a secondary boundary
+            const primaryBoundary = policy.adaptation_boundary || {};
+            const secondaryBoundary = (policy.secondary_boundaries || []).find(b => b.quality_attribute === event.trigger_metric);
+            
+            let displayMetric = policy.quality_attribute;
+            let displayCondition = primaryBoundary.condition;
+            let displayThreshold = primaryBoundary.threshold;
+
+            if (secondaryBoundary && event.trigger_metric !== displayMetric) {
+                // If the trigger was a secondary boundary metric, use its details
+                displayMetric = event.trigger_metric;
+                displayCondition = secondaryBoundary.condition;
+                displayThreshold = secondaryBoundary.threshold;
+            } else {
+                // If the trigger metric is the same as the main metric or no secondary metric matched, use main metric details
+                displayMetric = policy.quality_attribute || 'N/A';
+            }
+            
             const triggerValue = event.trigger_value ? parseFloat(event.trigger_value).toFixed(2) : 'N/A';
 
             card.innerHTML = `
@@ -1068,8 +1293,8 @@
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                     <div>
                         <div class="text-xs text-gray-500 uppercase">Violation Trigger</div>
-                        <div class="text-lg font-semibold text-red-500">${mainMetric || 'N/A'} (${triggerValue})</div>
-                        <div class="text-sm text-gray-400">Adapt when ${boundary.condition || ''} ${boundary.threshold || ''}</div>
+                        <div class="text-lg font-semibold text-red-500">${displayMetric} (${triggerValue})</div>
+                        <div class="text-sm text-gray-400">Adapt when ${displayCondition || ''} ${displayThreshold || ''}</div>
                     </div>
                     <div>
                         <div class="text-xs text-gray-500 uppercase">Action Taken</div>
@@ -1078,7 +1303,7 @@
                 </div>
                 
                 <div class="mt-4">
-                    <h4 class="text-sm font-medium text-gray-300 mb-2">Before & After Performance (${mainMetric || ''})</h4>
+                    <h4 class="text-sm font-medium text-gray-300 mb-2">Before & After Performance (${displayMetric})</h4>
                     <div class="h-40 bg-gray-700 p-2 rounded-md">
                         <canvas id="history-chart-${index}"></canvas>
                     </div>
@@ -1091,7 +1316,7 @@
             const canvas = document.getElementById(`history-chart-${index}`);
             if (!canvas) return;
 
-            const mainMetric = policy.quality_attribute;
+            const triggerMetric = event.trigger_metric || policy.quality_attribute;
             const eventTimestamp = event.timestamp;
             
             let eventIndex = telemetry.findIndex(t => t.timestamp >= eventTimestamp);
@@ -1099,12 +1324,12 @@
 
             const dataPointsToShow = 10;
             const startIndex = Math.max(0, eventIndex - dataPointsToShow);
-            const endIndex = Math.min(telemetry.length, eventIndex + dataPointsToShow); // <-- Fixed typo 'Mth.min' to 'Math.min'
+            const endIndex = Math.min(telemetry.length, eventIndex + dataPointsToShow);
 
             const chartData = telemetry.slice(startIndex, endIndex);
             
             const labels = chartData.map(t => new Date(t.timestamp * 1000));
-            const data = chartData.map(t => t[mainMetric]);
+            const data = chartData.map(t => t[triggerMetric]);
             
             const eventLine = {
                 type: 'line',
@@ -1127,7 +1352,7 @@
                 data: {
                     labels: labels,
                     datasets: [{
-                        label: mainMetric,
+                        label: triggerMetric,
                         data: data,
                         borderColor: '#3b82f6',
                         tension: 0.1,
@@ -1269,6 +1494,7 @@
                     quality_attribute: 'r2_score', // Main metric for regression
                     adaptation_boundary: { condition: "LESS_THAN", threshold: 0.0 }, // No adaptation threshold for single mode
                     tactics: [], // No tactics for single mode
+                    secondary_boundaries: [],
                     associated_qas: ['r2_score', 'normalized_energy', 'model_used'] // Attribute 1: r2_score, Attribute 2: normalized_energy, Model: model_used
                 };
                 approachConfig = 'reg_single';
@@ -1278,6 +1504,7 @@
                     quality_attribute: 'confidence', // Main metric for CV
                     adaptation_boundary: { condition: "LESS_THAN", threshold: 0.0 }, // No adaptation threshold for single mode
                     tactics: [], // No tactics for single mode
+                    secondary_boundaries: [],
                     associated_qas: ['confidence', 'normalized_energy', 'model_used'] // Attribute 1: confidence, Attribute 2: normalized_energy, Model: model_used
                 };
                 approachConfig = 'cv_single';
@@ -1358,3 +1585,4 @@
     </script>
 </body>
 </html>
+``` 
