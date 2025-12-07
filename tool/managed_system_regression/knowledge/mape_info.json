@@ -1,20 +1,20 @@
 {
-    "last_line": 20127,
+    "last_line": 21068,
     "current_energy_threshold": 1,
     "linear_version": 1,
     "lstm_version": 1,
     "svm_version": 1,
     "ema_scores": {
-        "lstm": 0.8223131782160658,
-        "linear": -0.16962475951594935,
-        "svm": 0.8491979658833132
+        "lstm": 0.8271600667327105,
+        "linear": -0.9071213720275785,
+        "svm": 0.3803352375346717
     },
     "recovery_cycles": 0,
     "event_counters": {
-        "model_switches": 121,
-        "retrains": 49,
+        "model_switches": 127,
+        "retrains": 53,
         "vmr_events": 0,
-        "mape_k_energy_uJ": 1879707043.0
+        "mape_k_energy_uJ": 2225658673.0
     },
     "simple_switch_counters": {
         "simple_switches": 15
