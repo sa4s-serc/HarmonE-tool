@@ -37,3 +37,40 @@ switch,5313,yolo_s,,
 switch,5336,yolo_n,,
 switch,5355,yolo_m,,
 switch,5423,yolo_s,,
+switch,6298,yolo_n,,confidence_baseline_switch
+switch,6445,yolo_m,,confidence_baseline_switch
+switch,6481,yolo_s,,confidence_baseline_switch
+switch,6534,yolo_m,,confidence_baseline_switch
+switch,6541,yolo_s,,confidence_baseline_switch
+switch,6556,yolo_m,,confidence_baseline_switch
+switch,6583,yolo_s,,confidence_baseline_switch
+switch,6660,yolo_n,,confidence_baseline_switch
+switch,6795,yolo_s,,confidence_baseline_switch
+switch,6849,yolo_m,,
+retrain,6877,,,Retraining triggered by drift detection.
+switch,7031,yolo_s,,
+switch,7172,yolo_m,,
+switch,7177,yolo_n,,
+retrain,7428,,,Retraining triggered by drift detection.
+switch,7462,yolo_s,,
+retrain,7476,,,Retraining triggered by drift detection.
+retrain,7490,,,Retraining triggered by drift detection.
+switch,7633,yolo_n,,
+retrain,7661,,,Retraining triggered by drift detection.
+retrain,7716,,,Retraining triggered by drift detection.
+switch,7756,yolo_m,,
+switch,7762,yolo_s,,
+switch,8276,yolo_n,,
+switch,8481,yolo_s,,
+switch,8582,yolo_m,,
+switch,8638,yolo_n,,
+switch,8696,yolo_m,,
+switch,8697,yolo_n,,
+switch,8714,yolo_n,,
+retrain,8729,,,Retraining triggered by drift detection.
+retrain,8780,,,Retraining triggered by drift detection.
+switch,8816,yolo_s,,
+switch,8879,yolo_n,,
+switch,8962,yolo_s,,
+switch,9108,yolo_n,,
+switch,9110,yolo_s,,

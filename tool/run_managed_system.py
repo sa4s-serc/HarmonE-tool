@@ -8,6 +8,8 @@ import json
 import importlib.util
 import sys
 import shutil
+import signal
+import psutil
 from flask import Flask, request, jsonify
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - [MasterWrapper] - %(levelname)s - %(message)s')
@@ -24,6 +26,10 @@ COMMAND_FILE_PATH = ""
 monitor_mape = None
 monitor_drift = None
 
+# --- Global process tracking ---
+subprocesses = []
+should_shutdown = False
+
 def get_python_command():
     """Detect whether to use 'python' or 'python3' command."""
     if shutil.which("python3"):
@@ -34,12 +40,63 @@ def get_python_command():
         logging.critical("FATAL: Neither 'python' nor 'python3' command found in PATH.")
         exit(1)
 
+def cleanup_processes():
+    """Clean up all subprocesses and related processes."""
+    global subprocesses, should_shutdown
+    should_shutdown = True
+    
+    logging.info("Starting process cleanup...")
+    
+    # Terminate direct subprocesses
+    for p in subprocesses:
+        try:
+            if p.poll() is None:  # Process is still running
+                logging.info(f"Terminating subprocess PID {p.pid}")
+                p.terminate()
+                
+                # Wait for graceful termination, then force kill if needed
+                try:
+                    p.wait(timeout=5)
+                except subprocess.TimeoutExpired:
+                    logging.warning(f"Process PID {p.pid} didn't terminate gracefully, force killing...")
+                    p.kill()
+        except Exception as e:
+            logging.error(f"Error terminating subprocess PID {p.pid}: {e}")
+    
+    # Clean up any orphaned Python processes related to our systems
+    try:
+        current_pid = os.getpid()
+        for proc in psutil.process_iter(['pid', 'ppid', 'name', 'cmdline']):
+            try:
+                # Skip our own process
+                if proc.info['pid'] == current_pid:
+                    continue
+                    
+                # Look for Python processes that might be our inference/manage processes
+                if proc.info['name'] in ['python', 'python3'] and proc.info['cmdline']:
+                    cmdline = ' '.join(proc.info['cmdline'])
+                    if ('inference.py' in cmdline or 'manage.py' in cmdline or 
+                        'managed_system_cv' in cmdline or 'managed_system_regression' in cmdline):
+                        logging.info(f"Killing orphaned process PID {proc.info['pid']}: {cmdline}")
+                        proc.kill()
+            except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+                continue
+    except Exception as e:
+        logging.error(f"Error during orphaned process cleanup: {e}")
+    
+    subprocesses.clear()
+    logging.info("Process cleanup completed")
+
 # --- Adaptation Handler API (Listens for commands from ACP) ---
 handler_app = Flask(__name__)
 
 @handler_app.route('/adaptor/tactic', methods=['POST'])
 def execute_tactic_from_acp():
     """Receives a command from the ACP and writes it to the correct command file."""
+    global should_shutdown
+    if should_shutdown:
+        return jsonify({"error": "System is shutting down"}), 503
+        
     data = request.json
     tactic_id = data.get("tactic_id")
     logging.info(f"[ACP_Handler] Command received: '{tactic_id}'")
@@ -53,13 +110,40 @@ def execute_tactic_from_acp():
         logging.error(f"[ACP_Handler] Failed to write command file: {e}")
         return jsonify({"error": "Failed to queue command"}), 500
 
+@handler_app.route('/adaptor/shutdown', methods=['POST'])
+def shutdown_system():
+    """Endpoint to shutdown all managed system processes."""
+    global should_shutdown
+    logging.info("[ACP_Handler] Shutdown command received")
+    should_shutdown = True
+    
+    # Clean up processes in a separate thread to avoid blocking the response
+    threading.Thread(target=cleanup_processes, daemon=True).start()
+    
+    # Also exit this process after a short delay
+    def delayed_exit():
+        time.sleep(2)
+        os._exit(0)
+    
+    threading.Thread(target=delayed_exit, daemon=True).start()
+    
+    return jsonify({"message": "System shutdown initiated"}), 200
+
+@handler_app.route('/adaptor/health', methods=['GET'])
+def health_check():
+    """Health check endpoint."""
+    global should_shutdown
+    if should_shutdown:
+        return jsonify({"status": "shutting_down"}), 503
+    return jsonify({"status": "running", "processes": len(subprocesses)}), 200
+
 def run_handler_api():
     handler_app.run(host='0.0.0.0', port=HANDLER_PORT)
 
 # --- Telemetry & Policy Functions ---
 def push_telemetry():
     """Dynamically pushes telemetry from the correct monitor."""
-    global monitor_mape, monitor_drift
+    global monitor_mape, monitor_drift, should_shutdown
     if not monitor_mape and not monitor_drift:
         logging.critical("Monitors not imported. Exiting telemetry thread.")
         return
@@ -67,7 +151,7 @@ def push_telemetry():
     logging.info(f"[Monitor] Telemetry thread started.")
     time.sleep(10) # Initial delay
     
-    while True:
+    while not should_shutdown:
         try:
             telemetry_payload = {"timestamp": time.time()}
             
@@ -89,9 +173,12 @@ def push_telemetry():
                 logging.info("[Monitor] No new data from monitors.")
 
         except Exception as e:
-            logging.error(f"[Monitor] Error in telemetry loop: {e}", exc_info=True)
+            if not should_shutdown:
+                logging.error(f"[Monitor] Error in telemetry loop: {e}", exc_info=True)
         
         time.sleep(15)
+    
+    logging.info("[Monitor] Telemetry thread shutting down")
 
 def register_policies_with_acp(policy_prefix):
     """
@@ -210,7 +297,6 @@ if __name__ == '__main__':
     threading.Thread(target=push_telemetry, daemon=True).start()
 
     # 6. Start Subprocesses from the correct logic path
-    subprocesses = []
     try:
         python_cmd = get_python_command()
         inference_cmd = [python_cmd, "-u", "inference.py"]
@@ -234,7 +320,7 @@ if __name__ == '__main__':
     policy_prefix = f"{system_type}_{run_mode}" # e.g., "cv_harmone"
     
     if not register_policies_with_acp(policy_prefix):
-        for p in subprocesses: p.terminate()
+        cleanup_processes()
         exit(1)
     
     if 'single' not in run_mode:
@@ -247,6 +333,6 @@ if __name__ == '__main__':
         for p in subprocesses: p.wait()
     except KeyboardInterrupt:
         logging.info("Shutdown signal received. Terminating subprocesses...")
-        for p in subprocesses: p.terminate()
+        cleanup_processes()
     finally:
         logging.info("Wrapper script finished.")

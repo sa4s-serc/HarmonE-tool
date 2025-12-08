@@ -7,6 +7,7 @@ import requests
 import logging
 import os
 import subprocess
+import psutil
 
 # --- Basic Setup ---
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - [ACP] - %(levelname)s - %(message)s')
@@ -278,9 +279,16 @@ def write_approach_config():
     data = request.json
     approach = data.get("approach")
 
+    # First, stop any running managed system processes
+    try:
+        stop_managed_system()
+        time.sleep(2)  # Give processes time to terminate
+    except Exception as e:
+        logging.warning(f"Error during cleanup: {e}")
+
     mapping = {
         'reg_harmone_score': 'reg_harmone',
-        'reg_switch_r2': 'reg_switch',
+        'reg_switch_r2': 'reg_switch', 
         'reg_single': 'reg_single',
         'cv_harmone_score': 'cv_harmone',
         'cv_switch_conf': 'cv_switch',
@@ -292,8 +300,16 @@ def write_approach_config():
     with open("approach.conf", "w") as f:
         f.write(config_val)
 
-    logging.info(f"Approach updated: {config_val}")
-    return jsonify({"message": "Approach written"}), 200
+    # Clear knowledge base when switching approaches
+    global KNOWLEDGE_BASE
+    KNOWLEDGE_BASE = {
+        "policies": {},
+        "telemetry_data": {}, 
+        "intervention_logs": {}
+    }
+
+    logging.info(f"Approach updated: {config_val}, knowledge base cleared")
+    return jsonify({"message": "Approach written and system cleaned"}), 200
 
 
 @app.route('/api/save-policy', methods=['POST'])
@@ -327,6 +343,19 @@ def set_model():
 
     return jsonify({"message": "Model set"}), 200
 
+# --- NEW: Reset Endpoint to flush data on approach switch ---
+@app.route('/api/reset', methods=['POST'])
+def reset_knowledge():
+    """Clears the in-memory knowledge base to start fresh."""
+    global KNOWLEDGE_BASE
+    KNOWLEDGE_BASE = {
+        "policies": {},
+        "telemetry_data": {},
+        "intervention_logs": {}
+    }
+    logging.info("[KNOWLEDGE] Knowledge base RESET requested by client.")
+    return jsonify({"message": "Knowledge base reset."}), 200
+
 
 @app.route('/')
 def home():
@@ -343,6 +372,39 @@ def start_managed_system():
         subprocess.Popen(["python3", "run_managed_system.py"])
         return jsonify({"status": "ok", "message": "Managed system started"})
     except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route("/api/stop-managed-system", methods=["POST"])
+def stop_managed_system():
+    """Stop all managed system processes before switching approaches."""
+    try:
+        # Send shutdown signal to the managed system wrapper
+        response = requests.post("http://localhost:8080/adaptor/shutdown", timeout=10)
+        
+        # Also kill any remaining processes using system commands
+        current_pid = os.getpid()
+        
+        for proc in psutil.process_iter(['pid', 'ppid', 'name', 'cmdline']):
+            try:
+                if proc.info['pid'] == current_pid:
+                    continue
+                    
+                if proc.info['name'] in ['python', 'python3'] and proc.info['cmdline']:
+                    cmdline = ' '.join(proc.info['cmdline'])
+                    if ('run_managed_system.py' in cmdline or 
+                        'inference.py' in cmdline or 
+                        'manage.py' in cmdline or
+                        'managed_system_cv' in cmdline or 
+                        'managed_system_regression' in cmdline):
+                        logging.info(f"Terminating process PID {proc.info['pid']}: {cmdline}")
+                        proc.terminate()
+            except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+                continue
+        
+        logging.info("[CLEANUP] Managed system processes terminated")
+        return jsonify({"status": "ok", "message": "Managed system stopped"})
+    except Exception as e:
+        logging.error(f"[CLEANUP] Error stopping managed system: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
 

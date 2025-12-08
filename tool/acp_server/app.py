@@ -4,6 +4,7 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS  # <-- IMPORT THE NEW LIBRARY
 import requests
 import logging
+import threading
 
 # --- Basic Setup ---
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - [ACP] - %(levelname)s - %(message)s')
@@ -18,6 +19,9 @@ KNOWLEDGE_BASE = {
     "intervention_logs": {}
 }
 
+# --- Configuration ---
+MANAGED_SYSTEM_URL = "http://localhost:8080"
+
 # --- Helper Functions ---
 def get_historical_average(policy_id, metric_key):
     """Calculates the historical average for a given metric from the Knowledge Base."""
@@ -31,6 +35,25 @@ def get_historical_average(policy_id, metric_key):
     ]
     
     return statistics.mean(metric_values) if metric_values else None
+
+def clear_knowledge_base():
+    """Clear all data from the knowledge base when switching approaches."""
+    logging.info("[KNOWLEDGE] Clearing all data from knowledge base")
+    KNOWLEDGE_BASE["policies"].clear()
+    KNOWLEDGE_BASE["telemetry_data"].clear()
+    KNOWLEDGE_BASE["intervention_logs"].clear()
+
+def shutdown_managed_system():
+    """Send shutdown signal to the managed system."""
+    try:
+        logging.info("[SHUTDOWN] Sending shutdown signal to managed system")
+        response = requests.post(f"{MANAGED_SYSTEM_URL}/adaptor/shutdown", timeout=10)
+        if response.status_code == 200:
+            logging.info("[SHUTDOWN] Managed system shutdown initiated successfully")
+        else:
+            logging.warning(f"[SHUTDOWN] Managed system returned status {response.status_code}")
+    except requests.exceptions.RequestException as e:
+        logging.error(f"[SHUTDOWN] Failed to send shutdown signal: {e}")
 
 def analyze_telemetry(policy, metric_value, metric_key):
     """
@@ -202,6 +225,18 @@ def get_knowledge(policy_id):
         "telemetry_history": KNOWLEDGE_BASE["telemetry_data"].get(policy_id, []),
         "intervention_logs": KNOWLEDGE_BASE["intervention_logs"].get(policy_id, [])
     })
+
+@app.route('/api/approach/switch', methods=['POST'])
+def switch_approach():
+    """Endpoint to switch approaches and clear the knowledge base."""
+    clear_knowledge_base()
+    return jsonify({"message": "Approach switched and knowledge base cleared"}), 200
+
+@app.route('/api/system/shutdown', methods=['POST'])
+def system_shutdown():
+    """Endpoint to shutdown the managed system."""
+    shutdown_managed_system()
+    return jsonify({"message": "Shutdown signal sent to managed system"}), 200
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)

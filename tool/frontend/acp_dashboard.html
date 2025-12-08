@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Adaptation Control Plane (ACP) Dashboard</title>
+    <title>Harmonica</title>
     <script src="https://unpkg.com/tailwindcss-jit-cdn@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
@@ -27,8 +27,8 @@
     
     <div id="welcome-screen" class="flex items-center justify-center min-h-screen">
         <div class="bg-white p-8 rounded-lg card-shadow-lg max-w-2xl w-full">
-            <h2 class="text-2xl font-bold text-gray-900 mb-4">Welcome to the Adaptation Control Plane</h2>
-            <p class="text-gray-600 mb-6">Choose an approach to begin. You can run a pre-built demo system (Regression or CV) or define your own custom pipeline.</p>
+            <h2 class="text-2xl font-bold text-gray-900 mb-4">Welcome to Harmonica's Adaptation Control Plane</h2>
+            <p class="text-gray-600 mb-6">Choose an approach to begin. This will reset any previous data and start a fresh monitoring session.</p>
             
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
     
@@ -109,7 +109,7 @@
                     &larr; Change Approach
                 </button>
 
-                <h1 class="text-2xl font-bold text-gray-900 hidden md:block">Adaptation Control Plane (ACP) Dashboard</h1>
+                <h1 class="text-2xl font-bold text-gray-900 hidden md:block">Harmonica</h1>
                 
                 <div class="flex items-center space-x-2">
                     <label for="policy-id-input" class="text-sm font-medium text-gray-700">Policy ID:</label>
@@ -352,7 +352,7 @@
         const downloadPolicyBtn = document.getElementById('download-policy-btn');
         const downloadTelemetryBtn = document.getElementById('download-telemetry-btn');
         
-        // ▼▼▼ 1. UPDATED PRESETS (WITH CORRECTED SECONDARY_BOUNDARIES FOR HARMONE) ▼▼▼
+        // ▼▼▼ 1. PRESETS ▼▼▼
         const HARMONY_PRESETS = {
             // --- REGRESSION PRESETS ---
             "reg_harmone_score": {
@@ -417,6 +417,33 @@
             }
         };
 
+        // === HELPER: RESET SERVER KNOWLEDGE ===
+        // === HELPER: RESET SERVER KNOWLEDGE ===
+        async function resetServerKnowledge() {
+            try {
+                // 1. Clear local state first
+                globalKnowledge = { telemetry_history: [], intervention_logs: [] };
+
+                // 2. FORCE CLEAR PIE CHART (Fixes the "Ghost Model" issue)
+                if (chartInstances.modelChart) {
+                    chartInstances.modelChart.data.labels = [];
+                    chartInstances.modelChart.data.datasets.forEach(dataset => {
+                        dataset.data = [];
+                    });
+                    chartInstances.modelChart.update();
+                }
+                
+                // 3. Update other charts to empty
+                updateDashboardCharts(globalKnowledge);
+                
+                // 4. Tell server to reset
+                await fetch(`${ACP_SERVER_URL}/api/reset`, { method: 'POST' });
+                console.log("Server knowledge reset successfully.");
+            } catch (err) {
+                console.error("Failed to reset server knowledge:", err);
+            }
+        }
+
         // === HELPER FUNCTION TO SWITCH VIEWS ===
         const showView = (viewName) => {
             if (viewName === 'dashboard') {
@@ -439,12 +466,59 @@
         document.addEventListener('DOMContentLoaded', () => {
 
             // ▼▼▼ VIEW NAVIGATION LOGIC (WITH "single" FIX) ▼▼▼
-            backToMenuBtn.addEventListener('click', () => {
+            backToMenuBtn.addEventListener('click', async () => {
+                // First, shutdown any running managed systems
+                try {
+                    showMessage("Shutting down current system...", "info");
+                    const response = await fetch(`${ACP_SERVER_URL}/api/shutdown-system`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' }
+                    });
+                    
+                    if (response.ok) {
+                        showMessage("System shutdown completed", "success");
+                        
+                        // Clear all chart data
+                        Object.values(chartInstances).forEach(chart => {
+                            if (chart) {
+                                chart.data.labels = [];
+                                chart.data.datasets.forEach(dataset => {
+                                    dataset.data = [];
+                                });
+                                chart.update();
+                            }
+                        });
+                        
+                        // Reset global state
+                        globalKnowledge = { telemetry_history: [] };
+                        
+                        // Stop polling
+                        if (pollingIntervalId) {
+                            clearInterval(pollingIntervalId);
+                            pollingIntervalId = null;
+                        }
+                        
+                        // Clear history feed
+                        const historyFeed = document.getElementById('history-feed');
+                        if (historyFeed) {
+                            historyFeed.innerHTML = '<p class="text-gray-500 text-center py-8">No adaptation events yet</p>';
+                        }
+                        
+                    } else {
+                        showMessage("Warning: Could not cleanly shutdown system", "warning");
+                    }
+                } catch (error) {
+                    console.error('Error during shutdown:', error);
+                    showMessage("Warning: Shutdown may not have completed cleanly", "warning");
+                }
+                
+                // Always switch back to welcome screen
                 showView('welcome');
             });
 
             // REGRESSION BUTTONS
             document.getElementById('modal-btn-reg-harmone').addEventListener('click', async () => {
+                await resetServerKnowledge(); // <--- RESET ADDED
                 populateFormWithPreset(HARMONY_PRESETS.reg_harmone_score);
                 policyIdInput.value = HARMONY_PRESETS.reg_harmone_score.policy_id;
                 document.getElementById('policy-presets').value = 'reg_harmone_score';
@@ -452,11 +526,12 @@
                 showView('dashboard');
                 document.querySelector('.tab-btn[data-tab="policy"]').click();
                 await writeApproachConfig('reg_harmone_score');
-                await savePolicyToFolder(); // Auto-save the policy
+                await savePolicyToFolder(); 
                 document.getElementById("adaptive-start-container").classList.remove("hidden");
             });
 
             document.getElementById('modal-btn-reg-switch').addEventListener('click', async () => {
+                await resetServerKnowledge(); // <--- RESET ADDED
                 populateFormWithPreset(HARMONY_PRESETS.reg_switch_r2);
                 policyIdInput.value = HARMONY_PRESETS.reg_switch_r2.policy_id;
                 document.getElementById('policy-presets').value = 'reg_switch_r2';
@@ -464,7 +539,7 @@
                 showView('dashboard');
                 document.querySelector('.tab-btn[data-tab="policy"]').click();
                 await writeApproachConfig('reg_switch_r2');
-                await savePolicyToFolder(); // Auto-save the policy
+                await savePolicyToFolder(); 
                 document.getElementById("adaptive-start-container").classList.remove("hidden");
             });
 
@@ -475,6 +550,7 @@
 
             // CV BUTTONS
             document.getElementById('modal-btn-cv-harmone').addEventListener('click', async () => {
+                await resetServerKnowledge(); // <--- RESET ADDED
                 populateFormWithPreset(HARMONY_PRESETS.cv_harmone_score);
                 policyIdInput.value = HARMONY_PRESETS.cv_harmone_score.policy_id;
                 document.getElementById('policy-presets').value = 'cv_harmone_score';
@@ -482,11 +558,12 @@
                 showView('dashboard');
                 document.querySelector('.tab-btn[data-tab="policy"]').click();
                 await writeApproachConfig('cv_harmone_score');
-                await savePolicyToFolder(); // Auto-save the policy
+                await savePolicyToFolder(); 
                 document.getElementById("adaptive-start-container").classList.remove("hidden");
             });
 
             document.getElementById('modal-btn-cv-switch').addEventListener('click', async () => {
+                await resetServerKnowledge(); // <--- RESET ADDED
                 populateFormWithPreset(HARMONY_PRESETS.cv_switch_conf);
                 policyIdInput.value = HARMONY_PRESETS.cv_switch_conf.policy_id;
                 document.getElementById('policy-presets').value = 'cv_switch_conf';
@@ -494,7 +571,7 @@
                 showView('dashboard');
                 document.querySelector('.tab-btn[data-tab="policy"]').click();
                 await writeApproachConfig('cv_switch_conf');
-                await savePolicyToFolder(); // Auto-save the policy
+                await savePolicyToFolder(); 
                 document.getElementById("adaptive-start-container").classList.remove("hidden");
             });
 
@@ -504,13 +581,14 @@
             });
 
             // CUSTOM BUTTON
-            document.getElementById('modal-btn-custom').addEventListener('click', () => {
+            document.getElementById('modal-btn-custom').addEventListener('click', async () => {
+                await resetServerKnowledge(); // <--- RESET ADDED
                 // Load a basic template for custom policies
                 const customTemplate = {
                     policy_id: "my_custom_policy",
                     quality_attribute: "",
                     adaptation_boundary: { condition: "LESS_THAN", threshold: 0.7 },
-                    secondary_boundaries: [], // Set empty for custom
+                    secondary_boundaries: [], 
                     tactics: [{tactic_id: "my_tactic", priority: 1, tactic_endpoint: "http://localhost:8080/adaptor/tactic"}],
                     associated_qas: []
                 };
@@ -654,29 +732,36 @@
             chartInstances.modelChart = new Chart(document.getElementById('model-chart'), doughnutChartConfig("Model Distribution"));
         }
 
-        // ▼▼▼ 3. UPDATED DASHBOARD CHARTS FUNCTION (INCLUDING ANNOTATIONS) ▼▼▼
+        // ▼▼▼ 3. UPDATED DASHBOARD CHARTS FUNCTION (ANNOTATIONS FIX + DATA FLUSH) ▼▼▼
         function updateDashboardCharts(data) {
             const policy = data.policy || {};
             const telemetry = data.telemetry_history || [];
-            const interventions = data.intervention_logs || []; // <-- NEW: Load intervention logs
+            const interventions = data.intervention_logs || [];
             
             let mainMetric = policy.quality_attribute || "N/A";
             const boundary = policy.adaptation_boundary || {};
             let threshold = boundary.threshold;
             let thresholdData = [];
             
-            // *** CRITICAL FIX: Apply data limiting BEFORE processing ***
             const dataLength = telemetry.length;
             const sliceStart = Math.max(0, dataLength - CHART_MAX_DATA_POINTS);
             const limitedTelemetry = telemetry.slice(sliceStart);
             
             const labels = limitedTelemetry.map(t => new Date(t.timestamp * 1000));
             
-            // --- 1. Generate Annotations for the Main Chart ---
+            // === DEFINE VALID MODELS BASED ON CURRENT MODE ===
+            // This whitelist acts as a firewall against "ghost" data
+            let validModels = null;
+            if (currentPolicyId && currentPolicyId.includes('cv_')) {
+                validModels = ['yolo_n', 'yolo_s', 'yolo_m', 'unknown'];
+            } else if (currentPolicyId && currentPolicyId.includes('reg_')) {
+                validModels = ['svm', 'lstm', 'linear', 'unknown'];
+            }
+
+            // --- 1. Generate Annotations with STRICT FILTER ---
             const annotations = {};
             let annotationCount = 0;
             
-            // Filter interventions to only show those within our limited time window
             const minTimestamp = limitedTelemetry.length > 0 ? limitedTelemetry[0].timestamp : 0;
             const relevantInterventions = interventions.filter(i => 
                 i.status === "CONFIRMED_SUCCESS" && i.timestamp >= minTimestamp
@@ -684,38 +769,43 @@
             
             relevantInterventions.forEach(i => {
                 const timestamp = new Date(i.timestamp * 1000);
-                const tacticId = i.tactic_id.replace(/_/g, ' '); // Clean up for display
+                const tacticId = i.tactic_id.replace(/_/g, ' ').toUpperCase(); 
                 
-                // Add a vertical line annotation
+                // Find telemetry immediately following intervention to see new model
+                const nextTelemetry = telemetry.find(t => t.timestamp >= i.timestamp);
+                const rawModel = nextTelemetry && nextTelemetry.model_used ? nextTelemetry.model_used : "unknown";
+                const switchedModel = rawModel.toUpperCase();
+
+                // === STRICT FILTER FOR GRAPH ANNOTATIONS ===
+                // If we are in CV mode, strictly HIDE any annotation that talks about SVM/LSTM
+                if (validModels && !validModels.includes(rawModel.toLowerCase())) {
+                    return; // Skip this annotation!
+                }
+
                 annotations[`line${annotationCount}`] = {
                     type: 'line',
                     mode: 'vertical',
                     scaleID: 'x',
                     value: timestamp,
-                    borderColor: '#10b981', // Green line for success
+                    borderColor: '#10b981',
                     borderWidth: 2,
                     borderDash: [6, 6],
                     label: {
-                        display: true,  // CORRECT for Chart.js annotation v3
-                        content: tacticId.toUpperCase(),
+                        display: true,
+                        content: [tacticId, `↳ Model: ${switchedModel}`],
                         position: 'start',
                         backgroundColor: 'rgba(16, 185, 129, 0.9)',
-                        color: '#ffffff',  // Add explicit white color
-                        font: { 
-                            size: 9,
-                            weight: 'bold'
-                        },
-                        padding: 1,
-                        rotation: -90
+                        color: '#ffffff',
+                        font: { size: 10, weight: 'bold' },
+                        padding: 4,
+                        rotation: -90,
+                        yAdjust: 20
                     }
-                    
                 };
                 annotationCount++;
             });
 
-            // --- 2. Main Chart Update (with new annotations) ---
-            
-            // --- "Single Mode" Main Chart Fix ---
+            // --- 2. Main Chart Update ---
             const isSingleMode = currentPolicyId.includes('single');
             if (isSingleMode && policy.associated_qas && policy.associated_qas.length > 0) {
                 mainMetric = policy.associated_qas[0];
@@ -753,44 +843,45 @@
                 }
             });
 
-            // --- 3. Pie Chart & QA Line Chart Logic (Updated to use limited data) ---
+            // --- 3. Pie Chart (Model Distribution) with STRICT FILTER ---
             const qaNames = policy.associated_qas ? [...policy.associated_qas] : [];
-            
-            // Check for 'model_used' and render the pie chart
             const modelChartIndex = qaNames.indexOf('model_used');
+            
             if (modelChartIndex > -1) {
                 qaNames.splice(modelChartIndex, 1); 
                 
-                // Process data for the pie chart (use limited telemetry)
                 const modelCounts = {};
-                limitedTelemetry.forEach(t => {
+                telemetry.forEach(t => { 
                     const model = t['model_used'];
                     if (model) {
+                        // === STRICT FILTER FOR PIE CHART ===
+                        // If model is "svm" but we are in "cv_" mode, IGNORE IT.
+                        if (validModels && !validModels.includes(model.toLowerCase())) {
+                            return; 
+                        }
+                        
                         modelCounts[model] = (modelCounts[model] || 0) + 1;
                     }
                 });
                 const modelLabels = Object.keys(modelCounts);
                 const modelData = Object.values(modelCounts);
 
-                document.getElementById('model-chart-title').textContent = "Model Distribution";
                 updateChart(chartInstances.modelChart, modelLabels, [{
                     label: 'Model Usage',
                     data: modelData,
                     backgroundColor: ['#3b82f6', '#10b981', '#eab308', '#a855f7', '#f472b6', '#6b7280'],
                 }]);
             } else {
-                // No model_used data, so clear the chart
-                document.getElementById('model-chart-title').textContent = "Model Distribution";
                 updateChart(chartInstances.modelChart, [], []);
             }
             
-            // --- Associated QA Line Charts (Updated to use limited data) ---
+            // --- Associated QA Line Charts ---
             const qaCharts = [chartInstances.qa1, chartInstances.qa2];
             const qaTitles = ['qa1-chart-title', 'qa2-chart-title'];
             const qaColors = ['#10b981', '#eab308'];
 
             qaNames.forEach((qaName, index) => {
-                if (index < qaCharts.length) { // Only fill the 2 available line charts
+                if (index < qaCharts.length) { 
                     const qaChart = qaCharts[index];
                     const qaTitle = qaTitles[index];
                     if (qaChart && qaTitle) {
@@ -818,14 +909,12 @@
             }
         }
         
-        // ▼▼▼ 4. UPDATED UPDATECHART FUNCTION (accepts options for annotations) ▼▼▼
+        // ▼▼▼ 4. UPDATECHART FUNCTION (accepts options for annotations) ▼▼▼
         function updateChart(chart, labels, datasets, extraOptions = {}) {
-            // Handle doughnut charts (labels are part of data)
             if (chart.config.type === 'doughnut') {
                 chart.data.labels = labels;
                 chart.data.datasets = datasets;
             } 
-            // Handle line charts (labels are on x-axis)
             else {
                 const dataLength = labels.length;
                 const sliceStart = Math.max(0, dataLength - CHART_MAX_DATA_POINTS);
@@ -836,11 +925,9 @@
                     data: ds.data.slice(sliceStart)
                 }));
                 
-                // --- CRITICAL FIX: Ensure annotation options are correctly merged/overwritten ---
                 if (extraOptions.plugins && extraOptions.plugins.annotation) {
                     chart.options.plugins.annotation.annotations = extraOptions.plugins.annotation.annotations;
                 } else if (chart.options.plugins.annotation) {
-                    // Clear annotations if none are provided
                      chart.options.plugins.annotation.annotations = {};
                 }
             }
@@ -870,23 +957,30 @@
         async function fetchKnowledge() {
             if (!currentPolicyId) return;
 
+            // Capture the ID we are requesting RIGHT NOW
+            const requestedPolicyId = currentPolicyId;
+
             try {
-                const response = await fetch(`${ACP_SERVER_URL}/api/knowledge/${currentPolicyId}`);
+                // Add timestamp to prevent caching
+                const response = await fetch(`${ACP_SERVER_URL}/api/knowledge/${requestedPolicyId}?t=${Date.now()}`);
+                
                 if (!response.ok) {
                     if (response.status === 404) {
-                        showMessage(`Policy '${currentPolicyId}' not found on server. You can create it in the Policy Management tab.`, "warning");
-                    } else {
-                        throw new Error(`Server error: ${response.statusText}`);
-                    }
-                    const data = { policy: { policy_id: currentPolicyId }, telemetry_history: [], intervention_logs: [] };
-                    globalKnowledge = data;
-                    updateDashboardCharts(data);
-                    updatePolicyForm(data);
-                    updateHistoryFeed(data);
+                        showMessage(`Policy '${requestedPolicyId}' not found on server.`, "warning");
+                    } 
                     return;
                 }
                 
                 const data = await response.json();
+
+                // === RACE CONDITION FIX ===
+                // If the user switched policies while this fetch was traveling over the network,
+                // currentPolicyId will have changed. We MUST ignore this stale data.
+                if (currentPolicyId !== requestedPolicyId) {
+                    console.log(`Ignoring stale data for ${requestedPolicyId} (Current is: ${currentPolicyId})`);
+                    return;
+                }
+                
                 globalKnowledge = data;
                 
                 updateDashboardCharts(data);
@@ -899,7 +993,10 @@
 
             } catch (error) {
                 console.error("Failed to fetch knowledge:", error);
-                showMessage(`Failed to connect to ACP server at ${ACP_SERVER_URL}. Is it running?`, "error");
+                // Only show error if we are still on the expected policy
+                if (currentPolicyId === requestedPolicyId) {
+                    showMessage(`Failed to connect to ACP server at ${ACP_SERVER_URL}. Is it running?`, "error");
+                }
                 if (pollingIntervalId) clearInterval(pollingIntervalId);
             }
         }
@@ -926,7 +1023,6 @@
 
         // === POLICY MANAGEMENT (KR1) ===
 
-        // MODIFIED: Added logic for secondary_boundaries
         function getPolicyFromForm() {
             const policy = {
                 policy_id: document.getElementById('form-policy-id').value,
@@ -937,11 +1033,10 @@
                     threshold: parseFloat(document.getElementById('form-threshold').value)
                 },
                 tactics: [],
-                secondary_boundaries: [], // Initialize secondary boundaries array
+                secondary_boundaries: [], 
                 associated_qas: document.getElementById('form-qas').value.split(',').filter(qa => qa.trim() !== "").map(qa => qa.trim())
             };
 
-            // Process Primary Tactics
             document.querySelectorAll('.tactic-group').forEach(group => {
                 policy.tactics.push({
                     tactic_id: group.querySelector('.tactic-id').value,
@@ -951,10 +1046,8 @@
                 });
             });
 
-            // Process Secondary Boundaries
             document.querySelectorAll('.secondary-boundary-group').forEach(group => {
                 const metric = group.querySelector('.sec-boundary-metric').value;
-                // Only include the boundary if a metric is specified
                 if (metric) {
                     policy.secondary_boundaries.push({
                         quality_attribute: metric,
@@ -968,7 +1061,6 @@
             return policy;
         }
 
-        // MODIFIED: Added logic for secondary_boundaries
         function updatePolicyForm(data) {
             const policy = data.policy || { policy_id: currentPolicyId };
             
@@ -991,13 +1083,12 @@
                 });
             }
 
-            // Populate Secondary Boundaries
             const secBoundaries = policy.secondary_boundaries || [];
             secondaryBoundariesContainer.innerHTML = '';
 
             if (secBoundaries.length === 0) {
-                addSecBoundaryGroup(null, 1); // Add a default empty one
-                secondaryBoundariesContainer.querySelector('.secondary-boundary-group').remove(); // Then remove it to start clean
+                addSecBoundaryGroup(null, 1); 
+                secondaryBoundariesContainer.querySelector('.secondary-boundary-group').remove(); 
             } else {
                 secBoundaries.forEach((boundary, index) => {
                     addSecBoundaryGroup(boundary, index + 1);
@@ -1035,7 +1126,6 @@
             }
         }
         
-        // MODIFIED: Added logic for secondary_boundaries
         function populateFormWithPreset(preset) {
             document.getElementById('form-policy-id').value = preset.policy_id || '';
             document.getElementById('form-metric').value = preset.quality_attribute || '';
@@ -1056,49 +1146,39 @@
                 });
             }
 
-            // Populate Secondary Boundaries
             const secBoundaries = preset.secondary_boundaries || [];
             secondaryBoundariesContainer.innerHTML = '';
 
-            if (secBoundaries.length === 0) {
-                // Keep the container clean for presets that don't use it
-                // Do nothing. The addSecBoundaryGroup will be called later if needed for custom.
-            } else {
+            if (secBoundaries.length > 0) {
                 secBoundaries.forEach((boundary, index) => {
                     addSecBoundaryGroup(boundary, index + 1);
                 });
             }
             updateSecBoundaryHeaders();
 
-            // Set fields as readonly for presets (not custom)
             setFieldsEditability(false);
         }
 
-        // === NEW: Field Editability Control ===
         function setFieldsEditability(isCustom) {
             const policyIdField = document.getElementById('form-policy-id');
             const metricField = document.getElementById('form-metric');
             
             if (isCustom) {
-                // Custom mode: fields are editable
                 policyIdField.removeAttribute('readonly');
                 metricField.removeAttribute('readonly');
                 policyIdField.classList.remove('bg-gray-600', 'cursor-not-allowed');
                 metricField.classList.remove('bg-gray-600', 'cursor-not-allowed');
                 policyIdField.classList.add('bg-gray-700');
                 metricField.classList.add('bg-gray-700');
-                // Enable secondary boundary additions/removals
                 addSecBoundaryBtn.classList.remove('hidden');
                 document.querySelectorAll('.remove-sec-boundary-btn').forEach(btn => btn.classList.remove('hidden'));
             } else {
-                // Preset mode: fields are readonly
                 policyIdField.setAttribute('readonly', true);
                 metricField.setAttribute('readonly', true);
                 policyIdField.classList.remove('bg-gray-700');
                 metricField.classList.remove('bg-gray-700');
                 policyIdField.classList.add('bg-gray-600', 'cursor-not-allowed');
                 metricField.classList.add('bg-gray-600', 'cursor-not-allowed');
-                // Disable secondary boundary additions/removals
                 addSecBoundaryBtn.classList.add('hidden');
                 document.querySelectorAll('.remove-sec-boundary-btn').forEach(btn => btn.classList.add('hidden'));
             }
@@ -1147,7 +1227,7 @@
                 const keys = Array.from(allKeys);
 
                 const csvContent = [
-                    keys.join(','), // Header row
+                    keys.join(','), 
                     ...telemetry.map(row => 
                         keys.map(key => {
                             let cell = row[key];
@@ -1215,7 +1295,6 @@
             });
         }
 
-        // NEW FUNCTION: Add Secondary Boundary Group
         function addSecBoundaryGroup(boundary = null, index = null) {
             const boundaryCount = index || secondaryBoundariesContainer.children.length + 1;
             const newBoundaryGroup = document.createElement('div');
@@ -1248,12 +1327,9 @@
                 </div>
             `;
             secondaryBoundariesContainer.appendChild(newBoundaryGroup);
-
-            // Re-apply editability logic in case we're in preset mode
             setFieldsEditability(currentPolicyId === "my_custom_policy" || !Object.keys(HARMONY_PRESETS).includes(currentPolicyId));
         }
 
-        // NEW FUNCTION: Update Secondary Boundary Headers
         function updateSecBoundaryHeaders() {
             document.querySelectorAll('.secondary-boundary-group').forEach((group, index) => {
                 group.querySelector('h4').textContent = `Secondary Boundary ${index + 1}`;
@@ -1291,7 +1367,6 @@
             
             const statusColor = event.status === "CONFIRMED_SUCCESS" ? "text-green-600" : (event.status.includes("FAILED") ? "text-red-600" : "text-yellow-600");
             
-            // Check if the trigger was from a secondary boundary
             const primaryBoundary = policy.adaptation_boundary || {};
             const secondaryBoundary = (policy.secondary_boundaries || []).find(b => b.quality_attribute === event.trigger_metric);
             
@@ -1300,12 +1375,10 @@
             let displayThreshold = primaryBoundary.threshold;
 
             if (secondaryBoundary && event.trigger_metric !== displayMetric) {
-                // If the trigger was a secondary boundary metric, use its details
                 displayMetric = event.trigger_metric;
                 displayCondition = secondaryBoundary.condition;
                 displayThreshold = secondaryBoundary.threshold;
             } else {
-                // If the trigger metric is the same as the main metric or no secondary metric matched, use main metric details
                 displayMetric = policy.quality_attribute || 'N/A';
             }
             
@@ -1469,7 +1542,6 @@
 
         // === MODAL FUNCTIONS FOR SINGLE MODEL SELECTION ===
         function showModelSelectionModal() {
-            // Populate dropdown based on system type
             const modelOptions = getModelOptions(currentSystemType);
             modelDropdown.innerHTML = '';
             
@@ -1525,10 +1597,13 @@
                 return;
             }
         
-            // Create single model policy based on system type
+            // 1. Reset knowledge first
+            await resetServerKnowledge(); 
+
             let singlePreset;
             let approachConfig;
             
+            // Define the presets based on system type
             if (currentSystemType === "regression") {
                 singlePreset = {
                     policy_id: `reg_single_${selectedModel}`,
@@ -1554,14 +1629,19 @@
             try {
                 showMessage(`Configuring single model mode with ${selectedModel.toUpperCase()}...`, "info");
         
-                // Step 1: Set the selected model in the managed system
+                // 2. MOVED UP: Write approach FIRST.
+                // This function clears the server's Knowledge Base, so it must happen 
+                // BEFORE we register the new policy.
+                await writeApproachConfig(approachConfig);
+
+                // 3. Set the specific model file
                 await setSelectedModel(selectedModel, currentSystemType);
                 
-                // Step 2: Configure the UI with the policy
+                // 4. Update the form UI (for visual feedback)
                 populateFormWithPreset(singlePreset);
                 policyIdInput.value = singlePreset.policy_id;
                 
-                // Step 3: Create the policy on the ACP server
+                // 5. Register the Policy (Now it won't be deleted)
                 const policyResponse = await fetch(`${ACP_SERVER_URL}/api/policy`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -1572,32 +1652,26 @@
                     throw new Error(`Failed to create policy: ${policyResponse.statusText}`);
                 }
         
-                // Step 4: Write approach config
-                await writeApproachConfig(approachConfig);
-                
-                // Step 5: Save policy to file
+                // 6. Save policy to disk (optional but good for persistence)
                 await savePolicyToFolder();
                 
-                // Step 6: Start the managed system automatically
+                // 7. Start the system
                 showMessage("Starting managed system...", "info");
                 await runManagedSystem();
                 
-                // Step 7: Hide modal and show dashboard
+                // 8. Update View
                 hideModelSelectionModal();
                 showView('dashboard');
                 
-                // Step 8: Load the policy and switch to dashboard tab
                 currentPolicyId = singlePreset.policy_id;
                 document.getElementById('policy-title-dashboard').textContent = `Policy: ${singlePreset.policy_id}`;
                 
-                // Start polling for telemetry
                 if (pollingIntervalId) {
                     clearInterval(pollingIntervalId);
                 }
                 await fetchKnowledge();
                 pollingIntervalId = setInterval(fetchKnowledge, POLLING_INTERVAL);
                 
-                // Switch to dashboard tab
                 document.querySelector('.tab-btn[data-tab="dashboard"]').click();
                 
                 showMessage(`Single model mode started! Using ${selectedModel.toUpperCase()} - monitoring ${singlePreset.quality_attribute}`, "success");
@@ -1634,10 +1708,8 @@
             showMessage("Starting managed system...", "info");
             await runManagedSystem();
             
-            // Hide the start button after clicking
             document.getElementById("adaptive-start-container").classList.add("hidden");
             
-            // Automatically load the policy and start monitoring
             if (policyIdInput.value) {
                 currentPolicyId = policyIdInput.value;
                 document.getElementById('policy-title-dashboard').textContent = `Policy: ${currentPolicyId}`;
@@ -1649,7 +1721,6 @@
                 await fetchKnowledge();
                 pollingIntervalId = setInterval(fetchKnowledge, POLLING_INTERVAL);
                 
-                // Switch to dashboard tab
                 document.querySelector('.tab-btn[data-tab="dashboard"]').click();
                 
                 showMessage(`Managed system started! Monitoring policy: ${currentPolicyId}`, "success");
