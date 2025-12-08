@@ -1,8 +1,9 @@
-# Generalized Self-Adaptation Control Plane (ACP)
+# Harmonica
 
-This project is a complete, runnable implementation of the Self-Adaptation Control Plane described in the design document. It demonstrates the MAPE-K (Monitor, Analyze, Plan, Execute, Knowledge) loop for a simulated MLOps pipeline, decoupling the adaptation policy from the execution mechanism.
 
-The system consists of two main components that run independently:
+The *Harmonica* tool provides a fully runnable implementation of the Self-Adaptation Control Plane (ACP). It operationalizes the HarmonE approach and demonstrates how a structured MAPE-K loop can be integrated into real MLOps pipelines to support sustainability, long-term viability, and runtime resilience in Machine-Learning-enabled Systems (MLS).
+
+Modern MLS frequently operate under environmental uncertainty - data drift, workload fluctuations, hardware variability, and changing performance expectations. Traditional MLOps practices streamline model development and deployment, but they offer limited support for detecting and responding to runtime deviations that affect system stability and cost. This implementation bridges that gap by introducing a managing system that oversees the MLS at runtime and enforces adaptation policies that are decoupled from system execution.
 
 **acp_server:** The Adaptation Control Plane (Managing System). It's a Flask server that receives telemetry, analyzes it against a policy, and triggers adaptation actions.
 
