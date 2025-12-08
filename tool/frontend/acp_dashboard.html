@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" class="h-full bg-gray-900">
+<html lang="en" class="h-full bg-gray-50">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -13,61 +13,65 @@
     
     <style>
         ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background: #1f2937; }
-        ::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #6b7280; }
+        ::-webkit-scrollbar-track { background: #f3f4f6; }
+        ::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
         .tab-active { border-bottom-color: #3b82f6 !important; color: #3b82f6; }
+        
+        /* Light mode card shadows */
+        .card-shadow { box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1); }
+        .card-shadow-lg { box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1); }
     </style>
 </head>
-<body class="h-full text-gray-200 font-sans">
+<body class="h-full text-gray-900 font-sans bg-gray-50">
     
     <div id="welcome-screen" class="flex items-center justify-center min-h-screen">
-        <div class="bg-gray-800 p-8 rounded-lg shadow-2xl max-w-2xl w-full">
-            <h2 class="text-2xl font-bold text-white mb-4">Welcome to the Adaptation Control Plane</h2>
-            <p class="text-gray-400 mb-6">Choose an approach to begin. You can run a pre-built demo system (Regression or CV) or define your own custom pipeline.</p>
+        <div class="bg-white p-8 rounded-lg card-shadow-lg max-w-2xl w-full">
+            <h2 class="text-2xl font-bold text-gray-900 mb-4">Welcome to the Adaptation Control Plane</h2>
+            <p class="text-gray-600 mb-6">Choose an approach to begin. You can run a pre-built demo system (Regression or CV) or define your own custom pipeline.</p>
             
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
     
-                <div class="p-4 bg-gray-700 rounded-lg">
-                    <h3 class="font-semibold text-white text-lg mb-3 border-b border-gray-600 pb-2">Regression (LSTM/SVM/Linear)</h3>
+                <div class="p-4 bg-gray-100 rounded-lg border border-gray-200">
+                    <h3 class="font-semibold text-gray-900 text-lg mb-3 border-b border-gray-300 pb-2">Regression (LSTM/SVM/Linear)</h3>
                     <div class="space-y-3">
-                        <button id="modal-btn-reg-harmone" class="text-left w-full p-3 bg-gray-600 hover:bg-blue-600 rounded-lg transition-colors">
-                            <h4 class="font-semibold text-white">HarmonE (Score/Drift)</h4>
-                            <p class="text-sm text-gray-300">Full logic orchestrated by ACP.</p>
+                        <button id="modal-btn-reg-harmone" class="text-left w-full p-3 bg-gray-200 hover:bg-blue-100 rounded-lg transition-colors border border-gray-300">
+                            <h4 class="font-semibold text-gray-900">HarmonE (Score/Drift)</h4>
+                            <p class="text-sm text-gray-700">Full logic orchestrated by ACP.</p>
                         </button>
-                        <button id="modal-btn-reg-switch" class="text-left w-full p-3 bg-gray-600 hover:bg-blue-600 rounded-lg transition-colors">
-                            <h4 class="font-semibold text-white">Simple R² Switch</h4>
-                            <p class="text-sm text-gray-300">Baseline: Switch on R² score drop.</p>
+                        <button id="modal-btn-reg-switch" class="text-left w-full p-3 bg-gray-200 hover:bg-blue-100 rounded-lg transition-colors border border-gray-300">
+                            <h4 class="font-semibold text-gray-900">Simple R² Switch</h4>
+                            <p class="text-sm text-gray-700">Baseline: Switch on R² score drop.</p>
                         </button>
-                        <button id="modal-btn-reg-single" class="text-left w-full p-3 bg-gray-600 hover:bg-blue-600 rounded-lg transition-colors">
-                            <h4 class="font-semibold text-white">Single Model (Monitor-Only)</h4>
-                            <p class="text-sm text-gray-300">Run one model, monitor only.</p>
+                        <button id="modal-btn-reg-single" class="text-left w-full p-3 bg-gray-200 hover:bg-blue-100 rounded-lg transition-colors border border-gray-300">
+                            <h4 class="font-semibold text-gray-900">Single Model (Monitor-Only)</h4>
+                            <p class="text-sm text-gray-700">Run one model, monitor only.</p>
                         </button>
                     </div>
                 </div>
             
-                <div class="p-4 bg-gray-700 rounded-lg">
-                    <h3 class="font-semibold text-white text-lg mb-3 border-b border-gray-600 pb-2">Computer Vision (YOLO)</h3>
+                <div class="p-4 bg-gray-100 rounded-lg border border-gray-200">
+                    <h3 class="font-semibold text-gray-900 text-lg mb-3 border-b border-gray-300 pb-2">Computer Vision (YOLO)</h3>
                     <div class="space-y-3">
-                        <button id="modal-btn-cv-harmone" class="text-left w-full p-3 bg-gray-600 hover:bg-blue-600 rounded-lg transition-colors">
-                            <h4 class="font-semibold text-white">HarmonE (Score/Drift)</h4>
-                            <p class="text-sm text-gray-300">Full logic orchestrated by ACP.</p>
+                        <button id="modal-btn-cv-harmone" class="text-left w-full p-3 bg-gray-200 hover:bg-blue-100 rounded-lg transition-colors border border-gray-300">
+                            <h4 class="font-semibold text-gray-900">HarmonE (Score/Drift)</h4>
+                            <p class="text-sm text-gray-700">Full logic orchestrated by ACP.</p>
                         </button>
-                        <button id="modal-btn-cv-switch" class="text-left w-full p-3 bg-gray-600 hover:bg-blue-600 rounded-lg transition-colors">
-                            <h4 class="font-semibold text-white">Simple Confidence Switch</h4>
-                            <p class="text-sm text-gray-300">Baseline: Switch on confidence drop.</p>
+                        <button id="modal-btn-cv-switch" class="text-left w-full p-3 bg-gray-200 hover:bg-blue-100 rounded-lg transition-colors border border-gray-300">
+                            <h4 class="font-semibold text-gray-900">Simple Confidence Switch</h4>
+                            <p class="text-sm text-gray-700">Baseline: Switch on confidence drop.</p>
                         </button>
-                        <button id="modal-btn-cv-single" class="text-left w-full p-3 bg-gray-600 hover:bg-blue-600 rounded-lg transition-colors">
-                            <h4 class="font-semibold text-white">Single Model (Monitor-Only)</h4>
-                            <p class="text-sm text-gray-300">Run one model, monitor only.</p>
+                        <button id="modal-btn-cv-single" class="text-left w-full p-3 bg-gray-200 hover:bg-blue-100 rounded-lg transition-colors border border-gray-300">
+                            <h4 class="font-semibold text-gray-900">Single Model (Monitor-Only)</h4>
+                            <p class="text-sm text-gray-700">Run one model, monitor only.</p>
                         </button>
                     </div>
                 </div>
             
                 <div class="md:col-span-2">
-                    <button id="modal-btn-custom" class="text-left w-full p-4 bg-gray-900 hover:bg-blue-800 rounded-lg transition-colors border border-gray-700">
-                        <h3 class="font-semibold text-white">Build Custom System</h3>
-                        <p class="text-sm text-gray-400">Go to the Policy Manager to define your own system from scratch.</p>
+                    <button id="modal-btn-custom" class="text-left w-full p-4 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors border border-blue-200">
+                        <h3 class="font-semibold text-gray-900">Build Custom System</h3>
+                        <p class="text-sm text-gray-600">Go to the Policy Manager to define your own system from scratch.</p>
                     </button>
                 </div>
             </div>
@@ -76,12 +80,12 @@
     </div>
     
     <div id="model-selection-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div class="bg-gray-800 p-8 rounded-lg shadow-2xl max-w-md w-full mx-4">
-            <h3 class="text-xl font-bold text-white mb-4">Select Model to Run</h3>
-            <p class="text-gray-400 mb-6">Choose which model you want to run in single model mode:</p>
+        <div class="bg-white p-8 rounded-lg card-shadow-lg max-w-md w-full mx-4">
+            <h3 class="text-xl font-bold text-gray-900 mb-4">Select Model to Run</h3>
+            <p class="text-gray-600 mb-6">Choose which model you want to run in single model mode:</p>
             
             <div class="space-y-3">
-                <select id="model-dropdown" class="w-full bg-gray-700 text-white px-3 py-2 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <select id="model-dropdown" class="w-full bg-white border border-gray-300 text-gray-900 px-3 py-2 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                     </select>
             </div>
             
@@ -89,7 +93,7 @@
                 <button id="confirm-model-btn" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors">
                     Start Single Model Run
                 </button>
-                <button id="cancel-model-btn" class="flex-1 bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors">
+                <button id="cancel-model-btn" class="flex-1 bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors">
                     Cancel
                 </button>
             </div>
@@ -98,30 +102,30 @@
     
     <div id="dashboard-wrapper" class="hidden flex flex-col h-screen">
 
-        <header class="bg-gray-800 shadow-md z-10">
+        <header class="bg-white border-b border-gray-200 card-shadow z-10">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center h-16">
 
-                <button id="back-to-menu-btn" class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-1.5 rounded-md text-sm font-medium transition-colors">
+                <button id="back-to-menu-btn" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-1.5 rounded-md text-sm font-medium transition-colors">
                     &larr; Change Approach
                 </button>
 
-                <h1 class="text-2xl font-bold text-white hidden md:block">Adaptation Control Plane (ACP) Dashboard</h1>
+                <h1 class="text-2xl font-bold text-gray-900 hidden md:block">Adaptation Control Plane (ACP) Dashboard</h1>
                 
                 <div class="flex items-center space-x-2">
-                    <label for="policy-id-input" class="text-sm font-medium">Policy ID:</label>
-                    <input type="text" id="policy-id-input" value="harmone_score_policy" class="bg-gray-700 text-white px-3 py-1.5 rounded-md text-sm w-48 md:w-64 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter policy ID to load...">
+                    <label for="policy-id-input" class="text-sm font-medium text-gray-700">Policy ID:</label>
+                    <input type="text" id="policy-id-input" value="harmone_score_policy" class="bg-white border border-gray-300 text-gray-900 px-3 py-1.5 rounded-md text-sm w-48 md:w-64 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Enter policy ID to load...">
                     <button id="load-policy-btn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded-md text-sm font-medium transition-colors">Load</button>
                 </div>
             </div>
         </header>
 
-        <main class="flex-1 overflow-y-auto bg-gray-900 p-4 lg:p-8">
+        <main class="flex-1 overflow-y-auto bg-gray-50 p-4 lg:p-8">
             <div class="max-w-7xl mx-auto">
                 
-                <nav class="mb-6 border-b border-gray-700">
+                <nav class="mb-6 border-b border-gray-300">
                     <ul class="flex space-x-8">
-                        <li><button class="tab-btn text-gray-400 hover:text-white py-2 border-b-2 border-transparent transition-colors" data-tab="policy">Policy Management (KR1)</button></li>
-                        <li><button class="tab-btn text-gray-400 hover:text-white py-2 border-b-2 border-transparent transition-colors tab-active" data-tab="dashboard">Live Dashboard (KR2)</button></li>
+                        <li><button class="tab-btn text-gray-600 hover:text-gray-900 py-2 border-b-2 border-transparent transition-colors" data-tab="policy">Policy Management (KR1)</button></li>
+                        <li><button class="tab-btn text-gray-600 hover:text-gray-900 py-2 border-b-2 border-transparent transition-colors tab-active" data-tab="dashboard">Live Dashboard (KR2)</button></li>
                         </ul>
                 </nav>
 
@@ -129,9 +133,9 @@
 
                 <div class="tab-content" id="dashboard-content">
                     <div class="flex justify-between items-center mb-4">
-                        <h2 class="text-xl font-semibold text-white">Live Telemetry: <span id="policy-title-dashboard" class="text-blue-400">No Policy Loaded</span></h2>
+                        <h2 class="text-xl font-semibold text-gray-900">Live Telemetry: <span id="policy-title-dashboard" class="text-blue-600">No Policy Loaded</span></h2>
                         
-                        <button id="download-telemetry-btn" class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-1.5 rounded-md text-sm font-medium transition-colors">
+                        <button id="download-telemetry-btn" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-1.5 rounded-md text-sm font-medium transition-colors">
                             Download Telemetry (CSV)
                         </button>
                     </div>
@@ -145,33 +149,33 @@
                     
                     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                         
-                        <div class="lg:col-span-3 bg-gray-800 p-6 rounded-lg shadow-lg">
-                            <h3 id="main-chart-title" class="text-lg font-medium mb-4">Main Metric</h3>
+                        <div class="lg:col-span-3 bg-white p-6 rounded-lg card-shadow border border-gray-200">
+                            <h3 id="main-chart-title" class="text-lg font-medium mb-4 text-gray-900">Main Metric</h3>
                             <div class="h-80"><canvas id="main-metric-chart"></canvas></div>
                         </div>
                         
-                        <div class="bg-gray-800 p-6 rounded-lg shadow-lg">
-                            <h3 id="qa1-chart-title" class="text-lg font-medium mb-4">Associated QA 1</h3>
+                        <div class="bg-white p-6 rounded-lg card-shadow border border-gray-200">
+                            <h3 id="qa1-chart-title" class="text-lg font-medium mb-4 text-gray-900">Associated QA 1</h3>
                             <div class="h-60"><canvas id="qa1-chart"></canvas></div>
                         </div>
-                        <div class="bg-gray-800 p-6 rounded-lg shadow-lg">
-                            <h3 id="qa2-chart-title" class="text-lg font-medium mb-4">Associated QA 2</h3>
+                        <div class="bg-white p-6 rounded-lg card-shadow border border-gray-200">
+                            <h3 id="qa2-chart-title" class="text-lg font-medium mb-4 text-gray-900">Associated QA 2</h3>
                             <div class="h-60"><canvas id="qa2-chart"></canvas></div>
                         </div>
                         
-                        <div class="bg-gray-800 p-6 rounded-lg shadow-lg">
-                            <h3 id="model-chart-title" class="text-lg font-medium mb-4">Model Distribution</h3>
+                        <div class="bg-white p-6 rounded-lg card-shadow border border-gray-200">
+                            <h3 id="model-chart-title" class="text-lg font-medium mb-4 text-gray-900">Model Distribution</h3>
                             <div class="h-60" style="position: relative; max-height: 240px;"><canvas id="model-chart"></canvas></div>
                         </div>
                     </div>
                 </div>
 
                 <div class="tab-content hidden" id="policy-content">
-                    <h2 class="text-xl font-semibold mb-4 text-white">Policy Management (KR1)</h2>
+                    <h2 class="text-xl font-semibold mb-4 text-gray-900">Policy Management (KR1)</h2>
                     
                     <div class="mb-4">
-                        <label for="policy-presets" class="block text-sm font-medium mb-1">Load Preset:</label>
-                        <select id="policy-presets" class="w-full bg-gray-700 rounded-md p-2 text-sm">
+                        <label for="policy-presets" class="block text-sm font-medium mb-1 text-gray-700">Load Preset:</label>
+                        <select id="policy-presets" class="w-full bg-white border border-gray-300 rounded-md p-2 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                             <option value="">-- Select a preset --</option>
                             <optgroup label="Regression Presets">
                                 <option value="reg_harmone_score">REG: HarmonE Score Policy</option>
@@ -184,63 +188,63 @@
                         </select>
                     </div>
                     
-                    <form id="policy-form" class="bg-gray-800 p-6 rounded-lg shadow-lg space-y-6">
+                    <form id="policy-form" class="bg-white p-6 rounded-lg card-shadow space-y-6 border border-gray-200">
                         
-                        <fieldset class="border border-gray-700 p-4 rounded-md">
-                            <legend class="text-lg font-medium px-2">General</legend>
+                        <fieldset class="border border-gray-300 p-4 rounded-md">
+                            <legend class="text-lg font-medium px-2 text-gray-900">General</legend>
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
                                 <div>
-                                    <label for="form-policy-id" class="block text-sm font-medium mb-1">Policy ID</label>
-                                    <input type="text" id="form-policy-id" class="w-full bg-gray-700 rounded-md p-2 text-sm" required>
+                                    <label for="form-policy-id" class="block text-sm font-medium mb-1 text-gray-700">Policy ID</label>
+                                    <input type="text" id="form-policy-id" class="w-full bg-white border border-gray-300 rounded-md p-2 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
                                 </div>
                                 <div>
-                                    <label for="form-metric" class="block text-sm font-medium mb-1">Metric to Watch (quality_attribute)</label>
-                                    <input type="text" id="form-metric" class="w-full bg-gray-700 rounded-md p-2 text-sm" required>
+                                    <label for="form-metric" class="block text-sm font-medium mb-1 text-gray-700">Metric to Watch (quality_attribute)</label>
+                                    <input type="text" id="form-metric" class="w-full bg-white border border-gray-300 rounded-md p-2 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
                                 </div>
                             </div>
                         </fieldset>
 
-                        <fieldset class="border border-gray-700 p-4 rounded-md">
-                            <legend class="text-lg font-medium px-2">Adaptation Boundary (Primary)</legend>
+                        <fieldset class="border border-gray-300 p-4 rounded-md">
+                            <legend class="text-lg font-medium px-2 text-gray-900">Adaptation Boundary (Primary)</legend>
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
                                 <div>
-                                    <label for="form-condition" class="block text-sm font-medium mb-1">Condition</label>
-                                    <select id="form-condition" class="w-full bg-gray-700 rounded-md p-2 text-sm">
+                                    <label for="form-condition" class="block text-sm font-medium mb-1 text-gray-700">Condition</label>
+                                    <select id="form-condition" class="w-full bg-white border border-gray-300 rounded-md p-2 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                                         <option value="LESS_THAN">LESS_THAN</option>
                                         <option value="GREATER_THAN">GREATER_THAN</option>
                                     </select>
                                 </div>
                                 <div>
-                                    <label for="form-threshold" class="block text-sm font-medium mb-1">Static Threshold</label>
-                                    <input type="number" step="0.01" id="form-threshold" class="w-full bg-gray-700 rounded-md p-2 text-sm" required>
+                                    <label for="form-threshold" class="block text-sm font-medium mb-1 text-gray-700">Static Threshold</label>
+                                    <input type="number" step="0.01" id="form-threshold" class="w-full bg-white border border-gray-300 rounded-md p-2 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
                                 </div>
                             </div>
                         </fieldset>
 
-                        <fieldset class="border border-gray-700 p-4 rounded-md">
-                            <legend class="text-lg font-medium px-2">Adaptation Boundary (Secondary)</legend>
+                        <fieldset class="border border-gray-300 p-4 rounded-md">
+                            <legend class="text-lg font-medium px-2 text-gray-900">Adaptation Boundary (Secondary)</legend>
                             <div id="secondary-boundaries-container" class="space-y-4 mt-2">
-                                <div class="secondary-boundary-group border border-gray-600 p-3 rounded-md space-y-2">
-                                    <h4 class="font-medium text-gray-300">Secondary Boundary 1</h4>
+                                <div class="secondary-boundary-group border border-gray-200 p-3 rounded-md space-y-2 bg-gray-50">
+                                    <h4 class="font-medium text-gray-700">Secondary Boundary 1</h4>
                                     <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                                         <div>
-                                            <label class="block text-sm font-medium mb-1">Metric (QA)</label>
-                                            <input type="text" class="sec-boundary-metric w-full bg-gray-700 rounded-md p-2 text-sm" required>
+                                            <label class="block text-sm font-medium mb-1 text-gray-700">Metric (QA)</label>
+                                            <input type="text" class="sec-boundary-metric w-full bg-white border border-gray-300 rounded-md p-2 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
                                         </div>
                                         <div>
-                                            <label class="block text-sm font-medium mb-1">Condition</label>
-                                            <select class="sec-boundary-condition w-full bg-gray-700 rounded-md p-2 text-sm">
+                                            <label class="block text-sm font-medium mb-1 text-gray-700">Condition</label>
+                                            <select class="sec-boundary-condition w-full bg-white border border-gray-300 rounded-md p-2 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                                                 <option value="LESS_THAN">LESS_THAN</option>
                                                 <option value="GREATER_THAN">GREATER_THAN</option>
                                             </select>
                                         </div>
                                         <div>
-                                            <label class="block text-sm font-medium mb-1">Threshold</label>
-                                            <input type="number" step="0.01" class="sec-boundary-threshold w-full bg-gray-700 rounded-md p-2 text-sm" required>
+                                            <label class="block text-sm font-medium mb-1 text-gray-700">Threshold</label>
+                                            <input type="number" step="0.01" class="sec-boundary-threshold w-full bg-white border border-gray-300 rounded-md p-2 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
                                         </div>
                                         <div>
-                                            <label class="block text-sm font-medium mb-1">Tactic ID</label>
-                                            <input type="text" class="sec-boundary-tactic-id w-full bg-gray-700 rounded-md p-2 text-sm" required>
+                                            <label class="block text-sm font-medium mb-1 text-gray-700">Tactic ID</label>
+                                            <input type="text" class="sec-boundary-tactic-id w-full bg-white border border-gray-300 rounded-md p-2 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
                                         </div>
                                     </div>
                                     <div class="flex justify-end">
@@ -250,23 +254,23 @@
                             </div>
                             <button type="button" id="add-sec-boundary-btn" class="mt-4 bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-md text-sm">+ Add Secondary Boundary</button>
                         </fieldset>
-                        <fieldset class="border border-gray-700 p-4 rounded-md">
-                            <legend class="text-lg font-medium px-2">Tactics (Primary)</legend>
+                        <fieldset class="border border-gray-300 p-4 rounded-md">
+                            <legend class="text-lg font-medium px-2 text-gray-900">Tactics (Primary)</legend>
                             <div id="tactics-container" class="space-y-4 mt-2">
-                                <div class="tactic-group border border-gray-600 p-3 rounded-md space-y-2">
-                                    <h4 class="font-medium text-gray-300">Tactic 1</h4>
+                                <div class="tactic-group border border-gray-200 p-3 rounded-md space-y-2 bg-gray-50">
+                                    <h4 class="font-medium text-gray-700">Tactic 1</h4>
                                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                                         <div>
-                                            <label class="block text-sm font-medium mb-1">Tactic ID</label>
-                                            <input type="text" class="tactic-id w-full bg-gray-700 rounded-md p-2 text-sm" required>
+                                            <label class="block text-sm font-medium mb-1 text-gray-700">Tactic ID</label>
+                                            <input type="text" class="tactic-id w-full bg-white border border-gray-300 rounded-md p-2 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
                                         </div>
                                         <div>
-                                            <label class="block text-sm font-medium mb-1">Priority</label>
-                                            <input type="number" value="1" class="tactic-priority w-full bg-gray-700 rounded-md p-2 text-sm" required>
+                                            <label class="block text-sm font-medium mb-1 text-gray-700">Priority</label>
+                                            <input type="number" value="1" class="tactic-priority w-full bg-white border border-gray-300 rounded-md p-2 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
                                         </div>
                                         <div class="md:col-span-2">
-                                            <label class="block text-sm font-medium mb-1">Tactic Endpoint URL</label>
-                                            <input type="text" class="tactic-endpoint w-full bg-gray-700 rounded-md p-2 text-sm" value="http://localhost:8080/adaptor/tactic" required>
+                                            <label class="block text-sm font-medium mb-1 text-gray-700">Tactic Endpoint URL</label>
+                                            <input type="text" class="tactic-endpoint w-full bg-white border border-gray-300 rounded-md p-2 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" value="http://localhost:8080/adaptor/tactic" required>
                                         </div>
                                         <div class="flex items-end">
                                             <button type="button" class="remove-tactic-btn bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-md text-sm">Remove</button>
@@ -277,11 +281,11 @@
                             <button type="button" id="add-tactic-btn" class="mt-4 bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-md text-sm">+ Add Tactic</button>
                         </fieldset>
 
-                        <fieldset class="border border-gray-700 p-4 rounded-md">
-                            <legend class="text-lg font-medium px-2">Associated QAs</legend>
+                        <fieldset class="border border-gray-300 p-4 rounded-md">
+                            <legend class="text-lg font-medium px-2 text-gray-900">Associated QAs</legend>
                              <div>
-                                <label for="form-qas" class="block text-sm font-medium mb-1">Associated Metrics (comma-separated)</label>
-                                <input type="text" id="form-qas" class="w-full bg-gray-700 rounded-md p-2 text-sm" placeholder="e.g., r2_score,normalized_energy,model_used">
+                                <label for="form-qas" class="block text-sm font-medium mb-1 text-gray-700">Associated Metrics (comma-separated)</label>
+                                <input type="text" id="form-qas" class="w-full bg-white border border-gray-300 rounded-md p-2 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="e.g., r2_score,normalized_energy,model_used">
                             </div>
                         </fieldset>
                         
@@ -289,7 +293,7 @@
                             <button type="button" id="save-policy-folder-btn" class="flex-1 bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-md text-base font-medium transition-colors">
                                  Save as Policy
                             </button>
-                            <button type="button" id="download-policy-btn" class="flex-1 bg-gray-600 hover:bg-gray-700 text-white px-6 py-3 rounded-md text-base font-medium transition-colors">
+                            <button type="button" id="download-policy-btn" class="flex-1 bg-gray-500 hover:bg-gray-600 text-white px-6 py-3 rounded-md text-base font-medium transition-colors">
                                  Download File
                             </button>
                         </div>
@@ -297,9 +301,9 @@
                 </div>
 
                 <div class="tab-content hidden" id="history-content">
-                    <h2 class="text-xl font-semibold mb-4 text-white">Adaptation History & Analysis (KR3)</h2>
+                    <h2 class="text-xl font-semibold mb-4 text-gray-900">Adaptation History & Analysis (KR3)</h2>
                     <div id="history-feed" class="space-y-6">
-                        <div class="text-gray-400">No adaptation events recorded yet.</div>
+                        <div class="text-gray-500">No adaptation events recorded yet.</div>
                     </div>
                 </div>
 
@@ -608,17 +612,16 @@
                         x: { 
                             type: 'time',
                             time: { unit: 'second', displayFormats: { second: 'HH:mm:ss' } },
-                            ticks: { color: '#9ca3af' },
-                            grid: { color: '#374151' }
+                            ticks: { color: '#6b7280' },  // Light mode: gray-500
+                            grid: { color: '#e5e7eb' }    // Light mode: gray-200
                         },
                         y: { 
-                            ticks: { color: '#9ca3af' },
-                            grid: { color: '#374151' },
-                            beginAtZero: false
+                            ticks: { color: '#6b7280' },  // Light mode: gray-500
+                            grid: { color: '#e5e7eb' }   // Light mode: gray-200
                         }
                     },
                     plugins: {
-                        legend: { labels: { color: '#e5e7eb' } },
+                        legend: { labels: { color: '#374151' } }, // Light mode: gray-700
                         tooltip: { mode: 'index', intersect: false },
                         annotation: { // Include annotation plugin here
                             annotations: {}
@@ -637,7 +640,7 @@
                     plugins: {
                         legend: { 
                             position: 'bottom',
-                            labels: { color: '#e5e7eb' }
+                            labels: { color: '#374151' } // Light mode: gray-700
                         },
                         title: { display: false, text: title }
                     },
@@ -648,7 +651,6 @@
             chartInstances.main = new Chart(document.getElementById('main-metric-chart'), lineChartConfig("Main Metric"));
             chartInstances.qa1 = new Chart(document.getElementById('qa1-chart'), lineChartConfig("QA 1"));
             chartInstances.qa2 = new Chart(document.getElementById('qa2-chart'), lineChartConfig("QA 2"));
-            // Initialize the new chart
             chartInstances.modelChart = new Chart(document.getElementById('model-chart'), doughnutChartConfig("Model Distribution"));
         }
 
@@ -662,14 +664,25 @@
             const boundary = policy.adaptation_boundary || {};
             let threshold = boundary.threshold;
             let thresholdData = [];
-            const labels = telemetry.map(t => new Date(t.timestamp * 1000));
+            
+            // *** CRITICAL FIX: Apply data limiting BEFORE processing ***
+            const dataLength = telemetry.length;
+            const sliceStart = Math.max(0, dataLength - CHART_MAX_DATA_POINTS);
+            const limitedTelemetry = telemetry.slice(sliceStart);
+            
+            const labels = limitedTelemetry.map(t => new Date(t.timestamp * 1000));
             
             // --- 1. Generate Annotations for the Main Chart ---
             const annotations = {};
             let annotationCount = 0;
             
-            // Filter for successful interventions and create annotations
-            interventions.filter(i => i.status === "CONFIRMED_SUCCESS").forEach(i => {
+            // Filter interventions to only show those within our limited time window
+            const minTimestamp = limitedTelemetry.length > 0 ? limitedTelemetry[0].timestamp : 0;
+            const relevantInterventions = interventions.filter(i => 
+                i.status === "CONFIRMED_SUCCESS" && i.timestamp >= minTimestamp
+            );
+            
+            relevantInterventions.forEach(i => {
                 const timestamp = new Date(i.timestamp * 1000);
                 const tacticId = i.tactic_id.replace(/_/g, ' '); // Clean up for display
                 
@@ -712,7 +725,7 @@
                 thresholdData = labels.map(() => threshold);
             }
             
-          const mainMetricData = telemetry.map(t => t[mainMetric]);
+            const mainMetricData = limitedTelemetry.map(t => t[mainMetric]);
             
             updateChart(chartInstances.main, labels, [
                 {
@@ -740,7 +753,7 @@
                 }
             });
 
-            // --- 3. Pie Chart & QA Line Chart Logic (Unchanged) ---
+            // --- 3. Pie Chart & QA Line Chart Logic (Updated to use limited data) ---
             const qaNames = policy.associated_qas ? [...policy.associated_qas] : [];
             
             // Check for 'model_used' and render the pie chart
@@ -748,9 +761,9 @@
             if (modelChartIndex > -1) {
                 qaNames.splice(modelChartIndex, 1); 
                 
-                // Process data for the pie chart
+                // Process data for the pie chart (use limited telemetry)
                 const modelCounts = {};
-                telemetry.slice(-CHART_MAX_DATA_POINTS).forEach(t => { // Use rolling window for counts
+                limitedTelemetry.forEach(t => {
                     const model = t['model_used'];
                     if (model) {
                         modelCounts[model] = (modelCounts[model] || 0) + 1;
@@ -771,7 +784,7 @@
                 updateChart(chartInstances.modelChart, [], []);
             }
             
-            // --- Associated QA Line Charts ---
+            // --- Associated QA Line Charts (Updated to use limited data) ---
             const qaCharts = [chartInstances.qa1, chartInstances.qa2];
             const qaTitles = ['qa1-chart-title', 'qa2-chart-title'];
             const qaColors = ['#10b981', '#eab308'];
@@ -782,7 +795,7 @@
                     const qaTitle = qaTitles[index];
                     if (qaChart && qaTitle) {
                         document.getElementById(qaTitle).textContent = qaName || `Associated QA ${index+1}`;
-                        const qaData = telemetry.map(t => t[qaName]);
+                        const qaData = limitedTelemetry.map(t => t[qaName]);
                         updateChart(qaChart, labels, [{
                             label: qaName,
                             data: qaData,
@@ -893,17 +906,21 @@
 
         function showMessage(text, type = "info") {
             messageContainer.textContent = text;
-            messageContainer.classList.remove('hidden', 'bg-red-500', 'bg-green-500', 'bg-yellow-500', 'bg-blue-500');
+            messageContainer.classList.remove('hidden', 'bg-red-100', 'bg-green-100', 'bg-yellow-100', 'bg-blue-100', 'text-red-800', 'text-green-800', 'text-yellow-800', 'text-blue-800');
             
-            let bgColor = 'bg-blue-500'; // default info
+            let bgColor = 'bg-blue-100'; // default info
+            let textColor = 'text-blue-800';
             if (type === "error") {
-                bgColor = 'bg-red-500';
+                bgColor = 'bg-red-100';
+                textColor = 'text-red-800';
             } else if (type === "success") {
-                bgColor = 'bg-green-500';
+                bgColor = 'bg-green-100'; 
+                textColor = 'text-green-800';
             } else if (type === "warning") {
-                bgColor = 'bg-yellow-500';
+                bgColor = 'bg-yellow-100';
+                textColor = 'text-yellow-800';
             }
-            messageContainer.classList.add(bgColor);
+            messageContainer.classList.add(bgColor, textColor, 'border', 'border-gray-300');
             messageContainer.classList.remove('hidden');
         }
 
@@ -1167,21 +1184,21 @@
         function addTacticGroup(tactic = null, index = null) {
             const tacticCount = index || tacticsContainer.children.length + 1;
             const newTacticGroup = document.createElement('div');
-            newTacticGroup.className = 'tactic-group border border-gray-600 p-3 rounded-md space-y-2';
+            newTacticGroup.className = 'tactic-group border border-gray-200 p-3 rounded-md space-y-2 bg-gray-50';
             newTacticGroup.innerHTML = `
-                <h4 class="font-medium text-gray-300">Tactic ${tacticCount}</h4>
+                <h4 class="font-medium text-gray-700">Tactic ${tacticCount}</h4>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
-                        <label class="block text-sm font-medium mb-1">Tactic ID</label>
-                        <input type="text" class="tactic-id w-full bg-gray-700 rounded-md p-2 text-sm" value="${tactic?.tactic_id || ''}" required>
+                        <label class="block text-sm font-medium mb-1 text-gray-700">Tactic ID</label>
+                        <input type="text" class="tactic-id w-full bg-white border border-gray-300 rounded-md p-2 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" value="${tactic?.tactic_id || ''}" required>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium mb-1">Priority</label>
-                        <input type="number" value="${tactic?.priority || tacticCount}" class="tactic-priority w-full bg-gray-700 rounded-md p-2 text-sm" required>
+                        <label class="block text-sm font-medium mb-1 text-gray-700">Priority</label>
+                        <input type="number" value="${tactic?.priority || tacticCount}" class="tactic-priority w-full bg-white border border-gray-300 rounded-md p-2 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
                     </div>
                     <div class="md:col-span-2">
-                        <label class="block text-sm font-medium mb-1">Tactic Endpoint URL</label>
-                        <input type="text" class="tactic-endpoint w-full bg-gray-700 rounded-md p-2 text-sm" value="${tactic?.tactic_endpoint || 'http://localhost:8080/adaptor/tactic'}" required>
+                        <label class="block text-sm font-medium mb-1 text-gray-700">Tactic Endpoint URL</label>
+                        <input type="text" class="tactic-endpoint w-full bg-white border border-gray-300 rounded-md p-2 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" value="${tactic?.tactic_endpoint || 'http://localhost:8080/adaptor/tactic'}" required>
                     </div>
                     <div class="flex items-end">
                         <button type="button" class="remove-tactic-btn bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-md text-sm">Remove</button>
@@ -1202,28 +1219,28 @@
         function addSecBoundaryGroup(boundary = null, index = null) {
             const boundaryCount = index || secondaryBoundariesContainer.children.length + 1;
             const newBoundaryGroup = document.createElement('div');
-            newBoundaryGroup.className = 'secondary-boundary-group border border-gray-600 p-3 rounded-md space-y-2';
+            newBoundaryGroup.className = 'secondary-boundary-group border border-gray-200 p-3 rounded-md space-y-2 bg-gray-50';
             newBoundaryGroup.innerHTML = `
-                <h4 class="font-medium text-gray-300">Secondary Boundary ${boundaryCount}</h4>
+                <h4 class="font-medium text-gray-700">Secondary Boundary ${boundaryCount}</h4>
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <div>
-                        <label class="block text-sm font-medium mb-1">Metric (QA)</label>
-                        <input type="text" class="sec-boundary-metric w-full bg-gray-700 rounded-md p-2 text-sm" value="${boundary?.quality_attribute || ''}" required>
+                        <label class="block text-sm font-medium mb-1 text-gray-700">Metric (QA)</label>
+                        <input type="text" class="sec-boundary-metric w-full bg-white border border-gray-300 rounded-md p-2 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" value="${boundary?.quality_attribute || ''}" required>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium mb-1">Condition</label>
-                        <select class="sec-boundary-condition w-full bg-gray-700 rounded-md p-2 text-sm">
+                        <label class="block text-sm font-medium mb-1 text-gray-700">Condition</label>
+                        <select class="sec-boundary-condition w-full bg-white border border-gray-300 rounded-md p-2 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                             <option value="LESS_THAN" ${boundary?.condition === 'LESS_THAN' ? 'selected' : ''}>LESS_THAN</option>
                             <option value="GREATER_THAN" ${boundary?.condition === 'GREATER_THAN' ? 'selected' : ''}>GREATER_THAN</option>
                         </select>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium mb-1">Threshold</label>
-                        <input type="number" step="0.01" class="sec-boundary-threshold w-full bg-gray-700 rounded-md p-2 text-sm" value="${boundary?.threshold || ''}" required>
+                        <label class="block text-sm font-medium mb-1 text-gray-700">Threshold</label>
+                        <input type="number" step="0.01" class="sec-boundary-threshold w-full bg-white border border-gray-300 rounded-md p-2 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" value="${boundary?.threshold || ''}" required>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium mb-1">Tactic ID</label>
-                        <input type="text" class="sec-boundary-tactic-id w-full bg-gray-700 rounded-md p-2 text-sm" value="${boundary?.tactic_id || ''}" required>
+                        <label class="block text-sm font-medium mb-1 text-gray-700">Tactic ID</label>
+                        <input type="text" class="sec-boundary-tactic-id w-full bg-white border border-gray-300 rounded-md p-2 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" value="${boundary?.tactic_id || ''}" required>
                     </div>
                 </div>
                 <div class="flex justify-end">
@@ -1253,7 +1270,7 @@
             const policy = data.policy || {};
 
             if (interventions.length === 0) {
-                feed.innerHTML = '<div class="text-gray-400">No adaptation events recorded yet.</div>';
+                feed.innerHTML = '<div class="text-gray-500">No adaptation events recorded yet.</div>';
                 return;
             }
 
@@ -1270,9 +1287,9 @@
         
         function createHistoryCard(event, index, telemetry, policy) {
             const card = document.createElement('div');
-            card.className = 'bg-gray-800 p-6 rounded-lg shadow-lg';
+            card.className = 'bg-white p-6 rounded-lg card-shadow border border-gray-200';
             
-            const statusColor = event.status === "CONFIRMED_SUCCESS" ? "text-green-500" : (event.status.includes("FAILED") ? "text-red-500" : "text-yellow-500");
+            const statusColor = event.status === "CONFIRMED_SUCCESS" ? "text-green-600" : (event.status.includes("FAILED") ? "text-red-600" : "text-yellow-600");
             
             // Check if the trigger was from a secondary boundary
             const primaryBoundary = policy.adaptation_boundary || {};
@@ -1296,26 +1313,26 @@
 
             card.innerHTML = `
                 <div class="flex justify-between items-center mb-4">
-                    <h3 class="text-lg font-medium text-white">Adaptation Event</h3>
+                    <h3 class="text-lg font-medium text-gray-900">Adaptation Event</h3>
                     <span class="text-sm font-mono ${statusColor}">${event.status}</span>
                 </div>
-                <div class="text-sm text-gray-400 mb-4">${new Date(event.timestamp * 1000).toLocaleString()}</div>
+                <div class="text-sm text-gray-500 mb-4">${new Date(event.timestamp * 1000).toLocaleString()}</div>
                 
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                     <div>
                         <div class="text-xs text-gray-500 uppercase">Violation Trigger</div>
-                        <div class="text-lg font-semibold text-red-500">${displayMetric} (${triggerValue})</div>
-                        <div class="text-sm text-gray-400">Adapt when ${displayCondition || ''} ${displayThreshold || ''}</div>
+                        <div class="text-lg font-semibold text-red-600">${displayMetric} (${triggerValue})</div>
+                        <div class="text-sm text-gray-600">Adapt when ${displayCondition || ''} ${displayThreshold || ''}</div>
                     </div>
                     <div>
                         <div class="text-xs text-gray-500 uppercase">Action Taken</div>
-                        <div class="text-lg font-semibold text-blue-400">${event.tactic_id}</div>
+                        <div class="text-lg font-semibold text-blue-600">${event.tactic_id}</div>
                     </div>
                 </div>
                 
                 <div class="mt-4">
-                    <h4 class="text-sm font-medium text-gray-300 mb-2">Before & After Performance (${displayMetric})</h4>
-                    <div class="h-40 bg-gray-700 p-2 rounded-md">
+                    <h4 class="text-sm font-medium text-gray-700 mb-2">Before & After Performance (${displayMetric})</h4>
+                    <div class="h-40 bg-gray-50 p-2 rounded-md border border-gray-200">
                         <canvas id="history-chart-${index}"></canvas>
                     </div>
                 </div>
@@ -1377,12 +1394,12 @@
                         x: { 
                             type: 'time',
                             time: { unit: 'second', displayFormats: { second: 'HH:mm:ss' } },
-                            ticks: { color: '#9ca3af', maxTicksLimit: 6 },
-                            grid: { color: '#374151' }
+                            ticks: { color: '#6b7280', maxTicksLimit: 6 },
+                            grid: { color: '#e5e7eb' }
                         },
                         y: { 
-                            ticks: { color: '#9ca3af', maxTicksLimit: 5 },
-                            grid: { color: '#374151' }
+                            ticks: { color: '#6b7280', maxTicksLimit: 5 },
+                            grid: { color: '#e5e7eb' }
                         }
                     },
                     plugins: {
@@ -1501,7 +1518,6 @@
             }
         }
         
-
         async function handleModelSelection() {
             const selectedModel = modelDropdown.value;
             if (!selectedModel) {
@@ -1640,8 +1656,6 @@
             }
         });
         
-
     </script>
 </body>
 </html>
-``` 

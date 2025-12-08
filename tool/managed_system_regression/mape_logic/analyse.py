@@ -149,7 +149,7 @@ def analyse_drift():
         return None
 
     kl_div = drift_data["kl_div"]
-    drift_detected = kl_div > 0.75  #? Threshold for drift detection
+    drift_detected = kl_div > 0.5  #? Threshold for drift detection
 
     if drift_detected:
         print(f"🚨 Drift detected! KL divergence = {kl_div:.4f}")
