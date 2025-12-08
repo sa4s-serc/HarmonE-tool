@@ -29,7 +29,7 @@ Replace `python3` with the appropriate command for your system throughout these 
 
 ```bash
 # Navigate to the project directory
-cd /home/user/<path>/HarmonE-tool/tool
+cd /home/user/<path>/Harmonica/tool
 
 # Open terminal
 # Make the script executable:
