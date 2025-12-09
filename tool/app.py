@@ -9,6 +9,7 @@ import os
 import subprocess
 import psutil
 import shutil
+import zipfile
 
 # --- Basic Setup ---
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - [ACP] - %(levelname)s - %(message)s')
@@ -411,7 +412,7 @@ def stop_managed_system():
 @app.route('/api/upload-custom-mape', methods=['POST'])
 def upload_custom_mape():
     try:
-        # 1. Get Base System (Regression or CV)
+        # 1. Get Base System
         base_system = request.form.get('base_system')
         if not base_system:
             return jsonify({"error": "Base system not specified"}), 400
@@ -419,7 +420,6 @@ def upload_custom_mape():
         # 2. Define Paths
         if base_system == 'regression':
             source_dir = "managed_system_regression"
-            # We treat the custom run as a variation of regression for the wrapper
             approach_conf_content = "custom_regression" 
         elif base_system == 'cv':
             source_dir = "managed_system_cv"
@@ -430,7 +430,6 @@ def upload_custom_mape():
         target_dir = "managed_system_custom"
 
         # 3. Clean and Re-create Custom Directory
-        # We copy the ENTIRE base directory first (inference.py, models, knowledge, etc.)
         if os.path.exists(target_dir):
             shutil.rmtree(target_dir)
         
@@ -439,31 +438,20 @@ def upload_custom_mape():
 
         # 4. Overwrite with Uploaded MAPE Files
         if 'files[]' not in request.files:
-            return jsonify({"error": "No files uploaded"}), 400
+            return jsonify({"error": "No MAPE files uploaded"}), 400
 
         uploaded_files = request.files.getlist('files[]')
-        
-        # Allowed files to overwrite in the logic folder
         allowed_files = ['monitor.py', 'analyse.py', 'plan.py', 'execute.py', 'manage.py']
-        
-        # Ensure mape_logic directory exists in target (it should from copytree)
         mape_logic_path = os.path.join(target_dir, "mape_logic")
         os.makedirs(mape_logic_path, exist_ok=True)
 
         count = 0
         for file in uploaded_files:
             if file.filename in allowed_files:
-                # Save to the root of the custom folder or mape_logic depending on your structure
-                # Based on your previous files, monitor/plan/etc seem to be in 'mape_logic' or root?
-                # Looking at run_managed_system.py: monitor is imported from logic_path/mape_logic/monitor.py
-                
-                # So we save into managed_system_custom/mape_logic/
                 save_path = os.path.join(mape_logic_path, file.filename)
                 file.save(save_path)
                 logging.info(f"[CUSTOM] Overwrote {file.filename}")
                 count += 1
-            else:
-                logging.warning(f"[CUSTOM] Skipped unauthorized file: {file.filename}")
 
         # 5. Update approach.conf
         with open("approach.conf", "w") as f:
@@ -477,7 +465,52 @@ def upload_custom_mape():
             "intervention_logs": {}
         }
 
-        return jsonify({"message": f"Custom system built with {count} uploaded files.", "approach": approach_conf_content}), 200
+        # --- NEW LOGIC STARTS HERE ---
+        # 7. Handle Dataset Upload
+        dataset_file = request.files.get('dataset')
+        
+        if dataset_file:
+            logging.info(f"[CUSTOM] Processing dataset upload for {base_system}...")
+            
+            if base_system == 'regression':
+                # Path: managed_system_custom/knowledge/dataset.csv
+                knowledge_dir = os.path.join(target_dir, "knowledge")
+                os.makedirs(knowledge_dir, exist_ok=True)
+                dataset_path = os.path.join(knowledge_dir, "dataset.csv")
+                
+                dataset_file.save(dataset_path)
+                logging.info(f"[CUSTOM] Regression dataset saved to {dataset_path}")
+
+            elif base_system == 'cv':
+                # Path: managed_system_custom/data/bdd100k/images/test/
+                # We expect a ZIP file for CV
+                test_images_dir = os.path.join(target_dir, "data", "bdd100k", "images", "test")
+                
+                # Clear existing test images so we only run on uploaded ones
+                if os.path.exists(test_images_dir):
+                    shutil.rmtree(test_images_dir)
+                os.makedirs(test_images_dir, exist_ok=True)
+
+                # Save zip temporarily
+                zip_path = os.path.join(target_dir, "temp_dataset.zip")
+                dataset_file.save(zip_path)
+
+                # Extract
+                try:
+                    with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+                        zip_ref.extractall(test_images_dir)
+                    logging.info(f"[CUSTOM] CV dataset extracted to {test_images_dir}")
+                except zipfile.BadZipFile:
+                    return jsonify({"error": "Uploaded CV dataset is not a valid zip file"}), 400
+                finally:
+                    # Clean up zip
+                    if os.path.exists(zip_path):
+                        os.remove(zip_path)
+        else:
+            logging.info("[CUSTOM] No dataset uploaded, using default base system data.")
+        # --- NEW LOGIC ENDS HERE ---
+
+        return jsonify({"message": f"Custom system built with {count} MAPE files.", "approach": approach_conf_content}), 200
 
     except Exception as e:
         logging.error(f"[CUSTOM] Error building system: {e}")

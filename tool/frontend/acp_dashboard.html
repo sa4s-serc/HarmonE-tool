@@ -115,6 +115,16 @@
                     </select>
                 </div>
 
+                <!-- NEW: Dataset Upload Input -->
+                <div>
+                    <label class="block text-sm font-medium mb-1 text-gray-700">Upload Dataset (Optional)</label>
+                    <input type="file" id="custom-dataset-input" class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"/>
+                    <!-- This hint text changes based on selection -->
+                    <p id="dataset-hint" class="text-xs text-gray-500 mt-1">
+                        For Regression: Upload <strong>dataset.csv</strong>
+                    </p>
+                </div>
+
                 <div>
                     <label class="block text-sm font-medium mb-1 text-gray-700">Upload MAPE Files</label>
                     <input type="file" id="custom-file-input" multiple accept=".py" class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"/>
@@ -349,7 +359,7 @@
     <script>
         // === CONFIGURATION ===
         const ACP_SERVER_URL = "http://localhost:5000";
-        const POLLING_INTERVAL = 5000;
+        const POLLING_INTERVAL = 1000;
         const CHART_MAX_DATA_POINTS = 30;
 
         // === GLOBAL STATE ===
@@ -392,6 +402,9 @@
         const cancelCustomBtn = document.getElementById('cancel-custom-btn');
         const uploadStatus = document.getElementById('upload-status');
 
+        const customBaseSystemSelect = document.getElementById('custom-base-system');
+        const customDatasetInput = document.getElementById('custom-dataset-input');
+        const datasetHint = document.getElementById('dataset-hint');
         
         // ▼▼▼ 1. PRESETS ▼▼▼
         const HARMONY_PRESETS = {
@@ -633,21 +646,51 @@
             cancelCustomBtn.addEventListener('click', () => {
                 customUploadModal.classList.add('hidden');
             });
-            
+
+            // 1. NEW: Handle Dropdown Change to update Dataset Hint
+            customBaseSystemSelect.addEventListener('change', () => {
+                const mode = customBaseSystemSelect.value;
+                // Clear previous input
+                customDatasetInput.value = ""; 
+
+                if (mode === 'regression') {
+                    customDatasetInput.setAttribute('accept', '.csv');
+                    datasetHint.innerHTML = "For Regression: Upload <strong>dataset.csv</strong>";
+                } else {
+                    customDatasetInput.setAttribute('accept', '.zip');
+                    datasetHint.innerHTML = "For CV: Upload a <strong>.zip</strong> file containing your images";
+                }
+            });
+
+            // 2. Trigger change once on load to set initial state
+            customBaseSystemSelect.dispatchEvent(new Event('change'));
+
+
             // 3. Handle Form Submit (File Upload)
             customUploadForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
                 
                 const fileInput = document.getElementById('custom-file-input');
+                const datasetInput = document.getElementById('custom-dataset-input'); // <--- Get input
                 const baseSystem = document.getElementById('custom-base-system').value;
                 
                 if (fileInput.files.length === 0) {
-                    alert("Please select at least one file.");
+                    alert("Please select at least one MAPE file.");
                     return;
                 }
             
                 const formData = new FormData();
                 formData.append('base_system', baseSystem);
+                
+                // Add MAPE files
+                for (let i = 0; i < fileInput.files.length; i++) {
+                    formData.append('files[]', fileInput.files[i]);
+                }
+            
+                // NEW: Add Dataset file if present
+                if (datasetInput.files.length > 0) {
+                    formData.append('dataset', datasetInput.files[0]);
+                }
                 
                 for (let i = 0; i < fileInput.files.length; i++) {
                     formData.append('files[]', fileInput.files[i]);
@@ -696,16 +739,16 @@
                                 tactics: [{tactic_id: "execute_mape_plan", priority: 1, tactic_endpoint: "http://localhost:8080/adaptor/tactic"}],
                                 associated_qas: ["score", "normalized_energy", "model_used"]
                             };
-                            
+
                             populateFormWithPreset(customTemplate); 
                             policyIdInput.value = generatedPolicyId;
                             currentPolicyId = generatedPolicyId; 
-                            
+
                             document.getElementById('policy-presets').value = '';
                             showMessage(`Custom system built. Created policy '${generatedPolicyId}'.`, "success");
-                            
+
                             showView('dashboard');
-                            
+
                             // 3. Automatically save this new valid policy to the folder so the Wrapper finds it
                             document.querySelector('.tab-btn[data-tab="policy"]').click();
                             setFieldsEditability(true);
@@ -713,7 +756,7 @@
                         
                             // 4. Show the start button
                             document.getElementById("adaptive-start-container").classList.remove("hidden");
-                            
+
                             // --- END OF CHANGE ---
             
                         }, 1000);

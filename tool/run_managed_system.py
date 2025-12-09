@@ -149,7 +149,7 @@ def push_telemetry():
         return
 
     logging.info(f"[Monitor] Telemetry thread started.")
-    time.sleep(10) # Initial delay
+    time.sleep(2) # Initial delay
     
     while not should_shutdown:
         try:
@@ -176,7 +176,7 @@ def push_telemetry():
             if not should_shutdown:
                 logging.error(f"[Monitor] Error in telemetry loop: {e}", exc_info=True)
         
-        time.sleep(15)
+        time.sleep(5)
     
     logging.info("[Monitor] Telemetry thread shutting down")
 

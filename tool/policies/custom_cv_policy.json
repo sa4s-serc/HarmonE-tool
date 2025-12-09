@@ -3,7 +3,7 @@
   "quality_attribute": "score",
   "adaptation_boundary": {
     "type": "STATIC_THRESHOLD",
-    "condition": "GREATER_THAN",
+    "condition": "LESS_THAN",
     "threshold": 0.5
   },
   "tactics": [
