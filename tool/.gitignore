@@ -3,6 +3,8 @@ venv311/
 harmone_env/
 managed_system_custom
 
+compiledir.py
+
 __pycache__/
 *.pyc
 

@@ -77,6 +77,6 @@ gnome-terminal -- bash -c "
 
 echo "=================================="
 echo "   All systems launched!"
-echo "   Dashboard: http://localhost:8000/acp_dashboard.html"
+echo "   Dashboard: http://localhost:8000/dashboard.html"
 echo "   ACP: Running on ports 5000 (API) & 8080 (Manager)"
 echo "=================================="
