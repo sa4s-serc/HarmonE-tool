@@ -1,6 +1,7 @@
 venv/
 venv311/
 harmone_env/
+managed_system_custom
 
 __pycache__/
 *.pyc

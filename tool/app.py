@@ -8,6 +8,7 @@ import logging
 import os
 import subprocess
 import psutil
+import shutil
 
 # --- Basic Setup ---
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - [ACP] - %(levelname)s - %(message)s')
@@ -407,6 +408,80 @@ def stop_managed_system():
         logging.error(f"[CLEANUP] Error stopping managed system: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
+@app.route('/api/upload-custom-mape', methods=['POST'])
+def upload_custom_mape():
+    try:
+        # 1. Get Base System (Regression or CV)
+        base_system = request.form.get('base_system')
+        if not base_system:
+            return jsonify({"error": "Base system not specified"}), 400
+
+        # 2. Define Paths
+        if base_system == 'regression':
+            source_dir = "managed_system_regression"
+            # We treat the custom run as a variation of regression for the wrapper
+            approach_conf_content = "custom_regression" 
+        elif base_system == 'cv':
+            source_dir = "managed_system_cv"
+            approach_conf_content = "custom_cv"
+        else:
+            return jsonify({"error": "Invalid base system"}), 400
+
+        target_dir = "managed_system_custom"
+
+        # 3. Clean and Re-create Custom Directory
+        # We copy the ENTIRE base directory first (inference.py, models, knowledge, etc.)
+        if os.path.exists(target_dir):
+            shutil.rmtree(target_dir)
+        
+        shutil.copytree(source_dir, target_dir)
+        logging.info(f"[CUSTOM] Copied base system '{source_dir}' to '{target_dir}'")
+
+        # 4. Overwrite with Uploaded MAPE Files
+        if 'files[]' not in request.files:
+            return jsonify({"error": "No files uploaded"}), 400
+
+        uploaded_files = request.files.getlist('files[]')
+        
+        # Allowed files to overwrite in the logic folder
+        allowed_files = ['monitor.py', 'analyse.py', 'plan.py', 'execute.py', 'manage.py']
+        
+        # Ensure mape_logic directory exists in target (it should from copytree)
+        mape_logic_path = os.path.join(target_dir, "mape_logic")
+        os.makedirs(mape_logic_path, exist_ok=True)
+
+        count = 0
+        for file in uploaded_files:
+            if file.filename in allowed_files:
+                # Save to the root of the custom folder or mape_logic depending on your structure
+                # Based on your previous files, monitor/plan/etc seem to be in 'mape_logic' or root?
+                # Looking at run_managed_system.py: monitor is imported from logic_path/mape_logic/monitor.py
+                
+                # So we save into managed_system_custom/mape_logic/
+                save_path = os.path.join(mape_logic_path, file.filename)
+                file.save(save_path)
+                logging.info(f"[CUSTOM] Overwrote {file.filename}")
+                count += 1
+            else:
+                logging.warning(f"[CUSTOM] Skipped unauthorized file: {file.filename}")
+
+        # 5. Update approach.conf
+        with open("approach.conf", "w") as f:
+            f.write(approach_conf_content)
+
+        # 6. Reset Knowledge Base
+        global KNOWLEDGE_BASE
+        KNOWLEDGE_BASE = {
+            "policies": {},
+            "telemetry_data": {},
+            "intervention_logs": {}
+        }
+
+        return jsonify({"message": f"Custom system built with {count} uploaded files.", "approach": approach_conf_content}), 200
+
+    except Exception as e:
+        logging.error(f"[CUSTOM] Error building system: {e}")
+        return jsonify({"error": str(e)}), 500
 
 # ============================================================
 # -------------------------- MAIN -----------------------------

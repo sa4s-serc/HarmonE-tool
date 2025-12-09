@@ -99,6 +99,41 @@
             </div>
         </div>
     </div>
+
+    <!-- Custom System Upload Modal -->
+    <div id="custom-upload-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white p-8 rounded-lg card-shadow-lg max-w-lg w-full mx-4">
+            <h3 class="text-xl font-bold text-gray-900 mb-4">Build Custom System</h3>
+            <p class="text-gray-600 mb-4">Select the base inference engine and upload your custom MAPE Python files (monitor.py, plan.py, etc.).</p>
+
+            <form id="custom-upload-form" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium mb-1 text-gray-700">Base System (Inference Engine)</label>
+                    <select id="custom-base-system" class="w-full bg-white border border-gray-300 rounded-md p-2 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500">
+                        <option value="regression">Regression (LSTM/SVM/Linear)</option>
+                        <option value="cv">Computer Vision (YOLO)</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium mb-1 text-gray-700">Upload MAPE Files</label>
+                    <input type="file" id="custom-file-input" multiple accept=".py" class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"/>
+                    <p class="text-xs text-gray-500 mt-1">Allowed: monitor.py, analyse.py, plan.py, execute.py, manage.py</p>
+                </div>
+
+                <div id="upload-status" class="hidden p-2 text-sm rounded bg-gray-100"></div>
+
+                <div class="flex space-x-3 mt-6">
+                    <button type="submit" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors">
+                        Upload & Build
+                    </button>
+                    <button type="button" id="cancel-custom-btn" class="flex-1 bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors">
+                        Cancel
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
     
     <div id="dashboard-wrapper" class="hidden flex flex-col h-screen">
 
@@ -351,6 +386,12 @@
 
         const downloadPolicyBtn = document.getElementById('download-policy-btn');
         const downloadTelemetryBtn = document.getElementById('download-telemetry-btn');
+
+        const customUploadModal = document.getElementById('custom-upload-modal');
+        const customUploadForm = document.getElementById('custom-upload-form');
+        const cancelCustomBtn = document.getElementById('cancel-custom-btn');
+        const uploadStatus = document.getElementById('upload-status');
+
         
         // ▼▼▼ 1. PRESETS ▼▼▼
         const HARMONY_PRESETS = {
@@ -582,24 +623,109 @@
 
             // CUSTOM BUTTON
             document.getElementById('modal-btn-custom').addEventListener('click', async () => {
-                await resetServerKnowledge(); // <--- RESET ADDED
-                // Load a basic template for custom policies
-                const customTemplate = {
-                    policy_id: "my_custom_policy",
-                    quality_attribute: "",
-                    adaptation_boundary: { condition: "LESS_THAN", threshold: 0.7 },
-                    secondary_boundaries: [], 
-                    tactics: [{tactic_id: "my_tactic", priority: 1, tactic_endpoint: "http://localhost:8080/adaptor/tactic"}],
-                    associated_qas: []
-                };
-                populateFormWithPreset(customTemplate); 
-                policyIdInput.value = "my_custom_policy";
-                // Clear dropdown selection for custom
-                document.getElementById('policy-presets').value = '';
-                showMessage("Ready to build a custom system. Define your policy below.", "info");
-                showView('dashboard');
-                document.querySelector('.tab-btn[data-tab="policy"]').click();
-                setFieldsEditability(true);
+                // Show the upload modal instead of jumping straight to policy view
+                customUploadModal.classList.remove('hidden');
+                uploadStatus.classList.add('hidden');
+                document.getElementById('custom-file-input').value = ""; // Clear previous
+            });
+            
+            // 2. Handle Cancel
+            cancelCustomBtn.addEventListener('click', () => {
+                customUploadModal.classList.add('hidden');
+            });
+            
+            // 3. Handle Form Submit (File Upload)
+            customUploadForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                
+                const fileInput = document.getElementById('custom-file-input');
+                const baseSystem = document.getElementById('custom-base-system').value;
+                
+                if (fileInput.files.length === 0) {
+                    alert("Please select at least one file.");
+                    return;
+                }
+            
+                const formData = new FormData();
+                formData.append('base_system', baseSystem);
+                
+                for (let i = 0; i < fileInput.files.length; i++) {
+                    formData.append('files[]', fileInput.files[i]);
+                }
+            
+                uploadStatus.textContent = "Uploading and building system...";
+                uploadStatus.className = "p-2 text-sm rounded bg-blue-100 text-blue-700 block";
+                uploadStatus.classList.remove('hidden');
+            
+                try {
+                    await resetServerKnowledge(); // Clear old data
+            
+                    const response = await fetch(`${ACP_SERVER_URL}/api/upload-custom-mape`, {
+                        method: 'POST',
+                        body: formData // No Content-Type header (browser sets it for FormData)
+                    });
+            
+                    const result = await response.json();
+            
+                    if (response.ok) {
+                        uploadStatus.textContent = "Success! " + result.message;
+                        uploadStatus.className = "p-2 text-sm rounded bg-green-100 text-green-700 block";
+                        
+                        setTimeout(() => {
+                            customUploadModal.classList.add('hidden');
+                            
+                            // --- START OF CHANGE ---
+        
+                            // 1. Determine the correct policy ID prefix based on the selected base system
+                            // The wrapper expects the policy filename to match the approach name in approach.conf
+                            let requiredPrefix = "";
+                            if (baseSystem === "regression") {
+                                requiredPrefix = "custom_regression";
+                            } else {
+                                requiredPrefix = "custom_cv";
+                            }
+                        
+                            const generatedPolicyId = `${requiredPrefix}_policy`;
+                        
+                            // 2. Load the template with the CORRECT ID
+                            const customTemplate = {
+                                policy_id: generatedPolicyId, // e.g. "custom_regression_policy"
+                                quality_attribute: "score", 
+                                adaptation_boundary: { condition: "LESS_THAN", threshold: 0.5 },
+                                secondary_boundaries: [], 
+                                tactics: [{tactic_id: "execute_mape_plan", priority: 1, tactic_endpoint: "http://localhost:8080/adaptor/tactic"}],
+                                associated_qas: ["score", "normalized_energy", "model_used"]
+                            };
+                            
+                            populateFormWithPreset(customTemplate); 
+                            policyIdInput.value = generatedPolicyId;
+                            currentPolicyId = generatedPolicyId; 
+                            
+                            document.getElementById('policy-presets').value = '';
+                            showMessage(`Custom system built. Created policy '${generatedPolicyId}'.`, "success");
+                            
+                            showView('dashboard');
+                            
+                            // 3. Automatically save this new valid policy to the folder so the Wrapper finds it
+                            document.querySelector('.tab-btn[data-tab="policy"]').click();
+                            setFieldsEditability(true);
+                            savePolicyToFolder(); // <--- Crucial: This writes the file to /policies immediately
+                        
+                            // 4. Show the start button
+                            document.getElementById("adaptive-start-container").classList.remove("hidden");
+                            
+                            // --- END OF CHANGE ---
+            
+                        }, 1000);
+                    } else {
+                        throw new Error(result.error || "Upload failed");
+                    }
+            
+                } catch (error) {
+                    console.error(error);
+                    uploadStatus.textContent = "Error: " + error.message;
+                    uploadStatus.className = "p-2 text-sm rounded bg-red-100 text-red-700 block";
+                }
             });
 
             // Modal event handlers

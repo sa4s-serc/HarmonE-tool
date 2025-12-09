@@ -262,23 +262,49 @@ if __name__ == '__main__':
     except FileNotFoundError:
         logging.critical(f"FATAL: '{APPROACH_CONFIG_FILE}' not found. Please create it.")
         exit(1)
+        
+    # --- MODIFIED BLOCK STARTS HERE ---
+    if approach.startswith("custom_"):
+        # Handle Custom Mode
+        system_type = "custom" # This helps us distinguish in logs
+        run_mode = approach.split('_')[1] # 'regression' or 'cv' effectively
+        LOGIC_PATH = "managed_system_custom" # <--- The key change: Point to the new dir
+        logging.info(f"--- Running CUSTOM System based on: '{run_mode.upper()}' ---")
+    
+    # Standard Modes
+    elif '_' in approach:
+        system_type, run_mode = approach.split('_', 1)
+        
+        if system_type == "cv":
+            LOGIC_PATH = "managed_system_cv"
+        elif system_type == "reg":
+            LOGIC_PATH = "managed_system_regression"
+        else:
+            logging.critical(f"FATAL: Unknown system_type '{system_type}'.")
+            exit(1)
+            
+        logging.info(f"--- Running System: '{system_type.upper()}' in Mode: '{run_mode.upper()}' ---")
+    else:
+        logging.critical(f"FATAL: Invalid approach format '{approach}'.")
+        exit(1)
+    # --- MODIFIED BLOCK ENDS HERE ---
 
     # 2. Parse Configuration (e.g., "cv_harmone")
-    if not '_' in approach:
-        logging.critical(f"FATAL: Invalid approach '{approach}'. Must be format 'system_mode' (e.g., 'cv_harmone').")
-        exit(1)
+    # if not '_' in approach:
+    #     logging.critical(f"FATAL: Invalid approach '{approach}'. Must be format 'system_mode' (e.g., 'cv_harmone').")
+    #     exit(1)
         
-    system_type, run_mode = approach.split('_', 1)
+    # system_type, run_mode = approach.split('_', 1)
     
-    if system_type == "cv":
-        LOGIC_PATH = "managed_system_cv"
-    elif system_type == "reg":
-        LOGIC_PATH = "managed_system_regression"
-    else:
-        logging.critical(f"FATAL: Unknown system_type '{system_type}'. Must be 'cv' or 'reg'.")
-        exit(1)
+    # if system_type == "cv":
+    #     LOGIC_PATH = "managed_system_cv"
+    # elif system_type == "reg":
+    #     LOGIC_PATH = "managed_system_regression"
+    # else:
+    #     logging.critical(f"FATAL: Unknown system_type '{system_type}'. Must be 'cv' or 'reg'.")
+    #     exit(1)
     
-    logging.info(f"--- Running System: '{system_type.upper()}' in Mode: '{run_mode.upper()}' ---")
+    # logging.info(f"--- Running System: '{system_type.upper()}' in Mode: '{run_mode.upper()}' ---")
     
     # 3. Dynamically import the correct logic
     import_monitor_from_path(LOGIC_PATH)
