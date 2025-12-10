@@ -169,8 +169,8 @@
                 
                 <nav class="mb-6 border-b border-gray-300">
                     <ul class="flex space-x-8">
-                        <li><button class="tab-btn text-gray-600 hover:text-gray-900 py-2 border-b-2 border-transparent transition-colors" data-tab="policy">Policy Management (KR1)</button></li>
-                        <li><button class="tab-btn text-gray-600 hover:text-gray-900 py-2 border-b-2 border-transparent transition-colors tab-active" data-tab="dashboard">Live Dashboard (KR2)</button></li>
+                        <li><button class="tab-btn text-gray-600 hover:text-gray-900 py-2 border-b-2 border-transparent transition-colors" data-tab="policy">Policy Management</button></li>
+                        <li><button class="tab-btn text-gray-600 hover:text-gray-900 py-2 border-b-2 border-transparent transition-colors tab-active" data-tab="dashboard">Live Dashboard</button></li>
                         </ul>
                 </nav>
 
@@ -216,7 +216,7 @@
                 </div>
 
                 <div class="tab-content hidden" id="policy-content">
-                    <h2 class="text-xl font-semibold mb-4 text-gray-900">Policy Management (KR1)</h2>
+                    <h2 class="text-xl font-semibold mb-4 text-gray-900">Policy Management</h2>
                     
                     <div class="mb-4">
                         <label for="policy-presets" class="block text-sm font-medium mb-1 text-gray-700">Load Preset:</label>
@@ -845,7 +845,7 @@
             document.querySelector('.tab-btn[data-tab="dashboard"]').click();
         });
         
-        // === CHARTING (KR2) ===
+        // === CHARTING ===
 
         // ▼▼▼ 2. UPDATED INITIALIZE CHARTS (Added annotation plugin to options) ▼▼▼
         function initializeCharts() {
@@ -1190,7 +1190,7 @@
             messageContainer.classList.remove('hidden');
         }
 
-        // === POLICY MANAGEMENT (KR1) ===
+        // === POLICY MANAGEMENT ===
 
         function getPolicyFromForm() {
             const policy = {
