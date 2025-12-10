@@ -4,6 +4,7 @@ harmone_env/
 managed_system_custom
 
 compiledir.py
+combined_output.txt
 
 __pycache__/
 *.pyc

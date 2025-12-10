@@ -185,8 +185,8 @@
                         </button>
                     </div>
 
-                    <div id="adaptive-start-container" class="mb-4 hidden">
-                        <button id="adaptive-start-btn" class="w-full bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-md text-base font-medium transition-colors">
+                    <div id="adaptive-start-container" class="mb-4 hidden flex justify-center">
+                        <button id="adaptive-start-btn" class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-md text-base font-medium transition-colors">
                             Start Managed System
                         </button>
                     </div>
@@ -422,7 +422,7 @@
                         tactic_id: "handle_data_drift"
                     }
                 ],
-                associated_qas: ["r2_score", "normalized_energy", "kl_div", "model_used"]
+                associated_qas: ["r2_score", "normalized_energy", "model_used"]
             },
             "reg_harmone_drift": {
                 policy_id: "reg_harmone_drift",
@@ -453,7 +453,7 @@
                         tactic_id: "handle_data_drift"
                     }
                 ],
-                associated_qas: ["confidence", "normalized_energy", "kl_div", "model_used"]
+                associated_qas: ["confidence", "normalized_energy", "model_used"]
             },
             "cv_harmone_drift": {
                 policy_id: "cv_harmone_drift",
