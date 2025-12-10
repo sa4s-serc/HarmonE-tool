@@ -1,10 +1,10 @@
 {
-    "last_line": 9113,
+    "last_line": 9594,
     "current_energy_threshold": -0.0333804894406792,
     "ema_scores": {
-        "yolo_n": 0.5141395244680487,
-        "yolo_s": 0.5518588504364101,
-        "yolo_m": 0.504123537177373
+        "yolo_n": 0.5602165578795398,
+        "yolo_s": 0.5061829971192756,
+        "yolo_m": 0.5301237539776763
     },
     "recovery_cycles": 1,
     "event_counters": {
@@ -14,6 +14,6 @@
         "mape_k_energy_uJ": 994049703.0
     },
     "simple_switch_counters": {
-        "simple_switches": 9
+        "simple_switches": 49
     }
 }
