@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 
 # ==========================
 # CONFIG
@@ -108,6 +109,7 @@ source "$VENV_PATH"
 echo "[4] Installing dependencies..."
 $PIP_CMD install -r requirements.txt \
   --extra-index-url https://download.pytorch.org/whl/cpu
+
 
 # ---------------------------
 # Step 2: PyRAPL Permissions
