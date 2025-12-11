@@ -17,7 +17,7 @@
   "secondary_boundaries": [],
   "associated_qas": [
     "r2_score",
-    "normalized_energy",
+    "energy",
     "model_used"
   ]
 }

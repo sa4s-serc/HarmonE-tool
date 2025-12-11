@@ -1,1 +1,0 @@
-# HarmonEXT for Vision
