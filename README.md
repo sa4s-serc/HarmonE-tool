@@ -1,4 +1,4 @@
-# Harmonica
+# *Harmonica*
 
 
 The *Harmonica* tool provides a fully runnable implementation designed to enable the sustainable operation of MLOps pipelines. It operationalizes the HarmonE approach and demonstrates how a structured MAPE-K loop can be integrated into real MLOps pipelines to support sustainability, long-term viability, and runtime resilience in Machine-Learning-enabled Systems (MLS).
