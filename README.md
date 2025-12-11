@@ -109,7 +109,7 @@ The Dashboard allows you to upload your own **MAPE (Monitor-Analyze-Plan-Execute
 
 ### 1. Prerequisites
 You need the following files on your local machine:
-*   **MAPE Python Files:** `monitor.py`, `analyse.py`, `plan.py`, `execute.py`, and `manage.py`.
+*   **MAPE Python Files:** `monitor.py`, `analyse.py`, `plan.py`, `execute.py`.
 *   **Dataset:** A CSV file (for Regression) or a ZIP file (for CV).
 
 ### 2. File Requirements & API

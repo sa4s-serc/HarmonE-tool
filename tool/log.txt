@@ -1,0 +1,40 @@
+ * Serving Flask app 'app'
+ * Debug mode: off
+ * Serving Flask app 'run_managed_system'
+ * Debug mode: off
+Loading synthetic data stream...
+Data stream prepared. Streaming inference begins...
+hi
+Inference 1/15: Using model → LSTM
+True: 205.00, Predicted: 180.59, Model: LSTM, Inference Time: 0.013903 sec, Energy: 417236.0 µJ
+Inference 2/15: Using model → LSTM
+True: 210.20, Predicted: 189.20, Model: LSTM, Inference Time: 0.003611 sec, Energy: 29479.0 µJ
+Inference 3/15: Using model → LSTM
+True: 180.50, Predicted: 197.30, Model: LSTM, Inference Time: 0.004177 sec, Energy: 30335.0 µJ
+Inference 4/15: Using model → LSTM
+True: 150.00, Predicted: 194.54, Model: LSTM, Inference Time: 0.004078 sec, Energy: 30579.0 µJ
+Inference 5/15: Using model → LSTM
+True: 140.00, Predicted: 180.45, Model: LSTM, Inference Time: 0.004552 sec, Energy: 35950.0 µJ
+Inference 6/15: Using model → LSTM
+True: 135.50, Predicted: 164.93, Model: LSTM, Inference Time: 0.001328 sec, Energy: 19226.0 µJ
+Inference 7/15: Using model → LSTM
+True: 130.00, Predicted: 151.05, Model: LSTM, Inference Time: 0.003273 sec, Energy: 19348.0 µJ
+Inference 8/15: Using model → LSTM
+True: 125.00, Predicted: 139.70, Model: LSTM, Inference Time: 0.003855 sec, Energy: 36133.0 µJ
+Inference 9/15: Using model → LSTM
+True: 140.00, Predicted: 132.14, Model: LSTM, Inference Time: 0.004610 sec, Energy: 37354.0 µJ
+Inference 10/15: Using model → LSTM
+True: 155.00, Predicted: 133.13, Model: LSTM, Inference Time: 0.003282 sec, Energy: 21668.0 µJ
+Inference 11/15: Using model → LSTM
+True: 165.00, Predicted: 140.27, Model: LSTM, Inference Time: 0.003296 sec, Energy: 25085.0 µJ
+Inference 12/15: Using model → LSTM
+True: 175.00, Predicted: 149.79, Model: LSTM, Inference Time: 0.002016 sec, Energy: 104248.0 µJ
+Inference 13/15: Using model → LSTM
+True: 185.00, Predicted: 160.21, Model: LSTM, Inference Time: 0.004391 sec, Energy: 27710.0 µJ
+Inference 14/15: Using model → LSTM
+True: 190.00, Predicted: 170.89, Model: LSTM, Inference Time: 0.005178 sec, Energy: 48767.0 µJ
+Inference 15/15: Using model → LSTM
+True: 195.00, Predicted: 179.33, Model: LSTM, Inference Time: 0.004482 sec, Energy: 31311.0 µJ
+
+Streaming inference completed. Predictions saved in knowledge/predictions.csv
+[CustomMonitor] Reporting: {'score': 0.95, 'energy': 0.5, 'normalized_energy': 0.3, 'model_used': 'lstm', 'r2_score': 0.9, 'confidence': 0.85}
