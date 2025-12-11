@@ -64,7 +64,8 @@ def monitor_mape():
             
             return {
                 "confidence": 0.5,  # Default value
-                "normalized_energy": 0.5,  # Default value
+                "energy": 0.0,  # Default actual energy value for display
+                "normalized_energy": 0.5,  # Default normalized value for calculations
                 "score": final_score,
                 "model_used": current_model,
                 "model_switches": event_counters["model_switches"],
@@ -129,7 +130,8 @@ def monitor_mape():
 
     return {
         "confidence": avg_conf,
-        "normalized_energy": energy_norm,
+        "energy": round(avg_energy, 2),  # Return actual energy for display
+        "normalized_energy": energy_norm,  # Keep normalized energy for internal calculations
         "score": final_score,
         "model_used": current_model,
         "model_switches": event_counters["model_switches"],

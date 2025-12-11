@@ -33,7 +33,7 @@ def get_current_model():
         return None
 
 def monitor_mape():
-    """Monitor R² Score and Normalized Energy, and Compute Score."""
+    """Monitor R² Score and Actual Energy, and Compute Score."""
     info = load_mape_info()
     last_line = info["last_line"]
     current_model = get_current_model()
@@ -62,7 +62,7 @@ def monitor_mape():
                         thresholds = json.load(f)
                     energy_min, energy_max = thresholds["E_m"], thresholds["E_M"]
                     
-                    # Calculate normalized energy
+                    # Calculate actual and normalized energy
                     avg_energy = recent_df["energy"].mean()
                     if energy_max > energy_min:
                         energy_normalized = (avg_energy - energy_min) / (energy_max - energy_min)
@@ -73,7 +73,7 @@ def monitor_mape():
                     # Use cached EMA score
                     final_score = info["ema_scores"].get(current_model, 0.5)
                     
-                    print(f"🔄 Using recent data: R²={r2:.4f}, Energy={energy_normalized:.4f}, Score={final_score:.4f}")
+                    print(f"🔄 Using recent data: R²={r2:.4f}, Actual Energy={avg_energy:.2f}, Normalized Energy={energy_normalized:.4f}, Score={final_score:.4f}")
                     
                     # Include event counters in telemetry
                     event_counters = info.get("event_counters", {
@@ -90,7 +90,8 @@ def monitor_mape():
                     
                     return {
                         "r2_score": round(r2, 4),
-                        "normalized_energy": round(energy_normalized, 4),
+                        "energy": round(avg_energy, 2),  # Return actual energy for display
+                        "normalized_energy": round(energy_normalized, 4),  # Keep for internal calculations
                         "score": round(final_score, 4),
                         "model_used": current_model,
                         "model_switches": event_counters["model_switches"],
@@ -115,7 +116,7 @@ def monitor_mape():
     # Calculate R² score
     r2 = r2_score(df["true_value"], df["predicted_value"])
 
-    # Compute Normalized Energy
+    # Compute Actual and Normalized Energy
     with open(thresholds_file, "r") as f:
         thresholds = json.load(f)
     energy_min, energy_max = thresholds["E_m"], thresholds["E_M"]
@@ -130,7 +131,7 @@ def monitor_mape():
     else:
         energy_normalized = 0.0
 
-    # Calculate model score
+    # Calculate model score (still use normalized energy for scoring)
     beta = thresholds.get("beta", 0.5)
     model_score = beta * r2 + (1 - beta) * (1 - energy_normalized)
 
@@ -145,6 +146,7 @@ def monitor_mape():
 
     # Log computed values
     print(f"🔹 R² Score: {r2:.4f}")
+    print(f"🔹 Actual Energy: {avg_energy:.2f}")
     print(f"🔹 Normalized Energy: {energy_normalized:.4f}")
     print(f"🔹 Model Score for {current_model.upper()}: {model_score:.4f}")
     print(f"🔹 Updated EMA Score for {current_model.upper()}: {final_score:.4f}")
@@ -168,7 +170,8 @@ def monitor_mape():
 
     return {
         "r2_score": round(r2, 4),
-        "normalized_energy": round(energy_normalized, 4),
+        "energy": round(avg_energy, 2),  # Return actual energy for display
+        "normalized_energy": round(energy_normalized, 4),  # Keep for internal calculations
         "score": round(final_score, 4),
         "model_used": current_model,
         "model_switches": event_counters["model_switches"],

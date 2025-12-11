@@ -24,7 +24,7 @@
   ],
   "associated_qas": [
     "confidence",
-    "normalized_energy",
+    "energy",
     "model_used"
   ]
 }

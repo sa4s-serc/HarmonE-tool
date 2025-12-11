@@ -30,18 +30,26 @@
             <h2 class="text-2xl font-bold text-gray-900 mb-4">Welcome to Harmonica</h2>
             <p class="text-gray-600 mb-6">Choose an approach to begin. This will reset any previous data and start a fresh monitoring session.</p>
             
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- <div class="grid grid-cols-1 md:grid-cols-2 gap-4"> -->
+                <div class="space-y-4">
+
     
                 <div class="p-4 bg-gray-100 rounded-lg border border-gray-200">
                     <h3 class="font-semibold text-gray-900 text-lg mb-3 border-b border-gray-300 pb-2">Regression (LSTM/SVM/Linear)</h3>
                     <div class="space-y-3">
                         <button id="modal-btn-reg-harmone" class="text-left w-full p-3 bg-gray-200 hover:bg-blue-100 rounded-lg transition-colors border border-gray-300">
                             <h4 class="font-semibold text-gray-900">HarmonE (Score/Drift)</h4>
-                            <p class="text-sm text-gray-700">Runs the HarmonE approach on Time Series Regression.</p>
+                            <p class="text-sm text-gray-700">Runs the HarmonE approach on Time Series Regression.
+                                Uses the HarmonE performance score to balance accuracy and energy.  
+                    <br><strong>Score:</strong>  
+                    S = (beta)(A) + (1 - beta)(1 - E)<br>
+                    where A = accuracy (e.g., R²), E = normalized energy, beta ∈ [0,1] is the weight parameter.  
+                    <br>
+                            </p>
                         </button>
                         <button id="modal-btn-reg-switch" class="text-left w-full p-3 bg-gray-200 hover:bg-blue-100 rounded-lg transition-colors border border-gray-300">
                             <h4 class="font-semibold text-gray-900">Simple R² Switch</h4>
-                            <p class="text-sm text-gray-700">Baseline: Switch on R² score+Energy drop.</p>
+                            <p class="text-sm text-gray-700">Baseline: Switch on R² score+Energy.</p>
                         </button>
                         <button id="modal-btn-reg-single" class="text-left w-full p-3 bg-gray-200 hover:bg-blue-100 rounded-lg transition-colors border border-gray-300">
                             <h4 class="font-semibold text-gray-900">Single Model (Monitor-Only)</h4>
@@ -53,13 +61,13 @@
                 <div class="p-4 bg-gray-100 rounded-lg border border-gray-200">
                     <h3 class="font-semibold text-gray-900 text-lg mb-3 border-b border-gray-300 pb-2">Computer Vision (YOLO)</h3>
                     <div class="space-y-3">
-                        <button id="modal-btn-cv-harmone" class="text-left w-full p-3 bg-gray-200 hover:bg-blue-100 rounded-lg transition-colors border border-gray-300">
+                        <!-- <button id="modal-btn-cv-harmone" class="text-left w-full p-3 bg-gray-200 hover:bg-blue-100 rounded-lg transition-colors border border-gray-300">
                             <h4 class="font-semibold text-gray-900">HarmonE (Score/Drift)</h4>
                             <p class="text-sm text-gray-700">Runs the HarmonE approach on Object Detection.</p>
-                        </button>
+                        </button> -->
                         <button id="modal-btn-cv-switch" class="text-left w-full p-3 bg-gray-200 hover:bg-blue-100 rounded-lg transition-colors border border-gray-300">
                             <h4 class="font-semibold text-gray-900">Simple Confidence Switch</h4>
-                            <p class="text-sm text-gray-700">Baseline: Switch on confidence+Energy drop.</p>
+                            <p class="text-sm text-gray-700">Baseline: Switch on confidence+Energy.</p>
                         </button>
                         <button id="modal-btn-cv-single" class="text-left w-full p-3 bg-gray-200 hover:bg-blue-100 rounded-lg transition-colors border border-gray-300">
                             <h4 class="font-semibold text-gray-900">Single Model (Monitor-Only)</h4>
@@ -349,7 +357,7 @@
                             <legend class="text-lg font-medium px-2 text-gray-900">Associated QAs</legend>
                              <div>
                                 <label for="form-qas" class="block text-sm font-medium mb-1 text-gray-700">Associated Metrics (comma-separated)</label>
-                                <input type="text" id="form-qas" class="w-full bg-white border border-gray-300 rounded-md p-2 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="e.g., r2_score,normalized_energy,model_used">
+                                <input type="text" id="form-qas" class="w-full bg-white border border-gray-300 rounded-md p-2 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="e.g., r2_score,energy,model_used">
                             </div>
                         </fieldset>
                         
@@ -441,7 +449,7 @@
                         tactic_id: "handle_data_drift"
                     }
                 ],
-                associated_qas: ["r2_score", "normalized_energy", "model_used"]
+                associated_qas: ["r2_score", "energy", "model_used"]
             },
             "reg_harmone_drift": {
                 policy_id: "reg_harmone_drift",
@@ -455,7 +463,7 @@
                 quality_attribute: "r2_score", 
                 adaptation_boundary: { condition: "LESS_THAN", threshold: 0.70 },
                 tactics: [ { tactic_id: "switch_model_r2_baseline", priority: 1, tactic_endpoint: "http://localhost:8080/adaptor/tactic" } ],
-                associated_qas: ["r2_score", "normalized_energy", "model_used"] 
+                associated_qas: ["r2_score", "energy", "model_used"] 
             },
             
             // --- CV PRESETS ---
@@ -472,7 +480,7 @@
                         tactic_id: "handle_data_drift"
                     }
                 ],
-                associated_qas: ["confidence", "normalized_energy", "model_used"]
+                associated_qas: ["confidence", "energy", "model_used"]
             },
             "cv_harmone_drift": {
                 policy_id: "cv_harmone_drift",
@@ -486,7 +494,7 @@
                 quality_attribute: "confidence", 
                 adaptation_boundary: { condition: "LESS_THAN", threshold: 0.70 },
                 tactics: [ { tactic_id: "switch_model_r2_baseline", priority: 1, tactic_endpoint: "http://localhost:8080/adaptor/tactic" } ],
-                associated_qas: ["confidence", "normalized_energy", "model_used"] 
+                associated_qas: ["confidence", "energy", "model_used"] 
             }
         };
 
@@ -612,18 +620,23 @@
             });
 
             // CV BUTTONS
-            document.getElementById('modal-btn-cv-harmone').addEventListener('click', async () => {
-                await resetServerKnowledge(); // <--- RESET ADDED
-                populateFormWithPreset(HARMONY_PRESETS.cv_harmone_score);
-                policyIdInput.value = HARMONY_PRESETS.cv_harmone_score.policy_id;
-                document.getElementById('policy-presets').value = 'cv_harmone_score';
-                showMessage("Loaded 'CV: HarmonE Demo' preset. Click 'Start Managed System' to begin", "info");
-                showView('dashboard');
-                document.querySelector('.tab-btn[data-tab="policy"]').click();
-                await writeApproachConfig('cv_harmone_score');
-                await savePolicyToFolder(); 
-                document.getElementById("adaptive-start-container").classList.remove("hidden");
-            });
+            const cvHarmoneBtn = document.getElementById('modal-btn-cv-harmone');
+
+            if (cvHarmoneBtn) {
+                cvHarmoneBtn.addEventListener('click', async () => {
+                    await resetServerKnowledge(); // <--- RESET ADDED
+                    populateFormWithPreset(HARMONY_PRESETS.cv_harmone_score);
+                    policyIdInput.value = HARMONY_PRESETS.cv_harmone_score.policy_id;
+                    document.getElementById('policy-presets').value = 'cv_harmone_score';
+                    showMessage("Loaded 'CV: HarmonE Demo' preset. Click 'Start Managed System' to begin", "info");
+                    showView('dashboard');
+                    document.querySelector('.tab-btn[data-tab="policy"]').click();
+                    await writeApproachConfig('cv_harmone_score');
+                    await savePolicyToFolder();
+                    document.getElementById("adaptive-start-container").classList.remove("hidden");
+                });
+            }
+
 
             document.getElementById('modal-btn-cv-switch').addEventListener('click', async () => {
                 await resetServerKnowledge(); 
@@ -739,7 +752,7 @@
                                 adaptation_boundary: { condition: "LESS_THAN", threshold: 0.5 },
                                 secondary_boundaries: [], 
                                 tactics: [{tactic_id: "execute_mape_plan", priority: 1, tactic_endpoint: "http://localhost:8080/adaptor/tactic"}],
-                                associated_qas: ["score", "normalized_energy", "model_used"]
+                                associated_qas: ["score", "energy", "model_used"]
                             };
 
                             populateFormWithPreset(customTemplate); 
@@ -1799,7 +1812,7 @@
                     adaptation_boundary: { condition: "LESS_THAN", threshold: 0.0 },
                     tactics: [],
                     secondary_boundaries: [],
-                    associated_qas: ['r2_score', 'normalized_energy', 'model_used']
+                    associated_qas: ['r2_score', 'energy', 'model_used']
                 };
                 approachConfig = 'reg_single';
             } else if (currentSystemType === "cv") {
@@ -1809,7 +1822,7 @@
                     adaptation_boundary: { condition: "LESS_THAN", threshold: 0.0 },
                     tactics: [],
                     secondary_boundaries: [],
-                    associated_qas: ['confidence', 'normalized_energy', 'model_used']
+                    associated_qas: ['confidence', 'energy', 'model_used']
                 };
                 approachConfig = 'cv_single';
             }
