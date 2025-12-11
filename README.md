@@ -29,7 +29,7 @@ We provide a unified script to handle virtual environment creation, dependency i
 
 ```bash
 # 1. Navigate to the project directory
-cd /home/user/<path>/Harmonica/tool
+cd /home/user/<path>/harmonica/tool
 
 # 2. Make the setup script executable
 chmod +x harmone_start.sh
