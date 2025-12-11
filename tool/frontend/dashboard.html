@@ -27,7 +27,7 @@
     
     <div id="welcome-screen" class="flex items-center justify-center min-h-screen">
         <div class="bg-white p-8 rounded-lg card-shadow-lg max-w-2xl w-full">
-            <h2 class="text-2xl font-bold text-gray-900 mb-4">Welcome to Harmonica's Adaptation Control Plane</h2>
+            <h2 class="text-2xl font-bold text-gray-900 mb-4">Welcome to Harmonica</h2>
             <p class="text-gray-600 mb-6">Choose an approach to begin. This will reset any previous data and start a fresh monitoring session.</p>
             
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -37,11 +37,11 @@
                     <div class="space-y-3">
                         <button id="modal-btn-reg-harmone" class="text-left w-full p-3 bg-gray-200 hover:bg-blue-100 rounded-lg transition-colors border border-gray-300">
                             <h4 class="font-semibold text-gray-900">HarmonE (Score/Drift)</h4>
-                            <p class="text-sm text-gray-700">Full logic orchestrated by ACP.</p>
+                            <p class="text-sm text-gray-700">Runs the HarmonE approach on Time Series Regression.</p>
                         </button>
                         <button id="modal-btn-reg-switch" class="text-left w-full p-3 bg-gray-200 hover:bg-blue-100 rounded-lg transition-colors border border-gray-300">
                             <h4 class="font-semibold text-gray-900">Simple R² Switch</h4>
-                            <p class="text-sm text-gray-700">Baseline: Switch on R² score drop.</p>
+                            <p class="text-sm text-gray-700">Baseline: Switch on R² score+Energy drop.</p>
                         </button>
                         <button id="modal-btn-reg-single" class="text-left w-full p-3 bg-gray-200 hover:bg-blue-100 rounded-lg transition-colors border border-gray-300">
                             <h4 class="font-semibold text-gray-900">Single Model (Monitor-Only)</h4>
@@ -55,11 +55,11 @@
                     <div class="space-y-3">
                         <button id="modal-btn-cv-harmone" class="text-left w-full p-3 bg-gray-200 hover:bg-blue-100 rounded-lg transition-colors border border-gray-300">
                             <h4 class="font-semibold text-gray-900">HarmonE (Score/Drift)</h4>
-                            <p class="text-sm text-gray-700">Full logic orchestrated by ACP.</p>
+                            <p class="text-sm text-gray-700">Runs the HarmonE approach on Object Detection.</p>
                         </button>
                         <button id="modal-btn-cv-switch" class="text-left w-full p-3 bg-gray-200 hover:bg-blue-100 rounded-lg transition-colors border border-gray-300">
                             <h4 class="font-semibold text-gray-900">Simple Confidence Switch</h4>
-                            <p class="text-sm text-gray-700">Baseline: Switch on confidence drop.</p>
+                            <p class="text-sm text-gray-700">Baseline: Switch on confidence+Energy drop.</p>
                         </button>
                         <button id="modal-btn-cv-single" class="text-left w-full p-3 bg-gray-200 hover:bg-blue-100 rounded-lg transition-colors border border-gray-300">
                             <h4 class="font-semibold text-gray-900">Single Model (Monitor-Only)</h4>
@@ -170,7 +170,26 @@
                 <nav class="mb-6 border-b border-gray-300">
                     <ul class="flex space-x-8">
                         <li><button class="tab-btn text-gray-600 hover:text-gray-900 py-2 border-b-2 border-transparent transition-colors" data-tab="policy">Policy Management</button></li>
-                        <li><button class="tab-btn text-gray-600 hover:text-gray-900 py-2 border-b-2 border-transparent transition-colors tab-active" data-tab="dashboard">Live Dashboard</button></li>
+                        <!-- <li><button class="tab-btn text-gray-600 hover:text-gray-900 py-2 border-b-2 border-transparent transition-colors tab-active" data-tab="dashboard">Live Dashboard</button></li> -->
+                        <li class="relative group">
+                            <button class="tab-btn text-gray-600 hover:text-gray-900 py-2 border-b-2 border-transparent transition-colors flex items-center gap-2"
+                                    data-tab="dashboard">
+                                
+                                <!-- Text -->
+                                Live Dashboard
+                        
+                                <!-- Pulsing attention dot -->
+                                <span id="live-dashboard-indicator"
+                                      class="inline-block w-2 h-2 bg-blue-500 rounded-full animate-ping"></span>
+                            </button>
+                        
+                            <!-- Tooltip -->
+                            <div class="absolute left-1/2 -translate-x-1/2 mt-2 hidden group-hover:block px-3 py-2 
+                                        text-sm rounded-md bg-gray-900 text-white shadow-lg whitespace-nowrap z-50">
+                                Click here to view live telemetry after setting a policy
+                            </div>
+                        </li>
+                        
                         </ul>
                 </nav>
 
@@ -236,7 +255,7 @@
                     <form id="policy-form" class="bg-white p-6 rounded-lg card-shadow space-y-6 border border-gray-200">
                         
                         <fieldset class="border border-gray-300 p-4 rounded-md">
-                            <legend class="text-lg font-medium px-2 text-gray-900">General</legend>
+                            <legend class="text-lg font-medium px-2 text-gray-500">General</legend>
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
                                 <div>
                                     <label for="form-policy-id" class="block text-sm font-medium mb-1 text-gray-700">Policy ID</label>
@@ -346,7 +365,7 @@
                 </div>
 
                 <div class="tab-content hidden" id="history-content">
-                    <h2 class="text-xl font-semibold mb-4 text-gray-900">Adaptation History & Analysis (KR3)</h2>
+                    <h2 class="text-xl font-semibold mb-4 text-gray-900">Adaptation History & Analysis</h2>
                     <div id="history-feed" class="space-y-6">
                         <div class="text-gray-500">No adaptation events recorded yet.</div>
                     </div>
@@ -829,6 +848,16 @@
                     }
                 }
             });
+            document.addEventListener("DOMContentLoaded", () => {
+                const dashboardTab = document.querySelector('.tab-btn[data-tab="dashboard"]');
+                const indicator = document.getElementById("live-dashboard-indicator");
+            
+                dashboardTab.addEventListener("click", () => {
+                    // Stop the pulsing once the user actually clicks
+                    indicator.classList.add("hidden");
+                });
+            });
+            
 
             // NEW: Secondary Boundary Logic
             addSecBoundaryBtn.addEventListener('click', () => addSecBoundaryGroup());
@@ -1331,27 +1360,34 @@
         function setFieldsEditability(isCustom) {
             const policyIdField = document.getElementById('form-policy-id');
             const metricField = document.getElementById('form-metric');
-            
+            const addTacticButton = document.getElementById('add-tactic-btn');
+            const removeTacticButtons = document.querySelectorAll('.remove-tactic-btn');
+        
             if (isCustom) {
+                // Allow editing
                 policyIdField.removeAttribute('readonly');
                 metricField.removeAttribute('readonly');
-                policyIdField.classList.remove('bg-gray-600', 'cursor-not-allowed');
-                metricField.classList.remove('bg-gray-600', 'cursor-not-allowed');
-                policyIdField.classList.add('bg-gray-700');
-                metricField.classList.add('bg-gray-700');
+        
+                addTacticButton.classList.remove('hidden');
+                removeTacticButtons.forEach(btn => btn.classList.remove('hidden'));
+        
                 addSecBoundaryBtn.classList.remove('hidden');
                 document.querySelectorAll('.remove-sec-boundary-btn').forEach(btn => btn.classList.remove('hidden'));
-            } else {
+            } 
+            else {
+                // Disable editing
                 policyIdField.setAttribute('readonly', true);
                 metricField.setAttribute('readonly', true);
-                policyIdField.classList.remove('bg-gray-700');
-                metricField.classList.remove('bg-gray-700');
-                policyIdField.classList.add('bg-gray-600', 'cursor-not-allowed');
-                metricField.classList.add('bg-gray-600', 'cursor-not-allowed');
+        
+                // ❌ Hide add/remove tactic buttons for presets
+                addTacticButton.classList.add('hidden');
+                removeTacticButtons.forEach(btn => btn.classList.add('hidden'));
+        
                 addSecBoundaryBtn.classList.add('hidden');
                 document.querySelectorAll('.remove-sec-boundary-btn').forEach(btn => btn.classList.add('hidden'));
             }
         }
+        
 
         function handlePolicyDownload() {
             try {
