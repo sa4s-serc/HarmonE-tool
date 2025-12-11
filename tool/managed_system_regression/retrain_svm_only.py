@@ -53,7 +53,7 @@ print(f"📊 Validation samples: {len(X_val)}")
 
 # Train SVM with current hyperparameters from retrain.py
 print("🚀 Training SVM model...")
-svm_model = SVR(kernel="linear", C=0.003, tol=0.0001)
+svm_model = SVR(kernel="linear", C=0.05, tol=0.16)
 svm_model.fit(X_train_split, y_train_split)
 
 # Evaluate the model

@@ -80,7 +80,7 @@ for model_name, model_path in MODEL_PATHS.items():
             calculate_and_save_initial_histogram(ref_image_paths, versioned_hist_path)
 
 print("\n--- Starting Inference ---")
-image_dir = Path("data/bdd100k/images/train")
+image_dir = Path("data/bdd100k/images/test")
 image_files = sorted(list(image_dir.glob("*.jpg")))
 
 current_model_name = None

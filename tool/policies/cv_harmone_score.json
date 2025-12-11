@@ -25,7 +25,6 @@
   "associated_qas": [
     "confidence",
     "normalized_energy",
-    "kl_div",
     "model_used"
   ]
 }

@@ -244,7 +244,11 @@ def execute_drift(trigger="local"):
         try:
             # Note: os.system() is simple but blocks. In a real system, you might
             # use subprocess.Popen() to run this in the background.
-            os.system("python retrain.py")
+            # os.system("python retrain.py")
+            import sys
+            RETRAIN_PATH = os.path.join(BASE_DIR, "..", "retrain.py")
+            os.system(f"{sys.executable} {RETRAIN_PATH}")
+
             
             energy_meter.end()
             energy_consumed = energy_meter.result.pkg[0] if energy_meter.result.pkg else 0.0

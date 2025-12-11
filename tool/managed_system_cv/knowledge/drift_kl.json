@@ -1,0 +1,9 @@
+{
+    "best_overall_version": null,
+    "min_overall_kl": Infinity,
+    "kl_per_model": {
+        "yolo_n": Infinity,
+        "yolo_s": Infinity,
+        "yolo_m": Infinity
+    }
+}
