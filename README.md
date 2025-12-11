@@ -23,14 +23,6 @@ Modern MLS frequently operate under environmental uncertainty - data drift, work
 - **Ports:** The tool uses ports 5000 (Managing Server) and 8080 (Adaptation Handler). Ensure these are free.
 - **GitHub:** For cloning/downloading the tool.
 
-<!-- **Note on Python Commands:**
-Depending on your Linux distribution, you may need to use different Python commands:
-- **Ubuntu/Debian**: `python3`, `pip3` 
-- **Some distributions**: `python3.11`, `python3.12` (for specific versions)
-- **Arch Linux**: `python`, `pip`
-
-Replace `python3` with the appropriate command for your system throughout these instructions. -->
-
 ## Step 1: Download and Setup
 
 We provide a unified script to handle virtual environment creation, dependency installation, and permission setting.
@@ -69,7 +61,7 @@ To verify the system is working and observe the HarmonE loop in action:
    - **HarmonE (Score/Drift)**: Full adaptive system with intelligent switching
    - **Simple Switch**: Baseline system with basic threshold switching  
    - **Single Model**: Monitor-only mode with no adaptation
- - *Note: You can choose to build your own custom system - process explained in Customization & Reuse*
+ - *Note: You can choose to build your own custom system - process explained in [Customization & Reuse](#customization--reuse)*
 
 1. **Load Policy:** The system will automatically load the preset policy. You can review the thresholds on the "Policy Management" tab.
 
@@ -157,202 +149,15 @@ The system expects images to be available for processing. Your zip file should c
 ---
 
 ### Part 2: Template / Test MAPE Files
-These are the template MAPE files that you can refer to for building your own system.
+The `examples/` directory contains two subfolders:
 
-#### 📄 `monitor.py`
-*Reads the inference output and calculates a mock score.*
+- `templates/` – This folder provides the skeleton structure for how MAPE files should be organized and written. These are generic templates meant to guide you in building your own system.
 
-```python
-import pandas as pd
-import os
-import json
+- `HarmonE/` – This folder contains the exact MAPE files used by HarmonE. These serve as fully implemented reference examples.
 
-# Define paths relative to this script
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-KNOWLEDGE_DIR = os.path.join(BASE_DIR, "..", "knowledge")
-PREDICTIONS_FILE = os.path.join(KNOWLEDGE_DIR, "predictions.csv")
-MODEL_FILE = os.path.join(KNOWLEDGE_DIR, "model.csv")
+Both sets of files are designed for regression-based MAPE workflows.
 
-def get_current_model():
-    try:
-        with open(MODEL_FILE, "r") as f:
-            return f.read().strip()
-    except:
-        return "unknown"
 
-def monitor_mape():
-    """
-    Reads the last few predictions to generate telemetry.
-    """
-    current_model = get_current_model()
-    
-    # Default values if no data exists yet
-    metrics = {
-        "score": 0.8,
-        "normalized_energy": 0.3,
-        "model_used": current_model,
-        "r2_score": 0.9,
-        "confidence": 0.85
-    }
-
-    if os.path.exists(PREDICTIONS_FILE):
-        try:
-            # Read last 10 rows to calculate current performance
-            df = pd.read_csv(PREDICTIONS_FILE)
-            if not df.empty:
-                df = df.tail(10)
-                # Simple mock logic: if model is 'svm' or 'yolo_n', score is lower
-                if "svm" in current_model or "yolo_n" in current_model:
-                    metrics["score"] = 0.65 # trigger adaptation
-                else:
-                    metrics["score"] = 0.95
-        except Exception as e:
-            print(f"[CustomMonitor] Error reading predictions: {e}")
-
-    print(f"[CustomMonitor] Reporting: {metrics}")
-    return metrics
-
-def monitor_drift():
-    # Placeholder for drift
-    return {"kl_div": 0.05}
-```
-
-#### 📄 `analyse.py`
-*Decides if the score is low enough to warrant a switch.*
-
-```python
-from monitor import monitor_mape
-
-def analyse_mape():
-    data = monitor_mape()
-    if not data:
-        return None
-
-    # Simple logic: If score is below 0.7, request a switch
-    if data["score"] < 0.7:
-        print("[CustomAnalyse] Score is low! Switch needed.")
-        return {"switch_needed": True}
-    
-    print("[CustomAnalyse] System healthy.")
-    return {"switch_needed": False}
-
-def analyse_drift():
-    return {"drift_detected": False}
-```
-
-#### 📄 `plan.py`
-*Randomly selects a model to switch to.*
-
-```python
-import random
-import os
-
-# Identify if we are running Regression or CV based on available models
-# This is a hack for the template; in production, you know your system.
-def plan_mape(trigger="local"):
-    # Randomly pick a model for demonstration purposes
-    # Models for Regression: lstm, svm, linear
-    # Models for CV: yolo_n, yolo_s, yolo_m
-    
-    # We will pick from a combined list, but in a real scenario, know your domain.
-    # If the user selected Regression, choosing 'yolo' won't break inference (it defaults to LSTM),
-    # but let's try to be generic.
-    
-    options = ["lstm", "svm", "linear"] 
-    # Uncomment below line if testing CV
-    # options = ["yolo_n", "yolo_s", "yolo_m"]
-    
-    choice = random.choice(options)
-    print(f"[CustomPlan] Planner selected: {choice}")
-    return choice
-
-def plan_drift(trigger="local"):
-    return None
-```
-
-#### 📄 `execute.py`
-*Writes the selected model to the shared file.*
-
-```python
-import os
-import sys
-
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-KNOWLEDGE_DIR = os.path.join(BASE_DIR, "..", "knowledge")
-MODEL_FILE = os.path.join(KNOWLEDGE_DIR, "model.csv")
-
-def execute_mape(trigger="local"):
-    from plan import plan_mape
-    
-    # 1. Plan
-    decision = plan_mape(trigger)
-    if not decision:
-        return
-
-    # 2. Execute (Write to file)
-    print(f"[CustomExecute] Writing '{decision}' to model.csv")
-    os.makedirs(KNOWLEDGE_DIR, exist_ok=True)
-    with open(MODEL_FILE, "w") as f:
-        f.write(decision)
-
-def execute_drift(trigger="local"):
-    pass
-```
-
-#### 📄 `manage.py`
-*Runs the loop.*
-
-```python
-import time
-import sys
-import logging
-from execute import execute_mape
-
-logging.basicConfig(level=logging.INFO, format='[CustomManage] %(message)s')
-
-def run_mape_loop():
-    logging.info("Starting Custom MAPE Loop...")
-    while True:
-        # Run every 5 seconds for testing
-        time.sleep(5)
-        logging.info("--- Triggering MAPE Cycle ---")
-        execute_mape(trigger="local")
-
-if __name__ == "__main__":
-    # The wrapper calls this file. 
-    # We can perform a simple loop or listen to commands.
-    run_mape_loop()
-```
-
----
-
-### Part 3: Test Dataset (Regression)
-
-Save this as **`dataset.csv`**. This file is valid for the `inference.py` regression engine.
-
-```csv
-flow
-173.0
-169.0
-160.0
-187.0
-195.5
-205.0
-210.2
-180.5
-150.0
-140.0
-135.5
-130.0
-125.0
-140.0
-155.0
-165.0
-175.0
-185.0
-190.0
-195.0
-```
 
 ### How to Test
 1.  Save the 5 Python files above.
@@ -363,15 +168,6 @@ flow
 6.  Upload `dataset.csv` in the dataset uploader.
 7.  Click **Build** -> **Start**.
 
-You should see the "Model Distribution" chart on the dashboard change periodically as the `manage.py` loop triggers `plan.py`, which randomly picks a model.
-
-## Monitor the System on website - Navigate to `Live Dashboard` tab and click `Run Managed System` 
-
-1. **Dashboard**: Watch real-time metrics and charts in the web dashboard
-2. **Inference results for download**: Click on `Download Telemetry` to obtain the CSV file of predictions.
-3. **Console Output**: Monitor both terminal windows for system logs
-4. **Knowledge Folder**: Check the `knowledge/` folders for saved data:
-   - `predictions.csv` - System predictions  
 
 ## Troubleshooting
 
@@ -410,5 +206,4 @@ You should see the "Model Distribution" chart on the dashboard change periodical
 - **Manager/Adaptor** (port 8080): Executes adaptation tactics
 - **Managed System**: The system being monitored and adapted
 - **Web Dashboard**: Real-time monitoring and policy management interface
-
 

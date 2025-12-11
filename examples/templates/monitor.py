@@ -24,6 +24,7 @@ def monitor_mape():
     # Default values if no data exists yet
     metrics = {
         "score": 0.8,
+        "energy": round(0.5, 2),
         "normalized_energy": 0.3,
         "model_used": current_model,
         "r2_score": 0.9,
