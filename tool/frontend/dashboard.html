@@ -433,11 +433,11 @@
                 quality_attribute: "score", 
                 adaptation_boundary: { type: "STATIC_THRESHOLD", condition: "LESS_THAN", threshold: 0.78 },
                 tactics: [ { tactic_id: "execute_mape_plan", priority: 1, tactic_endpoint: "http://localhost:8080/adaptor/tactic" } ],
-                secondary_boundaries: [ // ADDED KL_DIV SECONDARY BOUNDARY
+                secondary_boundaries: [ 
                     {
                         quality_attribute: "kl_div",
                         condition: "GREATER_THAN", 
-                        threshold: 0.10, // Changed threshold to 0.10 as per request
+                        threshold: 0.10, 
                         tactic_id: "handle_data_drift"
                     }
                 ],
@@ -455,7 +455,7 @@
                 quality_attribute: "r2_score", 
                 adaptation_boundary: { condition: "LESS_THAN", threshold: 0.70 },
                 tactics: [ { tactic_id: "switch_model_r2_baseline", priority: 1, tactic_endpoint: "http://localhost:8080/adaptor/tactic" } ],
-                associated_qas: ["r2_score", "normalized_energy", "model_used"] // Simple switch - no kl_div needed
+                associated_qas: ["r2_score", "normalized_energy", "model_used"] 
             },
             
             // --- CV PRESETS ---
@@ -486,18 +486,16 @@
                 quality_attribute: "confidence", 
                 adaptation_boundary: { condition: "LESS_THAN", threshold: 0.70 },
                 tactics: [ { tactic_id: "switch_model_r2_baseline", priority: 1, tactic_endpoint: "http://localhost:8080/adaptor/tactic" } ],
-                associated_qas: ["confidence", "normalized_energy", "model_used"] // Simple switch - no kl_div needed
+                associated_qas: ["confidence", "normalized_energy", "model_used"] 
             }
         };
 
-        // === HELPER: RESET SERVER KNOWLEDGE ===
+    
         // === HELPER: RESET SERVER KNOWLEDGE ===
         async function resetServerKnowledge() {
             try {
-                // 1. Clear local state first
                 globalKnowledge = { telemetry_history: [], intervention_logs: [] };
 
-                // 2. FORCE CLEAR PIE CHART (Fixes the "Ghost Model" issue)
                 if (chartInstances.modelChart) {
                     chartInstances.modelChart.data.labels = [];
                     chartInstances.modelChart.data.datasets.forEach(dataset => {
@@ -506,10 +504,8 @@
                     chartInstances.modelChart.update();
                 }
                 
-                // 3. Update other charts to empty
                 updateDashboardCharts(globalKnowledge);
                 
-                // 4. Tell server to reset
                 await fetch(`${ACP_SERVER_URL}/api/reset`, { method: 'POST' });
                 console.log("Server knowledge reset successfully.");
             } catch (err) {
@@ -522,7 +518,7 @@
             if (viewName === 'dashboard') {
                 welcomeScreen.classList.add('hidden');
                 dashboardWrapper.classList.remove('hidden');
-            } else { // 'welcome'
+            } else { 
                 dashboardWrapper.classList.add('hidden');
                 welcomeScreen.classList.remove('hidden');
                 
@@ -540,7 +536,6 @@
 
             // ▼▼▼ VIEW NAVIGATION LOGIC (WITH "single" FIX) ▼▼▼
             backToMenuBtn.addEventListener('click', async () => {
-                // First, shutdown any running managed systems
                 try {
                     showMessage("Shutting down current system...", "info");
                     const response = await fetch(`${ACP_SERVER_URL}/api/shutdown-system`, {
@@ -551,7 +546,6 @@
                     if (response.ok) {
                         showMessage("System shutdown completed", "success");
                         
-                        // Clear all chart data
                         Object.values(chartInstances).forEach(chart => {
                             if (chart) {
                                 chart.data.labels = [];
@@ -562,16 +556,13 @@
                             }
                         });
                         
-                        // Reset global state
                         globalKnowledge = { telemetry_history: [] };
                         
-                        // Stop polling
                         if (pollingIntervalId) {
                             clearInterval(pollingIntervalId);
                             pollingIntervalId = null;
                         }
                         
-                        // Clear history feed
                         const historyFeed = document.getElementById('history-feed');
                         if (historyFeed) {
                             historyFeed.innerHTML = '<p class="text-gray-500 text-center py-8">No adaptation events yet</p>';
@@ -585,13 +576,12 @@
                     showMessage("Warning: Shutdown may not have completed cleanly", "warning");
                 }
                 
-                // Always switch back to welcome screen
                 showView('welcome');
             });
 
             // REGRESSION BUTTONS
             document.getElementById('modal-btn-reg-harmone').addEventListener('click', async () => {
-                await resetServerKnowledge(); // <--- RESET ADDED
+                await resetServerKnowledge(); 
                 populateFormWithPreset(HARMONY_PRESETS.reg_harmone_score);
                 policyIdInput.value = HARMONY_PRESETS.reg_harmone_score.policy_id;
                 document.getElementById('policy-presets').value = 'reg_harmone_score';
@@ -604,7 +594,7 @@
             });
 
             document.getElementById('modal-btn-reg-switch').addEventListener('click', async () => {
-                await resetServerKnowledge(); // <--- RESET ADDED
+                await resetServerKnowledge();
                 populateFormWithPreset(HARMONY_PRESETS.reg_switch_r2);
                 policyIdInput.value = HARMONY_PRESETS.reg_switch_r2.policy_id;
                 document.getElementById('policy-presets').value = 'reg_switch_r2';
@@ -636,7 +626,7 @@
             });
 
             document.getElementById('modal-btn-cv-switch').addEventListener('click', async () => {
-                await resetServerKnowledge(); // <--- RESET ADDED
+                await resetServerKnowledge(); 
                 populateFormWithPreset(HARMONY_PRESETS.cv_switch_conf);
                 policyIdInput.value = HARMONY_PRESETS.cv_switch_conf.policy_id;
                 document.getElementById('policy-presets').value = 'cv_switch_conf';
@@ -655,21 +645,18 @@
 
             // CUSTOM BUTTON
             document.getElementById('modal-btn-custom').addEventListener('click', async () => {
-                // Show the upload modal instead of jumping straight to policy view
+                
                 customUploadModal.classList.remove('hidden');
                 uploadStatus.classList.add('hidden');
-                document.getElementById('custom-file-input').value = ""; // Clear previous
+                document.getElementById('custom-file-input').value = ""; 
             });
             
-            // 2. Handle Cancel
             cancelCustomBtn.addEventListener('click', () => {
                 customUploadModal.classList.add('hidden');
             });
 
-            // 1. NEW: Handle Dropdown Change to update Dataset Hint
             customBaseSystemSelect.addEventListener('change', () => {
                 const mode = customBaseSystemSelect.value;
-                // Clear previous input
                 customDatasetInput.value = ""; 
 
                 if (mode === 'regression') {
@@ -681,16 +668,14 @@
                 }
             });
 
-            // 2. Trigger change once on load to set initial state
             customBaseSystemSelect.dispatchEvent(new Event('change'));
 
 
-            // 3. Handle Form Submit (File Upload)
             customUploadForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
                 
                 const fileInput = document.getElementById('custom-file-input');
-                const datasetInput = document.getElementById('custom-dataset-input'); // <--- Get input
+                const datasetInput = document.getElementById('custom-dataset-input'); 
                 const baseSystem = document.getElementById('custom-base-system').value;
                 
                 if (fileInput.files.length === 0) {
@@ -701,12 +686,10 @@
                 const formData = new FormData();
                 formData.append('base_system', baseSystem);
                 
-                // Add MAPE files
                 for (let i = 0; i < fileInput.files.length; i++) {
                     formData.append('files[]', fileInput.files[i]);
                 }
             
-                // NEW: Add Dataset file if present
                 if (datasetInput.files.length > 0) {
                     formData.append('dataset', datasetInput.files[0]);
                 }
@@ -720,11 +703,11 @@
                 uploadStatus.classList.remove('hidden');
             
                 try {
-                    await resetServerKnowledge(); // Clear old data
+                    await resetServerKnowledge(); 
             
                     const response = await fetch(`${ACP_SERVER_URL}/api/upload-custom-mape`, {
                         method: 'POST',
-                        body: formData // No Content-Type header (browser sets it for FormData)
+                        body: formData 
                     });
             
                     const result = await response.json();
@@ -1193,7 +1176,7 @@
                 console.error("Failed to fetch knowledge:", error);
                 // Only show error if we are still on the expected policy
                 if (currentPolicyId === requestedPolicyId) {
-                    showMessage(`Failed to connect to ACP server at ${ACP_SERVER_URL}. Is it running?`, "error");
+                    showMessage(`Failed to connect to managing system server at ${ACP_SERVER_URL}. Is it running?`, "error");
                 }
                 if (pollingIntervalId) clearInterval(pollingIntervalId);
             }

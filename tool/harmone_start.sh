@@ -1,4 +1,3 @@
-#!/bin/bash
 
 # ==========================
 # CONFIG
@@ -10,6 +9,32 @@ VENV_PATH="$PROJECT_DIR/$VENV_NAME/bin/activate"
 echo "=============================="
 echo "  HarmonE: Setup + Launch"
 echo "=============================="
+
+# ---------------------------
+# Detect Python interpreter
+# ---------------------------
+detect_python() {
+    for cmd in python3 python python3.12 python3.11; do
+        if command -v "$cmd" &>/dev/null; then
+            echo "$cmd"
+            return
+        fi
+    done
+    echo ""
+}
+
+PYTHON_CMD=$(detect_python)
+
+if [[ -z "$PYTHON_CMD" ]]; then
+    echo "No valid Python interpreter found!"
+    echo "Install Python 3 first."
+    exit 1
+else
+    echo "[✔] Using Python: $PYTHON_CMD"
+fi
+
+# pip command mapped to python -m pip (always available)
+PIP_CMD="$PYTHON_CMD -m pip"
 
 # ---------------------------
 # Detect a usable terminal
@@ -33,13 +58,14 @@ detect_terminal() {
 TERMINAL=$(detect_terminal)
 
 if [[ -z "$TERMINAL" ]]; then
-    echo "No supported terminal found! Install xterm or GNOME terminal."
+    echo "No supported terminal found!"
+    echo "Install xterm or GNOME Terminal."
     exit 1
 else
     echo "[✔] Using terminal: $TERMINAL"
 fi
 
-# Helper to launch commands in whichever terminal the user has
+# Helper to launch commands in user’s terminal
 launch_terminal() {
     CMD="$1"
 
@@ -70,17 +96,17 @@ cd "$PROJECT_DIR" || { echo "Directory not found!"; exit 1; }
 
 echo "[2] Creating virtual environment..."
 if [ ! -d "$VENV_NAME" ]; then
-    python3 -m venv "$VENV_NAME"
-    echo "Virtual environment created."
+    $PYTHON_CMD -m venv "$VENV_NAME"
+    echo "[✔] Virtual environment created."
 else
-    echo "Virtual environment already exists."
+    echo "[✔] Virtual environment already exists."
 fi
 
 echo "[3] Activating environment..."
 source "$VENV_PATH"
 
 echo "[4] Installing dependencies..."
-pip install -r requirements.txt \
+$PIP_CMD install -r requirements.txt \
   --extra-index-url https://download.pytorch.org/whl/cpu
 
 # ---------------------------
@@ -98,20 +124,20 @@ echo "[6] Launching ACP Server..."
 launch_terminal "
 cd $PROJECT_DIR;
 source $VENV_PATH;
-python3 app.py
+$PYTHON_CMD app.py
 "
 
 echo "[7] Launching Dashboard..."
 launch_terminal "
 cd $PROJECT_DIR/frontend;
-python3 -m http.server 8000
+$PYTHON_CMD -m http.server 8000
 "
 
 echo "[8] Opening Managed System Console..."
 launch_terminal "
 cd $PROJECT_DIR;
 source $VENV_PATH;
-echo 'Run: python3 run_managed_system.py'
+echo 'Run: $PYTHON_CMD run_managed_system.py'
 exec bash
 "
 

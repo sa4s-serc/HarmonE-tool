@@ -5,76 +5,112 @@ The *Harmonica* tool provides a fully runnable implementation designed to enable
 
 Modern MLS frequently operate under environmental uncertainty - data drift, workload fluctuations, hardware variability, and changing performance expectations. Traditional MLOps practices streamline model development and deployment, but they offer limited support for detecting and responding to runtime deviations that affect system stability and cost. This implementation bridges that gap by introducing a managing system that oversees the MLS at runtime and enforces adaptation policies that are decoupled from system execution.
 
-**Managing System Server:** It's a Flask server that receives telemetry, analyzes it against a policy, and triggers adaptation actions.
+## Key Elements
 
-**Managed System:** A simulator for a user's MLOps pipeline (Managed System). It generates metric data, sends it to the managing server, and hosts an endpoint to receive and execute adaptation commands. Its behavior is defined by policy.json.
+**Managing System Server:** A Flask server that receives telemetry, analyzes it against a policy, and triggers adaptation actions.
 
-# HarmonE Tool - Setup and Running Instructions
+**Managed System:** A simulator for a user's MLOps pipeline. It generates metric data, sends it to the managing server, and hosts an endpoint to receive and execute adaptation commands. Its behavior is dynamically defined by `policy.json`.
+
+**Dashboard:** A web-based interface for visualizing runtime metrics, configuring policies, and monitoring adaptation events.
+
+# Getting Started
 
 ## Prerequisites
-- Linux based OS
-- Python 3.8+ installed on Linux
-- Sudo access (for pyRAPL energy monitoring permissions)
-- Git (optional, for cloning)
+- **OS:** Linux-based Operating System (Ubuntu/Debian recommended).
+- **Python:** Python 3.8+ is required.
+- **Privileges:** Sudo access is required.
+  - Side Effect: The tool uses `pyRAPL` for energy monitoring, which requires read access to Intel RAPL energy counters in /`sys/class/powercap`. You will be prompted for your sudo password during setup to grant these permissions.
+- **Ports:** The tool uses ports 5000 (Managing Server) and 8080 (Adaptation Handler). Ensure these are free.
+- **GitHub:** For cloning/downloading the tool.
 
-**Note on Python Commands:**
+<!-- **Note on Python Commands:**
 Depending on your Linux distribution, you may need to use different Python commands:
 - **Ubuntu/Debian**: `python3`, `pip3` 
 - **Some distributions**: `python3.11`, `python3.12` (for specific versions)
 - **Arch Linux**: `python`, `pip`
 
-Replace `python3` with the appropriate command for your system throughout these instructions.
+Replace `python3` with the appropriate command for your system throughout these instructions. -->
 
-## Step 1: Create and Activate Virtual Environment
+## Step 1: Download and Setup
+
+We provide a unified script to handle virtual environment creation, dependency installation, and permission setting.
 
 ```bash
-# Navigate to the project directory
+# 1. Navigate to the project directory
 cd /home/user/<path>/Harmonica/tool
 
-# Open terminal
-# Make the script executable:
+# 2. Make the setup script executable
 chmod +x harmone_start.sh
 
-# Run the combined setup + launch script:
+# 3. Run the launch script
+# This script creates a virtual environment, installs requirements, and launches the tool.
 ./harmone_start.sh
 
 ```
+### Note on Permissions: 
+During execution, the script will request your `sudo` password. This is strictly to execute `chmod` on the RAPL energy files to allow the application to read energy metrics without running the entire Python application as root.
 
-
-## Step 2: Set PyRAPL Permissions (Energy Monitoring)
-
-PyRAPL requires special permissions to access CPU energy counters
 ```bash
 # On the same terminal you will be asked for sudo access password
 [sudo] password for <username>:
 ```
 
-## Step 3: Open the web dashboard
 
-- click here: http://localhost:8000/dashboard.html
+## Step 2: Access the Dashboard
+Once the script is running, open your web browser and navigate to:
+ http://localhost:8000/dashboard.html
 
-## Step 4: Manage Use Cases
+## Step 3: "Play" the Artifact (Running an Experiment)
 
-### 4.1 Select Approach in Dashboard
-1. Open the web dashboard
-2. Choose your approach (Regression or Computer Vision) : these are our pre-existing `managed_systems`.
-3. Select the specific variant:
+To verify the system is working and observe the HarmonE loop in action:
+
+1. **Select Approach:** On the dashboard landing page, example: under "Regression", click "HarmonE (Score/Drift)". These are the pre-existing `managed_systems`
+  Select the specific variant:
    - **HarmonE (Score/Drift)**: Full adaptive system with intelligent switching
    - **Simple Switch**: Baseline system with basic threshold switching  
    - **Single Model**: Monitor-only mode with no adaptation
-4. You can also choose to build your very own `custom managed_system`.
+ - *Note: You can choose to build your own custom system - process explained in Customization & Reuse*
 
+1. **Load Policy:** The system will automatically load the preset policy. You can review the thresholds on the "Policy Management" tab.
 
-## Running pre-existing Managed Systems
-###  Regression/Computer Vision Approaches: Configure Policy Settings
-- If you are trying out the pre-existing Regression or Computer Vision systems: 
-  - Based on your selected approach a preset will be loaded. 
-  - You can try out the preset as it is, or can play around by changing thresholds, etc and if changed click on the `Save as Policy` button
-  - Navigate to `Live Dashboard` tab and click `Start Managed System` 
+2. **Start Execution:** Switch to the `Live Dashboard` tab and click the green `Start Managed System` button.
 
-  
+3. **Observe Results:**
 
+    - *Graphs:* Watch the "Main Metric" (e.g., R2 Score) graph. You will see it degrade over time (drift) and then suddenly improve - this indicates an adaptation (model switch) has occurred.
 
+    - *Pie Chart:* The "Model Distribution" chart will update to show which models (e.g., LSTM, SVM) are currently active.
+
+    - *Terminal:* Check your terminal output to see logs of the MAPE loop detecting violations and executing switches.
+
+# Artifact Outputs & Verification
+When you run an experiment, the artifact generates several files that represent the execution history and results. These are located in the tool/ directory structure.
+
+1. Telemetry Logs (predictions.csv)
+    - Location: tool/managed_system_<type>/knowledge/predictions.csv
+
+    - Description: A raw log of every inference made by the managed system.
+
+    - Content: Timestamps, input data, predicted values, ground truth, and the specific model used for that inference.
+
+    - Verification: You can compare model_used against the timestamp to verify that the model changed exactly when the dashboard reported an adaptation.
+
+2. Adaptation Log (Dashboard Download)
+    - Location: Downloadable via the "Download Telemetry (CSV)" button on the Live Dashboard.
+
+    - Description: A consolidated CSV file containing the metrics visualized on the dashboard.
+
+    - Content: Includes the primary metric (e.g., score), energy consumption (normalized_energy), and the active model for every reporting interval.
+
+3. Current State (model.csv)
+    - Location: tool/managed_system_<type>/knowledge/model.csv
+
+    - Description: A single-line file containing the name of the currently active model (e.g., lstm).
+
+    - Verification: Open this file during runtime to see the immediate effect of an adaptation action.
+
+# Customization & Reuse
+The Harmonica tool is designed to be extensible. Researchers can reuse the Managing System while swapping out the Managed System (ML Pipeline) to test different self-adaptation strategies in new contexts.
 ## Building a Custom Managed System
 
 The Dashboard allows you to upload your own **MAPE (Monitor-Analyze-Plan-Execute)** logic and **Datasets** to run on top of the provided inference engines.
