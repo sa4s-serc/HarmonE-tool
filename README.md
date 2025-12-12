@@ -169,7 +169,7 @@ Both sets of files are designed for regression-based MAPE workflows.
 7.  Click **Build** -> **Start**.
 
 
-## Troubleshooting
+# Troubleshooting
 
 ### Common Issues:
 
@@ -199,7 +199,7 @@ Both sets of files are designed for regression-based MAPE workflows.
    # Re-install dependencies
    ```
 
-## System Architecture
+# System Architecture
 
 - **app.py**: Main application that starts both managing server and Manager
 - **Managing Server** (port 5000): Stores policies and telemetry data
@@ -207,3 +207,21 @@ Both sets of files are designed for regression-based MAPE workflows.
 - **Managed System**: The system being monitored and adapted
 - **Web Dashboard**: Real-time monitoring and policy management interface
 
+# Complete Datasets
+
+For demonstration purposes, we include only small sample datasets for both the regression and computer vision tasks. These samples allow the system to run end-to-end without requiring large storage or long execution times.
+However, if you wish to run on the complete datasets, you may obtain them as follows:
+### Regression Task - Traffic Flow Prediction (PEMS Dataset)
+
+  - Due to privacy and licensing restrictions, the full PEMS dataset cannot be redistributed directly.
+If you have authorized access from the ccccc, you may integrate the complete dataset into HarmonE by following these steps:
+
+  - Download the data: https://pems.dot.ca.gov/
+
+  - Obtain the raw CSV files from the California PEMS website. Note that the dataset may originally be in MATLAB format; you might need to convert it to CSV. The available CSV files should include a column named "Flow (Veh/5 Minutes)" which represents the traffic flow measurements.
+
+### Computer Vision Task - Object Detection (BDD100K Dataset)
+
+  - For large-scale object detection experiments, the full BDD100K dataset (~100k images) can be used, available from: https://bair.berkeley.edu/blog/2018/05/30/bdd/
+
+  - This dataset includes diverse driving scenes and annotations suitable for training and evaluating object detection models.
