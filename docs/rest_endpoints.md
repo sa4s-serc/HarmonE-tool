@@ -2,11 +2,10 @@
 
 Harmonica relies on two HTTP servers communicating via JSON.
 
-## 1. Managing System (ACP)
+## 1. Managing System
 **Base URL:** `http://localhost:5000`  
 **Defined in:** `tool/app.py`
 
-The ACP acts as the central brain, accepting telemetry and serving policy data.
 
 ### `POST /api/telemetry`
 Ingests runtime metrics from the Managed System.
@@ -14,7 +13,7 @@ Ingests runtime metrics from the Managed System.
 *   **Request Body:**
     ```json
     {
-      "timestamp": 1715601234.5,
+      "timestamp": 1715601234,
       "score": 0.85,
       "energy": 120.5,
       "model_used": "yolo_n",
