@@ -1,8 +1,0 @@
-models_cached
-clear_models
-knowledge/inferences
-versionedMR
-runs_artifact_storeaway
-*/__pycache__
-semi_base_models
-
