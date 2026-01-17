@@ -1,6 +1,6 @@
-# HarmonE Research Website
+# Harmonica Website
 
-This repository contains the website for the HarmonE research project: **"A Self-Adaptive Approach for Sustainable MLOps Pipeline Management"**.
+This repository contains the website for the Harmonica research project: **"A Self-Adaptation Exemplar for Sustainable MLOps"**.
 
 ## About
 
