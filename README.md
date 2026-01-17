@@ -61,7 +61,8 @@ To verify the system is working and observe the HarmonE loop in action:
    - **HarmonE (Score/Drift)**: Full adaptive system with intelligent switching
    - **Simple Switch**: Baseline system with basic threshold switching  
    - **Single Model**: Monitor-only mode with no adaptation
- - *Note: You can choose to build your own custom system - process explained in [Customization & Reuse](#customization--reuse)*
+- *Note: You can choose to build your own custom system - process explained in [Customization and Reuse](#customization-and-reuse)
+*
 
 1. **Load Policy:** The system will automatically load the preset policy. You can review the thresholds on the "Policy Management" tab.
 
@@ -101,7 +102,7 @@ When you run an experiment, the artifact generates several files that represent 
 
     - Verification: Open this file during runtime to see the immediate effect of an adaptation action.
 
-# Customization & Reuse
+# Customization and Reuse
 The Harmonica tool is designed to be extensible. Researchers can reuse the Managing System while swapping out the Managed System (ML Pipeline) to test different self-adaptation strategies in new contexts.
 ## Building a Custom Managed System
 
