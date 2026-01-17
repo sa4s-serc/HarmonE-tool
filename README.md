@@ -10,13 +10,12 @@ This website presents the research submitted to SEAMS 2026 on self-adaptive syst
 
 - `index.html` - Main research website with paper content, methodology, and evaluation results
 - `static/` - Website assets including CSS, JavaScript, images, and demo videos
-- `SEAMS_Harmonica_2026.pdf` - Research paper (if available)
 
 ## Research Links
 
 - **Main Tool Repository**: [HarmonE-tool main branch](https://github.com/sa4s-serc/HarmonE-tool) - Contains the complete implementation
 - **Live Website**: [https://sa4s-serc.github.io/HarmonE-tool/](https://sa4s-serc.github.io/HarmonE-tool/)
-- **Conference**: SEAMS 2026 - International Symposium on Software Engineering for Adaptive and Self-Managing Systems
+- **Conference**: SEAMS 2026 
 
 ## Key Features Presented
 
@@ -30,7 +29,7 @@ This website presents the research submitted to SEAMS 2026 on self-adaptive syst
 
 This website is based on the [Nerfies template](https://github.com/nerfies/nerfies.github.io) and is licensed under a [Creative Commons Attribution-ShareAlike 4.0 International License](http://creativecommons.org/licenses/by-sa/4.0/).
 
-## Citation
+<!-- ## Citation
 
 If you find this research useful, please cite:
 
@@ -43,7 +42,7 @@ If you find this research useful, please cite:
   publisher = {ACM},
   note      = {Available at: https://github.com/sa4s-serc/HarmonE-tool}
 }
-```
+``` -->
 
 ---
 
