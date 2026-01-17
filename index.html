@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Harmonica: A Self-Adaptation Exemplar for Sustainable MLOps</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <!-- Fonts -->
+  <link href="https://fonts.googleapis.com/css?family=Google+Sans|Noto+Sans|Castoro" rel="stylesheet">
+
+  <!-- Bulma CSS (used by Nerfies) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css">
+
+  <!-- Font Awesome -->
+  <script defer src="https://use.fontawesome.com/releases/v6.4.0/js/all.js"></script>
+
+  <style>
+    body {
+      font-family: 'Noto Sans', sans-serif;
+    }
+    .title {
+      font-family: 'Google Sans', sans-serif;
+    }
+    .publication-authors {
+      font-size: 1.1em;
+    }
+    .publication-links a {
+      margin: 0.2em;
+    }
+    .content figure {
+      text-align: center;
+    }
+  </style>
+</head>
+
+<body>
+
+<!-- ================= HERO ================= -->
+<section class="hero">
+  <div class="hero-body">
+    <div class="container has-text-centered">
+      <h1 class="title is-2">
+        Harmonica
+      </h1>
+      <h2 class="subtitle is-4">
+        A Self-Adaptation Exemplar for Sustainable MLOps
+      </h2>
+
+      <div class="publication-authors">
+        <span>Ananya Halgatti</span>,
+        <span>Shaunak Biswas</span>,
+        <span>Hiya Bhatt</span>,
+        <span>Srinivasan Rakhunathan</span>,
+        <span>Karthik Vaidhyanathan</span>
+      </div>
+
+      <div class="publication-authors">
+        <span>SERC, IIIT Hyderabad &nbsp;</span>
+      </div>
+
+      <!-- Links -->
+      <div class="publication-links buttons is-centered">
+        <a class="button is-dark" href="https://arxiv.org" target="_blank">
+          <span class="icon"><i class="fas fa-file-pdf"></i></span>
+          <span>Paper</span>
+        </a>
+        <a class="button is-dark" href="https://github.com/sa4s-serc/HarmonE-tool" target="_blank">
+          <span class="icon"><i class="fab fa-github"></i></span>
+          <span>Code</span>
+        </a>
+        <a class="button is-dark" href="https://youtu.be/oiH0wzCPKSs" target="_blank">
+          <span class="icon"><i class="fab fa-youtube"></i></span>
+          <span>Video</span>
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= ABSTRACT ================= -->
+<section class="section">
+  <div class="container is-max-desktop">
+    <h2 class="title is-3">Abstract</h2>
+    <div class="content has-text-justified">
+      <p>
+        Machine Learning Enabled Systems (MLS) operate in dynamic environments
+        where changes in data, workload, or execution context can degrade
+        performance, increase cost, and negatively impact sustainability.
+        While MLOps supports automation across the ML lifecycle, it provides
+        limited support for runtime adaptation driven by sustainability goals.
+      </p>
+      <p>
+        This paper presents <strong>Harmonica</strong>, a self-adaptation exemplar
+        for sustainable MLOps pipelines. Built on the HarmonE approach,
+        Harmonica integrates a configurable MAPE-K loop that separates
+        adaptation intent from execution tactics. It continuously monitors
+        sustainability metrics, evaluates them against adaptation boundaries,
+        and automatically triggers architectural adaptations such as model
+        switching or retraining.
+      </p>
+      <p>
+        We demonstrate Harmonica through time series regression and computer
+        vision case studies, showing how it enables controlled experimentation
+        with sustainability-aware adaptation strategies while improving system
+        stability and reducing manual intervention.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ================= ARCHITECTURE ================= -->
+<section class="section">
+  <div class="container is-max-desktop">
+    <h2 class="title is-3">Architecture Design</h2>
+
+    <div class="content has-text-justified">
+      <p>
+        Harmonica is designed as a <strong>self-adaptive wrapper</strong> around
+        existing machine learning pipelines. Instead of changing how models are
+        trained or deployed, Harmonica observes the system while it runs and
+        intervenes only when necessary.
+      </p>
+
+      <p>
+        The architecture is divided into three clearly separated parts:
+      </p>
+
+      <ul>
+        <li>
+          <strong>Managed System</strong> – the actual machine learning pipeline
+          (training, inference, data preprocessing) that performs the task.
+        </li>
+        <li>
+          <strong>Managing System</strong> – a control layer that continuously
+          monitors the system, reasons about sustainability goals, and decides
+          when adaptation is required.
+        </li>
+        <li>
+          <strong>Frontend</strong> – a lightweight user interface that allows
+          users to configure goals and observe system behavior in real time.
+        </li>
+      </ul>
+
+      <p>
+        At the core of Harmonica lies a <strong>MAPE-K feedback loop</strong>
+        (Monitor, Analyze, Plan, Execute over Knowledge). This loop enables the
+        system to:
+      </p>
+
+      <ul>
+        <li>Monitor metrics such as accuracy, energy usage, and runtime cost</li>
+        <li>Detect when the system moves outside acceptable boundaries</li>
+        <li>Select an appropriate adaptation strategy (e.g., model switching or retraining)</li>
+        <li>Apply the adaptation without stopping the pipeline</li>
+      </ul>
+
+      <p>
+        By keeping adaptation logic separate from the ML pipeline itself,
+        Harmonica allows researchers and practitioners to experiment with
+        sustainability-aware strategies <strong>without rewriting existing systems</strong>.
+      </p>
+
+      <figure>
+        <img src="static/images/architecture.png" alt="Harmonica Architecture">
+        <figcaption>
+          High-level architecture of Harmonica showing the Managed System,
+          Managing System, and the MAPE-K feedback loop.
+        </figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
+
+<!-- ================= DASHBOARD ================= -->
+<section class="section">
+  <div class="container is-max-desktop">
+    <h2 class="title is-3">Live Dashboard</h2>
+    <div class="content">
+      <figure>
+        <!-- Replace with your actual image path -->
+        <img src="static/images/dashboard.png" alt="Harmonica Dashboard">
+        <figcaption>
+          Real-time visualization of sustainability metrics, thresholds,
+          and adaptation events.
+        </figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<!-- ================= USE CASES ================= -->
+<section class="section">
+  <div class="container is-max-desktop">
+    <h2 class="title is-3">Use Cases</h2>
+
+    <div class="content has-text-justified">
+      <p>
+        Harmonica is intended as an <strong>exemplar</strong>—a reference system
+        that helps researchers and practitioners study self-adaptation in
+        real-world MLOps pipelines. To demonstrate its flexibility, we evaluate
+        Harmonica across two different application domains.
+      </p>
+
+      <h3 class="title is-4">Use Case 1: Time Series Regression</h3>
+
+      <p>
+        In this scenario, Harmonica is applied to a traffic flow prediction
+        pipeline. The system continuously predicts future traffic volume using
+        machine learning models with different accuracy and energy profiles.
+      </p>
+
+      <p>
+        As data characteristics change over time (for example, due to seasonal
+        effects or sudden traffic disruptions), Harmonica detects performance
+        degradation and automatically adapts by switching models or triggering
+        retraining. This allows the system to balance prediction accuracy against
+        energy consumption without manual intervention.
+      </p>
+
+      <h3 class="title is-4">Use Case 2: Computer Vision</h3>
+
+      <p>
+        The second use case focuses on object detection in driving scenarios.
+        Multiple vision models with different computational costs are available,
+        ranging from lightweight models to more accurate but energy-intensive
+        ones.
+      </p>
+
+      <p>
+        Harmonica monitors runtime behavior and selects suitable models based on
+        the current sustainability goals. This demonstrates how the same
+        adaptation mechanisms can be reused across domains, even when the
+        underlying ML tasks are fundamentally different.
+      </p>
+
+      <p>
+        Together, these use cases show how Harmonica supports experimentation
+        with sustainability-aware adaptation strategies across the ML lifecycle,
+        rather than being tied to a single application or model type.
+      </p>
+    </div>
+  </div>
+</section>
+
+
+<!-- ================= BIBTEX ================= -->
+<section class="section">
+  <div class="container is-max-desktop">
+    <h2 class="title is-3">BibTeX</h2>
+    <pre>
+<!-- @inproceedings{halgatti2026harmonica,
+  title     = {Harmonica: A Self-Adaptation Exemplar for Sustainable MLOps},
+  author    = {Halgatti, Ananya and Biswas, Shaunak and Bhatt, Hiya
+               and Rakhunathan, Srinivasan and Vaidhyanathan, Karthik},
+  booktitle = {Proceedings of the International Symposium on Software Engineering
+               for Adaptive and Self-Managing Systems (SEAMS)},
+  year      = {2026}
+} -->
+    </pre>
+  </div>
+</section>
+
+<!-- ================= FOOTER ================= -->
+<footer class="footer">
+  <div class="container">
+    <div class="content has-text-centered">
+      <p>
+        This website is based on the
+        <a href="https://github.com/nerfies/nerfies.github.io" target="_blank">
+          Nerfies project page template
+        </a>.
+      </p>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
