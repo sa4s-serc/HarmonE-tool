@@ -25,20 +25,6 @@ This website presents the research submitted to SEAMS 2026 on self-adaptive syst
 
 This website is based on the [Nerfies template](https://github.com/nerfies/nerfies.github.io) and is licensed under a [Creative Commons Attribution-ShareAlike 4.0 International License](http://creativecommons.org/licenses/by-sa/4.0/).
 
-<!-- ## Citation
-
-If you find this research useful, please cite:
-
-```bibtex
-@inproceedings{harmone2026,
-  title     = {HarmonE: A Self-Adaptive Approach for Sustainable MLOps Pipeline Management},
-  author    = {Research Authors},
-  booktitle = {Proceedings of the 21st International Symposium on Software Engineering for Adaptive and Self-Managing Systems (SEAMS 2026)},
-  year      = {2026},
-  publisher = {ACM},
-  note      = {Available at: https://github.com/sa4s-serc/HarmonE-tool}
-}
-``` -->
 
 ---
 
