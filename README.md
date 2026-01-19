@@ -1,21 +1,17 @@
 # Harmonica Website
 
-This repository contains the website for the Harmonica research project: **"A Self-Adaptation Exemplar for Sustainable MLOps"**.
+This repository contains the website for the Harmonica exemplar: **"A Self-Adaptation Exemplar for Sustainable MLOps"**.
 
 ## About
 
 This website presents the research submitted to SEAMS 2026 on self-adaptive systems for sustainable Machine Learning Operations (MLOps). The HarmonE approach integrates Monitor-Analyze-Plan-Execute-Knowledge (MAPE-K) control loops into MLOps pipelines to enable sustainable and resilient machine learning systems.
 
-## Website Structure
-
-- `index.html` - Main research website with paper content, methodology, and evaluation results
-- `static/` - Website assets including CSS, JavaScript, images, and demo videos
 
 ## Research Links
 
 - **Main Tool Repository**: [HarmonE-tool main branch](https://github.com/sa4s-serc/HarmonE-tool) - Contains the complete implementation
 - **Live Website**: [https://sa4s-serc.github.io/HarmonE-tool/](https://sa4s-serc.github.io/HarmonE-tool/)
-- **Conference**: SEAMS 2026 
+- **Conference**: Software Engineering for Adaptive and Self-Managing Systems (SEAMS) 2026 
 
 ## Key Features Presented
 
