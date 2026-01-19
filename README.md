@@ -149,7 +149,23 @@ The system expects images to be available for processing. Your zip file should c
 
 ---
 
-### Part 2: Template / Test MAPE Files
+### 4. Custom JSON example 
+
+Users can define custom adaptation strategies by specifying (i) the quality attribute to monitor, (ii) boundary conditions that represent sustainability intent, and (iii) tactics to execute when boundaries are violated.
+
+```
+{
+  "quality_attribute": "<metric>",
+  "adaptation_boundary": {
+    "condition": "<operator>",
+    "threshold": <value>
+  },
+  "tactics": [{ "tactic_type": "<action>" }]
+}
+```
+---
+
+### Template / Test MAPE Files
 The `examples/` directory contains two subfolders:
 
 - `templates/` – This folder provides the skeleton structure for how MAPE files should be organized and written. These are generic templates meant to guide you in building your own system.
