@@ -693,14 +693,8 @@
                                     class="bg-moss-700 hover:bg-moss-600 text-white dark:bg-moss-300 dark:hover:bg-moss-200 dark:text-moss-900 px-4 py-2 rounded text-sm font-semibold transition-colors">Save as policy</button>
                             <button type="button" id="download-policy-btn"
                                     class="border border-bark-300 dark:border-bark-700 hover:bg-bark-50 dark:hover:bg-bark-800 px-4 py-2 rounded text-sm font-semibold transition-colors">Download JSON</button>
-                            <button type="button" id="trigger-retrain-btn"
-                                    class="ml-auto inline-flex items-center gap-1.5 border border-bark-300 dark:border-bark-700 hover:bg-bark-50 dark:hover:bg-bark-800 px-4 py-2 rounded text-sm font-medium transition-colors disabled:opacity-50">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 3v6h-6"/></svg>
-                                Retrain now
-                                <span id="mlflow-retrain-status" class="text-xs text-bark-400">Idle</span>
-                            </button>
                             <button id="download-telemetry-btn" type="button"
-                                    class="inline-flex items-center gap-1.5 border border-bark-300 dark:border-bark-700 hover:bg-bark-50 dark:hover:bg-bark-800 px-4 py-2 rounded text-sm font-medium transition-colors">
+                                    class="ml-auto inline-flex items-center gap-1.5 border border-bark-300 dark:border-bark-700 hover:bg-bark-50 dark:hover:bg-bark-800 px-4 py-2 rounded text-sm font-medium transition-colors">
                                 Telemetry CSV
                             </button>
                         </div>
@@ -1427,7 +1421,6 @@
 
             mapeToggle.addEventListener('click', () => setMapeOpen(mapeBody.classList.contains('hidden')));
 
-            document.getElementById('trigger-retrain-btn').addEventListener('click', triggerRetrain);
 
             // isTrusted: only a real user click dismisses the dot, not the
             // programmatic .click() calls used for tab routing.
@@ -3283,94 +3276,6 @@
             knowledgePollId = setInterval(refreshKnowledgeState, 2000);
             if (modelsPollId) clearInterval(modelsPollId);
             modelsPollId = setInterval(refreshModels, 4000);
-        }
-
-        // === MANUAL RETRAIN ===
-        // Runs as an MLflow Project in a background thread, so fire and poll.
-        let retrainPollIntervalId = null;
-
-        function setRetrainStatus(text, tone) {
-            const el = document.getElementById('mlflow-retrain-status');
-            if (!el) return;
-            const tones = {
-                idle:    'text-sm mt-1',
-                running: 'text-sm mt-1 text-amber-600 dark:text-amber-400',
-                done:    'text-sm mt-1 text-emerald-600 dark:text-emerald-400',
-                failed:  'text-sm mt-1 text-rose-600 dark:text-rose-400'
-            };
-            el.className = tones[tone] || tones.idle;
-            el.textContent = text;
-        }
-
-        async function pollRetrainStatus() {
-            if (!activeSystemType) return;
-            try {
-                const res = await fetch(`${ACP_SERVER_URL}/api/retrain-status/${activeSystemType}?t=${Date.now()}`);
-                if (!res.ok) return;
-                const state = await res.json();
-
-                if (state.status === 'running') {
-                    setRetrainStatus('Running…', 'running');
-                    return;
-                }
-
-                if (retrainPollIntervalId) {
-                    clearInterval(retrainPollIntervalId);
-                    retrainPollIntervalId = null;
-                }
-                document.getElementById('trigger-retrain-btn').disabled = false;
-
-                if (state.status === 'failed' || state.error) {
-                    setRetrainStatus('Failed', 'failed');
-                    showMessage(`Retrain failed: ${state.error || 'unknown error'}`, "error");
-                } else if (state.status === 'done' || state.status === 'finished' || state.status === 'success') {
-                    setRetrainStatus('Completed', 'done');
-                    showMessage("Retrain finished. The new run is in MLflow.", "success");
-                    refreshMlflowLinks();
-                } else {
-                    setRetrainStatus('Idle', 'idle');
-                }
-            } catch (error) {
-                console.error('Error polling retrain status:', error);
-            }
-        }
-
-        async function triggerRetrain() {
-            if (!activeSystemType) {
-                showMessage("Load an approach first - there is no system to retrain yet.", "warning");
-                return;
-            }
-
-            const btn = document.getElementById('trigger-retrain-btn');
-            btn.disabled = true;
-            setRetrainStatus('Starting…', 'running');
-
-            try {
-                const res = await fetch(`${ACP_SERVER_URL}/api/trigger-retrain`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ system: activeSystemType })
-                });
-                const result = await res.json();
-
-                if (res.status === 409) {
-                    showMessage("A retrain is already running for this system.", "warning");
-                } else if (!res.ok) {
-                    throw new Error(result.error || res.statusText);
-                } else {
-                    showMessage("Retrain started as an MLflow Project. Watch the status in the MLflow panel.", "info");
-                }
-
-                setRetrainStatus('Running…', 'running');
-                if (retrainPollIntervalId) clearInterval(retrainPollIntervalId);
-                retrainPollIntervalId = setInterval(pollRetrainStatus, 2000);
-
-            } catch (error) {
-                console.error('Error triggering retrain:', error);
-                btn.disabled = false;
-                setRetrainStatus('Failed', 'failed');
-                showMessage(`Could not start retrain: ${error.message}`, "error");
-            }
         }
 
         document.getElementById("adaptive-start-btn").addEventListener("click", async () => {
