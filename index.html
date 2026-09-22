@@ -30,6 +30,58 @@
     .content figure {
       text-align: center;
     }
+
+    .feature-image {
+      width: 100%;
+      height: auto;
+      display: block;
+      border-radius: 8px;
+      box-shadow: 0 8px 28px rgba(0, 0, 0, 0.12);
+    }
+
+    .feature-grid .column {
+      display: flex;
+    }
+
+    .feature-grid figure {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .feature-grid .feature-image {
+      aspect-ratio: 16 / 9;
+      object-fit: contain;
+      background: #f5f5f5;
+    }
+
+    .feature-grid figcaption {
+      min-height: 0;
+    }
+
+    figcaption {
+      font-style: italic;
+      color: #555;
+      margin-top: 0.75rem;
+    }
+
+    .integration-card {
+      height: 100%;
+      padding: 1.25rem;
+      border: 1px solid #e5e5e5;
+      border-radius: 8px;
+      background: #fafafa;
+    }
+
+    .integration-card .title {
+      margin-bottom: 0.55rem;
+    }
+
+    @media screen and (max-width: 768px) {
+      .feature-grid .column {
+        display: block;
+      }
+    }
   </style>
 </head>
 
@@ -199,22 +251,186 @@
 </section>
 
 
-<!-- ================= DASHBOARD ================= -->
+<!-- ================= FRONTEND ================= -->
 <section class="section">
   <div class="container is-max-desktop">
     <h2 class="title is-3">Live Dashboard</h2>
+
+    <div class="content has-text-justified">
+      <p>
+        The redesigned Harmonica frontend provides a persistent sidebar and
+        dedicated views for observing the live managed system, inspecting
+        available models, configuring adaptation policies, and reviewing the
+        adaptation history.
+      </p>
+    </div>
+
     <div class="content">
       <figure>
-        <!-- Replace with your actual image path -->
-        <img src="static/images/dashboard.png" alt="Harmonica Dashboard">
+        <img class="feature-image" src="static/images/overview.png"
+             alt="Harmonica Overview showing live score, energy, drift, and adaptation events"
+             loading="lazy">
         <figcaption>
-          Real-time visualization of sustainability metrics, thresholds,
-          and adaptation events.
+          Live score, energy, drift, and adaptation events.
         </figcaption>
       </figure>
     </div>
+
+    <div class="columns is-multiline feature-grid">
+      <div class="column is-half">
+        <figure>
+          <img class="feature-image" src="static/images/models.png"
+               alt="Harmonica Models view" loading="lazy">
+          <figcaption>
+            Available models and their runtime performance.
+          </figcaption>
+        </figure>
+      </div>
+
+      <div class="column is-half">
+        <figure>
+          <img class="feature-image" src="static/images/policy.png"
+               alt="Harmonica Policy configuration view" loading="lazy">
+          <figcaption>
+            Adaptation policy, thresholds, and tactics.
+          </figcaption>
+        </figure>
+      </div>
+
+      <div class="column is-half">
+        <figure>
+          <img class="feature-image" src="static/images/history.png"
+               alt="Harmonica adaptation history view" loading="lazy">
+          <figcaption>
+            Adaptation events and their outcomes.
+          </figcaption>
+        </figure>
+      </div>
+
+      <div class="column is-half">
+        <figure>
+          <img class="feature-image" src="static/images/approach.png"
+               alt="Harmonica approach selection screen" loading="lazy">
+          <figcaption>
+            Available approaches and system configurations.
+          </figcaption>
+        </figure>
+      </div>
+    </div>
   </div>
 </section>
+
+
+<!-- ================= MLFLOW INTEGRATION ================= -->
+<section class="section">
+  <div class="container is-max-desktop">
+    <h2 class="title is-3">MLflow Integration</h2>
+
+    <div class="content has-text-justified">
+      <p>
+        Harmonica integrates with <strong>MLflow</strong> to make retraining,
+        model versioning, and runtime adaptation telemetry observable across
+        the ML lifecycle. Tracking is configured at startup, with the MLflow
+        UI served locally at <code>http://localhost:5001</code>.
+      </p>
+
+      <div class="columns is-multiline">
+        <div class="column is-half">
+          <div class="integration-card">
+            <h3 class="title is-5">MLflow Projects for Retraining</h3>
+            <p>
+              Retraining is launched as an actual MLflow Project for the
+              regression or computer-vision system. The MAPE-K loop can trigger
+              retraining automatically when adaptation conditions are violated,
+              while CLI execution remains available for debugging.
+            </p>
+          </div>
+        </div>
+
+        <div class="column is-half">
+          <div class="integration-card">
+            <h3 class="title is-5">Experiment Tracking</h3>
+            <p>
+              Each retrain records model-specific hyperparameters and held-out
+              evaluation metrics. A managed-system session also opens an
+              <code>harmone-adaptations</code> MLflow run and streams continuous
+              telemetry such as score, energy, drift, model usage, switches,
+              and retraining events.
+            </p>
+          </div>
+        </div>
+
+        <div class="column is-half">
+          <div class="integration-card">
+            <h3 class="title is-5">Model Registry</h3>
+            <p>
+              Retrained LSTM, SVM, and Ridge models, as well as computer-vision
+              models, are registered in MLflow. The Harmonica Models view
+              exposes registry versions alongside the disk-based Versioned
+              Model Repository.
+            </p>
+          </div>
+        </div>
+
+        <div class="column is-half">
+          <div class="integration-card">
+            <h3 class="title is-5">Live Deep Links</h3>
+            <p>
+              The frontend provides persistent MLflow access and resolves the
+              current session, experiment, active model, registered model, and
+              active alias version so users can move directly from Harmonica
+              into the corresponding MLflow records.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content">
+      <figure>
+        <img class="feature-image" src="static/images/mlflow-run-overview.png"
+             alt="MLflow managed-system run overview" loading="lazy">
+        <figcaption>
+          Live adaptation telemetry tracked in MLflow.
+        </figcaption>
+      </figure>
+    </div>
+
+    <div class="columns is-multiline feature-grid">
+      <div class="column is-half">
+        <figure>
+          <img class="feature-image" src="static/images/mlflow-run-metrics.png"
+               alt="MLflow model metrics charts" loading="lazy">
+          <figcaption>
+            Runtime metrics tracked throughout the session.
+          </figcaption>
+        </figure>
+      </div>
+
+      <div class="column is-half">
+        <figure>
+          <img class="feature-image" src="static/images/mlflow-models.png"
+               alt="MLflow Models page showing registered model versions"
+               loading="lazy">
+          <figcaption>
+            Registered models and their tracked versions.
+          </figcaption>
+        </figure>
+      </div>
+
+      <div class="column is-half">
+        <figure>
+          <img class="feature-image" src="static/images/mlflow-registry.png"
+               alt="MLflow Registered Models page" loading="lazy">
+          <figcaption>
+            MLflow Model Registry and active versions.
+          </figcaption>
+        </figure>
+      </div>
+    </div>
+  </div>
+</section>
+
 
 <!-- ================= USE CASES ================= -->
 <section class="section">
