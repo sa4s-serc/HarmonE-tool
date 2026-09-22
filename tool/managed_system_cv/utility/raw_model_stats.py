@@ -1,10 +1,12 @@
 import os
+import sys
 import time
 import numpy as np
 import pandas as pd
 from pathlib import Path
 from ultralytics import YOLO
-import pyRAPL
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
+import energy_utils as pyRAPL
 
 # -----------------------
 # CONFIG

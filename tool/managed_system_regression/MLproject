@@ -1,0 +1,21 @@
+name: harmone_regression
+
+entry_points:
+  train:
+    parameters:
+      ridge_alpha: {type: float, default: 256}
+      svm_c: {type: float, default: 0.08}
+      svm_tol: {type: float, default: 0.16}
+      lstm_epochs: {type: float, default: 50}
+      lstm_lr: {type: float, default: 0.001}
+      seq_length: {type: float, default: 5}
+    command: "python train.py --ridge_alpha {ridge_alpha} --svm_c {svm_c} --svm_tol {svm_tol} --lstm_epochs {lstm_epochs} --lstm_lr {lstm_lr} --seq_length {seq_length}"
+  retrain:
+    parameters:
+      ridge_alpha: {type: float, default: 200}
+      svm_c: {type: float, default: 0.08}
+      svm_tol: {type: float, default: 0.16}
+      lstm_epochs: {type: float, default: 50}
+      lstm_lr: {type: float, default: 0.001}
+      seq_length: {type: float, default: 5}
+    command: "python retrain.py --ridge_alpha {ridge_alpha} --svm_c {svm_c} --svm_tol {svm_tol} --lstm_epochs {lstm_epochs} --lstm_lr {lstm_lr} --seq_length {seq_length}"

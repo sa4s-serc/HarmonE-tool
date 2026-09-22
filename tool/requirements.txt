@@ -75,7 +75,7 @@ pillow>=12.0.0; python_version >= "3.12"
 
 pydantic==2.12.3
 pydantic_core==2.41.4
-pyRAPL==0.2.3.1
+pyRAPL==0.2.3.1; sys_platform == "linux"
 python-dateutil==2.9.0.post0
 pytz==2024.2
 requests==2.31.0
@@ -99,9 +99,13 @@ uvicorn==0.38.0
 #########################################
 
 # PyTorch for Python < 3.12 (CPU-only)
-torch==2.1.0; python_version < "3.12"
-torchvision==0.16.0; python_version < "3.12"
-torchaudio==2.1.0; python_version < "3.12"
+# Pinned to 2.4.1, not 2.1.0: mlflow's PyTorch model-logging flavor imports
+# torch.export.Dim, which doesn't exist before torch 2.4 - mlflow>=3 + torch
+# 2.1.0 fails with "ImportError: cannot import name 'Dim' from 'torch.export'"
+# the moment train.py tries to register a model.
+torch==2.4.1; python_version < "3.12"
+torchvision==0.19.1; python_version < "3.12"
+torchaudio==2.4.1; python_version < "3.12"
 
 # PyTorch for Python ≥ 3.12 (newer versions with 3.12 support)
 torch>=2.9.0; python_version >= "3.12"
@@ -126,3 +130,14 @@ ultralytics==8.2.103; python_version < "3.12"
 ultralytics>=8.3.0; python_version >= "3.12"
 
 tqdm==4.67.1
+
+#########################################
+# Experiment tracking (MLflow Projects + Model Registry)
+#########################################
+
+# Pinned, not >=2.16.0: an unpinned install grabs the newest mlflow (3.x),
+# which is fine on its own but must be paired with torch>=2.4 above - keeping
+# both pinned here means `pip install -r requirements.txt` alone always
+# produces a working pair instead of occasionally resolving an incompatible one.
+mlflow==3.16.1
+plotly>=5.24.0

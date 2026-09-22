@@ -1,4 +1,5 @@
 import os
+import argparse
 import shutil
 import re
 import json
@@ -8,21 +9,50 @@ from ultralytics import YOLO
 from pathlib import Path
 from PIL import Image
 from tqdm import tqdm
-import pyRAPL
 import csv
+import mlflow
 
-# Add utility path to import drift utils
+# Add utility path to import drift utils, and the shared tool/ dir for energy_utils
 import sys
 sys.path.append(os.path.abspath(os.path.dirname(__file__)))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+import energy_utils as pyRAPL
+from console_utils import force_utf8_console
+from session_utils import current_session_id, session_versioned_dir
 from utility.drift_utils import luminance_histogram
+
+# Own entry point (`mlflow run managed_system_cv -e retrain`) - see
+# managed_system_regression/retrain.py.
+force_utf8_console()
 from torchvision.transforms.functional import adjust_brightness
+
+# --- MLflow tracking setup ---
+# Absolute path so this converges on the same DB regardless of the caller's cwd
+# (bare `python retrain.py`, `mlflow run .`, or triggered from mape_logic/execute.py).
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+TRACKING_DB_PATH = os.path.join(BASE_DIR, "..", "mlflow.db")
+# Only set this ourselves if nothing upstream (mlflow.projects.run's caller, e.g.
+# mape_logic/execute.py, or `mlflow run`'s own default) already configured one via
+# env var — otherwise we'd orphan an inherited run ID in the wrong store (see
+# managed_system_regression/retrain.py for the full explanation).
+if not os.environ.get("MLFLOW_TRACKING_URI"):
+    os.environ["MLFLOW_TRACKING_URI"] = f"sqlite:///{TRACKING_DB_PATH}"
+os.environ["MLFLOW_EXPERIMENT_NAME"] = "harmonica-cv"
+mlflow.set_tracking_uri(os.environ["MLFLOW_TRACKING_URI"])
+mlflow.set_experiment("harmonica-cv")
 
 # --- CONFIGURATION ---
 DATA_DIR = Path("data/bdd100k")
 MODELS_DIR = Path("base_models")
 ACTIVE_MODELS_DIR = Path("models")
-VERSIONED_DIR = Path("versionedMR")
 KNOWLEDGE_DIR = Path("knowledge")
+# VMR is scoped per managed-system session, so version numbering restarts at 1
+# each run and drift reuse only considers models this session trained - see
+# tool/session_utils.py.
+SESSION_ID = current_session_id(os.path.abspath(KNOWLEDGE_DIR))
+VERSIONED_DIR = Path(session_versioned_dir(
+    os.path.abspath(Path("versionedMR")), os.path.abspath(KNOWLEDGE_DIR)
+))
 ENERGY_LOG_FILE = KNOWLEDGE_DIR / "retrain_energy_log.csv"
 
 # Reference data for drift comparison
@@ -154,7 +184,7 @@ def create_augmented_retrain_set(image_paths, label_dir, drift_type):
 
 # --- MAIN RETRAIN FUNCTION ---
 
-def retrain_yolo():
+def retrain_yolo(args):
     pyRAPL.setup()
 
     try:
@@ -218,34 +248,80 @@ names: {{ {', '.join([f'{i}: {i}' for i in range(80)])} }}
     trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
     print(f"✅ Fine-tuning setup complete. Trainable parameters: {trainable_params}")
 
+    batch = args.batch
+    if batch is None:
+        batch = 4 if model_name == "yolo_n" else (1 if model_name == "yolo_m" else 2)
+
     meter = pyRAPL.Measurement("model_training")
-    meter.begin()
 
-    model.train(
-        data=train_yaml_path, epochs=5, imgsz=640,
-        batch=4 if model_name == "yolo_n" else (1 if model_name == "yolo_m" else 2),
-        workers=2, patience=3, pretrained=True, cache="disk")
+    with mlflow.start_run(run_name=f"retrain-{model_name}"):
+        # See managed_system_regression/retrain.py: `epochs`/`imgsz`/`patience` are
+        # already auto-logged by MLflow Projects when launched via `mlflow run`
+        # (they're declared MLproject parameters); only log what's missing so this
+        # also works when this script is run bare.
+        existing_params = mlflow.active_run().data.params
+        candidate_params = {
+            "model_name": model_name,
+            "drift_type": drift_type,
+            "epochs": args.epochs,
+            "imgsz": args.imgsz,
+            "batch": batch,
+            "patience": args.patience,
+            "trigger": "drift",
+        }
+        new_params = {k: v for k, v in candidate_params.items() if k not in existing_params}
+        if new_params:
+            mlflow.log_params(new_params)
 
-    meter.end()
+        # Registry versioning stays global; this tag scopes a registered
+        # version back to the session that produced it (see
+        # managed_system_regression/retrain.py for the same rationale).
+        mlflow.set_tag("harmone_session", SESSION_ID)
 
-    energy_used = meter.result.pkg[0] if meter.result.pkg else 0.0
-    log_energy(model_name, energy_used)
-    print(f"⚡ Energy consumed for training: {energy_used} uJ")
+        meter.begin()
 
-    v = get_next_version(model_name)
-    new_version_base_name = f"{model_name}_v{v}"
+        # Ultralytics detects this already-active MLflow run and logs its own
+        # per-epoch metrics/params into it automatically.
+        model.train(
+            data=train_yaml_path, epochs=int(args.epochs), imgsz=int(args.imgsz),
+            batch=batch,
+            workers=2, patience=int(args.patience), pretrained=True, cache="disk")
 
-    versioned_model_path = VERSIONED_DIR / f"{new_version_base_name}.pt"
-    versioned_hist_path = VERSIONED_DIR / f"{new_version_base_name}_hist.json"
-    model.save(str(versioned_model_path))
-    with open(versioned_hist_path, 'w') as f:
-        json.dump({"average_histogram": avg_retrain_hist.tolist()}, f, indent=4)
-    print(f"✔ Saved versioned model to {versioned_model_path}")
-    print(f"✔ Saved versioned histogram to {versioned_hist_path}")
+        meter.end()
 
-    active_model_path = ACTIVE_MODELS_DIR / f"{model_name}.pt"
-    shutil.copy(versioned_model_path, active_model_path)
-    print(f"✔ Updated active model at {active_model_path}")
+        energy_used = meter.result.pkg[0] if meter.result.pkg else 0.0
+        log_energy(model_name, energy_used)
+        mlflow.log_metric("training_energy_uJ", energy_used)
+        print(f"⚡ Energy consumed for training: {energy_used} uJ")
+
+        v = get_next_version(model_name)
+        new_version_base_name = f"{model_name}_v{v}"
+
+        versioned_model_path = VERSIONED_DIR / f"{new_version_base_name}.pt"
+        versioned_hist_path = VERSIONED_DIR / f"{new_version_base_name}_hist.json"
+        model.save(str(versioned_model_path))
+        with open(versioned_hist_path, 'w') as f:
+            json.dump({"average_histogram": avg_retrain_hist.tolist()}, f, indent=4)
+        print(f"✔ Saved versioned model to {versioned_model_path}")
+        print(f"✔ Saved versioned histogram to {versioned_hist_path}")
+        mlflow.log_param("versionedMR_version", v)
+
+        # Log our own known-good copy of the weight file (rather than relying on
+        # guessing Ultralytics' internal artifact layout) and register it, so the
+        # Model Registry always has a valid pointer to this version's weights.
+        mlflow.log_artifact(str(versioned_model_path), artifact_path="model")
+        # Versioned Model Repository pairs a model with the data distribution it
+        # was trained on; the luminance histogram is that pairing for CV.
+        mlflow.log_artifact(str(versioned_hist_path), artifact_path="training_data")
+        run_id = mlflow.active_run().info.run_id
+        mlflow.register_model(
+            f"runs:/{run_id}/model/{versioned_model_path.name}",
+            f"harmone-cv-{model_name}",
+        )
+
+        active_model_path = ACTIVE_MODELS_DIR / f"{model_name}.pt"
+        shutil.copy(versioned_model_path, active_model_path)
+        print(f"✔ Updated active model at {active_model_path}")
 
     os.remove(train_yaml_path)
     shutil.rmtree(RETRAIN_AUG_DIR)
@@ -253,5 +329,13 @@ names: {{ {', '.join([f'{i}: {i}' for i in range(80)])} }}
     print("✔ Cleanup complete.")
     print(f"✅ {model_name} retrained successfully -> version {v}")
 
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--epochs", type=float, default=5)
+    parser.add_argument("--imgsz", type=float, default=640)
+    parser.add_argument("--batch", type=float, default=None)
+    parser.add_argument("--patience", type=float, default=3)
+    return parser.parse_args()
+
 if __name__ == "__main__":
-    retrain_yolo()
+    retrain_yolo(parse_args())

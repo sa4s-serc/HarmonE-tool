@@ -68,7 +68,7 @@ This subsystem performs the primary function of the application (e.g., object de
 *   **Implementation:** `tool/managed_system_<type>/inference.py`.
 *   **Data Ingestion Service:** Reads input data (images or CSV rows) from the Data Repository.
 *   **Data Preprocessor:** Normalizes inputs (e.g., resizing images, scaling float values) before passing them to the model.
-*   **Inference Engine:** Loads the active model defined in `knowledge/model.csv` and generates predictions. It records the result, confidence score, and energy consumption (measured via `pyRAPL`) into the System Logs.
+*   **Inference Engine:** Loads the active model defined in `knowledge/model.csv` and generates predictions. It records the result, confidence score, and energy consumption into the System Logs - measured via `pyRAPL`/Intel RAPL on Linux, or a CPU-utilization-based estimate elsewhere (see `tool/energy_utils.py`) on platforms like Windows/macOS where RAPL isn't available.
 
 ### 3.2 Training Subsystem
 This subsystem handles the evolution of models in response to data drift.

@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 import json
+import time
 import os
 import sys
 
@@ -18,12 +19,54 @@ predictions_file = os.path.join(KNOWLEDGE_DIR, "predictions.csv")
 
 
 def load_mape_info():
-    with open(mape_info_file, "r") as f:
-        return json.load(f)
+    """Load MAPE info from JSON file.
+
+    Retries once: a concurrent writer can briefly leave the file mid-rename on
+    Windows, and this used to raise straight out of the monitoring loop.
+    """
+    for attempt in (0, 1):
+        try:
+            with open(mape_info_file, "r") as f:
+                return json.load(f)
+        except (json.JSONDecodeError, FileNotFoundError, PermissionError):
+            if attempt:
+                raise
+            time.sleep(0.05)
 
 def save_mape_info(data):
-    with open(mape_info_file, "w") as f:
+    """Save MAPE info atomically.
+
+    Written to a temp file and moved into place with os.replace(), which is
+    atomic on Windows and POSIX. Three processes (inference.py via monitor,
+    manage.py via analyse/execute) read-modify-write this file concurrently;
+    a plain open(path, "w") truncates it to zero before the new bytes land,
+    so a reader landing in that window gets an empty file. Measured at a 25%
+    failure rate under sustained concurrent writes.
+    """
+    tmp_path = "%s.tmp%s" % (mape_info_file, os.getpid())
+    with open(tmp_path, "w") as f:
         json.dump(data, f, indent=4)
+        f.flush()
+        os.fsync(f.fileno())
+
+    # os.replace raises WinError 5 if anything else currently has the
+    # destination open, and the dashboard polls this file every couple of
+    # seconds. Those read handles live for microseconds, so a short retry
+    # clears them; if it somehow does not, fall back to the direct write
+    # rather than lose the update or crash the loop.
+    for _ in range(40):
+        try:
+            os.replace(tmp_path, mape_info_file)
+            return
+        except PermissionError:
+            time.sleep(0.02)
+
+    # Still locked after ~0.8s. Skip this snapshot rather than fall back to a
+    # truncating write: the next tick rewrites the whole file anyway, whereas a
+    # torn write can leave state that load_mape_info cannot parse.
+    if os.path.exists(tmp_path):
+        os.remove(tmp_path)
+    print("[MAPE] WARNING: could not update %s (locked); skipping this snapshot" % mape_info_file)
 
 def get_current_model():
     try:
@@ -32,9 +75,63 @@ def get_current_model():
     except FileNotFoundError:
         return None
 
+def _mean_inference_time(frame):
+    """Mean inference_time (seconds) over this window, or None.
+
+    Inference time is one of the paper's four headline metrics, but it was
+    never put into the telemetry payload - only into predictions.csv. The
+    dashboard's latency chart reads telemetry, so it had nothing to plot,
+    while the Models table looked fine because it reads predictions.csv
+    directly. Returned in seconds; the UI converts to ms.
+    """
+    try:
+        if frame is None or "inference_time" not in frame.columns:
+            return None
+        value = frame["inference_time"].mean()
+        return None if value != value else round(float(value), 6)  # NaN-safe
+    except Exception:
+        return None
+
+def _numeric_frame(frame, columns):
+    """Drop rows whose numeric columns are not actually numeric.
+
+    predictions.csv accumulates torn rows when more than one writer appends to
+    it, and a single one of those ('svm' landing in true_value) raised out of
+    r2_score and stopped telemetry entirely. Coerce and drop instead.
+    """
+    import pandas as _pd
+    out = frame.copy()
+    for col in columns:
+        if col in out.columns:
+            out[col] = _pd.to_numeric(out[col], errors="coerce")
+    present = [c for c in columns if c in out.columns]
+    return out.dropna(subset=present) if present else out
+
 def monitor_mape():
     info = load_mape_info()
     last_line = info["last_line"]
+    # predictions.csv is recreated empty on a fresh run, but last_line is not
+    # reset alongside it. Once the pointer sits past the end of the file,
+    # skiprows always yields an empty frame, so the "new data" branch never
+    # runs - and that branch is the ONLY place ema_scores and last_line are
+    # updated. The loop then plans forever on EMA values frozen from before
+    # the reset. Observed live: last_line=53986 against a 50856-row file.
+    try:
+        total_rows = sum(1 for _ in open(predictions_file)) - 1  # minus header
+    except OSError:
+        total_rows = None
+    if total_rows is not None and last_line > max(total_rows, 0):
+        # Resync to the end rather than rewinding to 0. Rewinding replays the
+        # whole historical file, which contains 789 torn rows left over from
+        # when duplicate inference.py processes appended concurrently - one of
+        # them ("could not convert string to float: 'svm'") killed every
+        # telemetry tick. Everything already written counts as processed.
+        print(f"[MAPE] last_line ({last_line}) is past the end of predictions.csv "
+              f"({total_rows} rows) - the file was reset; resyncing to {total_rows}")
+        last_line = total_rows
+        info["last_line"] = total_rows
+        save_mape_info(info)
+
     current_model = get_current_model()
     if current_model is None:
         print("[MAPE] No current model found.")
@@ -52,16 +149,11 @@ def monitor_mape():
                 "mape_k_energy_uJ": 0.0
             })
             
-            # Include simple switch counters
-            simple_switch_counters = info.get("simple_switch_counters", {
-                "simple_switches": 0
-            })
-            
             # Use cached EMA score
             final_score = info["ema_scores"].get(current_model, 0.5)
-            
+
             print(f"📊 Event Counters - Switches: {event_counters['model_switches']}, Retrains: {event_counters['retrains']}, VMR: {event_counters['vmr_events']}, MAPE-K Energy: {event_counters['mape_k_energy_uJ']:.2f} µJ")
-            
+
             return {
                 "confidence": 0.5,  # Default value
                 "energy": 0.0,  # Default actual energy value for display
@@ -72,7 +164,7 @@ def monitor_mape():
                 "retrains": event_counters["retrains"],
                 "vmr_events": event_counters["vmr_events"],
                 "mape_k_energy_uJ": round(event_counters["mape_k_energy_uJ"], 2),
-                "simple_switches": simple_switch_counters["simple_switches"]
+                "inference_time": None,
             }
     except FileNotFoundError:
         print("[MAPE] Predictions file not found.")
@@ -83,6 +175,7 @@ def monitor_mape():
     energy_min = thresholds.get("E_m", 0)
     energy_max = thresholds.get("E_M", 10000000)
 
+    df = _numeric_frame(df, ["confidence", "energy_uJ"])
     avg_conf = df["confidence"].mean()
     avg_energy = df["energy_uJ"].mean()
 
@@ -120,13 +213,8 @@ def monitor_mape():
 
     # Include event counters in telemetry
     event_counters = info["event_counters"]
-    
-    # Include simple switch counters
-    simple_switch_counters = info.get("simple_switch_counters", {
-        "simple_switches": 0
-    })
-    
-    print(f"📊 Event Counters - Switches: {event_counters['model_switches']}, Retrains: {event_counters['retrains']}, VMR: {event_counters['vmr_events']}, MAPE-K Energy: {event_counters['mape_k_energy_uJ']:.2f} µJ, Simple Switches: {simple_switch_counters['simple_switches']}")
+
+    print(f"📊 Event Counters - Switches: {event_counters['model_switches']}, Retrains: {event_counters['retrains']}, VMR: {event_counters['vmr_events']}, MAPE-K Energy: {event_counters['mape_k_energy_uJ']:.2f} µJ")
 
     return {
         "confidence": avg_conf,
@@ -138,7 +226,7 @@ def monitor_mape():
         "retrains": event_counters["retrains"],
         "vmr_events": event_counters["vmr_events"],
         "mape_k_energy_uJ": round(event_counters["mape_k_energy_uJ"], 2),
-        "simple_switches": simple_switch_counters["simple_switches"]
+        "inference_time": _mean_inference_time(df),
     }
 
 def monitor_drift():

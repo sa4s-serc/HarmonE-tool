@@ -10,7 +10,16 @@ import sys
 import shutil
 import signal
 import psutil
+import mlflow
+from mlflow.tracking import MlflowClient
+from mlflow.entities import Metric
 from flask import Flask, request, jsonify
+
+# Must run before anything prints. Also covers inference.py / manage.py, which
+# inherit this process's environment when spawned below.
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+from console_utils import force_utf8_console
+force_utf8_console()
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - [MasterWrapper] - %(levelname)s - %(message)s')
 
@@ -18,7 +27,47 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - [MasterWrapper] - 
 ACP_SERVER_URL = "http://localhost:5000"
 APPROACH_CONFIG_FILE = "approach.conf"
 POLICY_DIR = "policies"
+
+# How often the telemetry thread samples the monitors and pushes to the ACP
+# server + MLflow. Lower = finer-grained live charts, at the cost of re-reading
+# predictions.csv more often (monitor_mape parses the whole file each tick), so
+# going far below ~1s mostly buys resolution the monitors can't actually supply.
+TELEMETRY_INTERVAL_SECONDS = float(os.environ.get("HARMONE_TELEMETRY_INTERVAL_SECONDS", "2"))
 HANDLER_PORT = 8080
+
+# --- MLflow: this process owns the shared 'adaptation timeline' session run.
+# execute.py (running in the separate manage.py process) appends its own
+# adaptation events to the SAME run_id (read from a file this process writes),
+# via MlflowClient rather than the fluent start_run API, since two independent
+# OS processes need to append to one run concurrently.
+# ONE experiment per managed system: the session run and the training runs
+# that nest under it belong together. The old split ('harmone-adaptations' for
+# sessions, 'harmone-<system>' for training) left every session disconnected
+# from the models it produced.
+def mlflow_experiment_for(system):
+    return f"harmonica-{system}"
+mlflow.set_tracking_uri(f"sqlite:///{os.path.join(os.path.dirname(os.path.abspath(__file__)), 'mlflow.db')}")
+mlflow_client = MlflowClient()
+
+
+def active_experiment_id(name):
+    """Experiment id for `name`, created or restored so it is always ACTIVE.
+
+    get_experiment_by_name() returns SOFT-DELETED experiments too, so taking
+    its id blindly makes create_run() fail with "must be in the 'active'
+    state". That is exactly how session runs silently stopped being created:
+    'harmone-adaptations' had been deleted, the id still resolved, create_run
+    raised, the surrounding except swallowed it, and the whole adaptation
+    timeline vanished with no visible error.
+    """
+    exp = mlflow_client.get_experiment_by_name(name)
+    if exp is None:
+        return mlflow_client.create_experiment(name)
+    if exp.lifecycle_stage == "deleted":
+        mlflow_client.restore_experiment(exp.experiment_id)
+        logging.warning("[MLFLOW] Restored soft-deleted experiment '%s'", name)
+    return exp.experiment_id
+SESSION_RUN_ID = None
 
 # --- Dynamically set logic paths ---
 LOGIC_PATH = ""
@@ -31,21 +80,123 @@ subprocesses = []
 should_shutdown = False
 
 def get_python_command():
-    """Detect whether to use 'python' or 'python3' command."""
-    if shutil.which("python3"):
-        return "python3"
-    elif shutil.which("python"):
-        return "python"
-    else:
-        logging.critical("FATAL: Neither 'python' nor 'python3' command found in PATH.")
-        exit(1)
+    """The interpreter to spawn child processes (inference.py, manage.py) with.
+
+    Deliberately sys.executable rather than a PATH lookup for "python3": on
+    Windows, `shutil.which("python3")` matches the Microsoft Store's app
+    execution alias, a stub that prints "Python was not found" and exits 0
+    without running anything - so the children silently never start and the
+    dashboard just sits there with no telemetry. sys.executable is the
+    interpreter already running this script, so it also keeps children in the
+    same virtualenv without depending on PATH ordering."""
+    return sys.executable
+
+def build_and_log_timeline_chart(run_id):
+    """
+    Renders one interactive HTML chart combining the continuous telemetry
+    (score/energy/drift, logged by push_telemetry) with the discrete adaptation
+    events (switch/vmr/retrain, logged by execute.py in the manage.py process)
+    that both live on this same session run, then attaches it back to the run
+    as an artifact.
+
+    This exists because MLflow's own 'Model metrics' tab auto-generates one
+    disconnected mini-chart per metric - it doesn't overlay them for you. A
+    manually-built 'Add chart' view in the UI can do this, but scripting it here
+    means every session gets a ready-made timeline without that manual step,
+    and it's what actually reproduces the paper's Figure 4 (adaptation events
+    marked directly on a cumulative-energy curve) rather than 12 separate tiles.
+    """
+    try:
+        import plotly.graph_objects as go
+        from plotly.subplots import make_subplots
+        import pandas as pd
+        import tempfile
+
+        def hist_df(key):
+            hist = mlflow_client.get_metric_history(run_id, key)
+            if not hist:
+                return None
+            return pd.DataFrame({
+                "time": pd.to_datetime([m.timestamp for m in hist], unit="ms"),
+                "value": [m.value for m in hist],
+            }).sort_values("time")
+
+        fig = make_subplots(
+            rows=4, cols=1, shared_xaxes=False,
+            specs=[[{}], [{}], [{}], [{"type": "domain"}]],
+            row_heights=[0.28, 0.24, 0.24, 0.24],
+            subplot_titles=(
+                "Adaptation timeline - cumulative MAPE-K energy, with switch/vmr/retrain marked on it",
+                "Performance vs. adaptation - continuous score, with the value that triggered each switch",
+                "Drift vs. adaptation - continuous KL divergence, with the value that triggered each retrain",
+                "Model distribution - share of time each model was active this session",
+            ),
+            vertical_spacing=0.1,
+        )
+
+        energy_df = hist_df("cumulative_mape_k_energy_uJ")
+        if energy_df is not None:
+            fig.add_trace(go.Scatter(x=energy_df["time"], y=energy_df["value"], mode="lines+markers",
+                                      name="cumulative MAPE-K energy (uJ)", line=dict(color="gray")), row=1, col=1)
+        for key, label, color in [("event_switch", "switch", "orange"), ("event_vmr", "vmr", "green"), ("event_retrain", "retrain", "red")]:
+            df = hist_df(key)
+            if df is not None:
+                fig.add_trace(go.Scatter(x=df["time"], y=df["value"], mode="markers", name=label,
+                                          marker=dict(size=14, color=color, symbol="star")), row=1, col=1)
+
+        score_df = hist_df("score")
+        if score_df is not None:
+            fig.add_trace(go.Scatter(x=score_df["time"], y=score_df["value"], mode="lines+markers",
+                                      name="score (continuous)", line=dict(color="steelblue")), row=2, col=1)
+        trig_df = hist_df("triggering_score")
+        if trig_df is not None:
+            fig.add_trace(go.Scatter(x=trig_df["time"], y=trig_df["value"], mode="markers", name="score @ switch decision",
+                                      marker=dict(size=12, color="orange", symbol="x")), row=2, col=1)
+
+        kl_df = hist_df("kl_div")
+        if kl_df is not None:
+            fig.add_trace(go.Scatter(x=kl_df["time"], y=kl_df["value"], mode="lines+markers",
+                                      name="KL divergence (continuous)", line=dict(color="mediumpurple")), row=3, col=1)
+        kld_df = hist_df("kl_divergence")
+        if kld_df is not None:
+            fig.add_trace(go.Scatter(x=kld_df["time"], y=kld_df["value"], mode="markers", name="KL @ retrain decision",
+                                      marker=dict(size=12, color="red", symbol="x")), row=3, col=1)
+
+        # Model distribution: push_telemetry() logs a `using_<model>` metric
+        # (value 1) each tick a given model is active, one series per model name
+        # actually seen - so the set of matching keys, and each one's point count,
+        # is discovered from the run itself rather than a hardcoded model list
+        # (this file is shared by both the regression and CV managed systems).
+        run_metrics = mlflow_client.get_run(run_id).data.metrics
+        usage_keys = [k for k in run_metrics if k.startswith("using_")]
+        if usage_keys:
+            labels = [k[len("using_"):] for k in usage_keys]
+            counts = [len(mlflow_client.get_metric_history(run_id, k)) for k in usage_keys]
+            fig.add_trace(go.Pie(labels=labels, values=counts, name="model distribution"), row=4, col=1)
+
+        fig.update_layout(height=1400, title_text="HarmonE Adaptation Timeline", template="plotly_dark")
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            html_path = os.path.join(tmpdir, "adaptation_timeline.html")
+            fig.write_html(html_path)
+            mlflow_client.log_artifact(run_id, html_path)
+        logging.info(f"[MLFLOW] Adaptation timeline chart logged to run {run_id}")
+    except Exception as e:
+        logging.warning(f"[MLFLOW] Failed to build timeline chart: {e}")
 
 def cleanup_processes():
     """Clean up all subprocesses and related processes."""
     global subprocesses, should_shutdown
     should_shutdown = True
-    
+
     logging.info("Starting process cleanup...")
+
+    if SESSION_RUN_ID:
+        try:
+            build_and_log_timeline_chart(SESSION_RUN_ID)
+            mlflow_client.set_terminated(SESSION_RUN_ID, "FINISHED")
+        except Exception as e:
+            logging.warning(f"[MLFLOW] Failed to terminate session run: {e}")
     
     # Terminate direct subprocesses
     for p in subprocesses:
@@ -117,14 +268,24 @@ def shutdown_system():
     logging.info("[ACP_Handler] Shutdown command received")
     should_shutdown = True
     
-    # Clean up processes in a separate thread to avoid blocking the response
-    threading.Thread(target=cleanup_processes, daemon=True).start()
-    
-    # Also exit this process after a short delay
+    # Run cleanup (including chart-building) SYNCHRONOUSLY, before responding.
+    # app.py's /api/stop-managed-system posts here, then - as soon as THIS call
+    # returns - separately sweeps and psutil-kills this same process. If cleanup
+    # ran in a background thread instead, that external kill could land mid
+    # chart-build (a plotly render + artifact upload) and the timeline artifact
+    # would silently never get saved, no matter how generous a same-process
+    # timer here was. Blocking makes the HTTP response slower, but that's a
+    # small price for the chart actually existing afterward.
+    cleanup_processes()
+
     def delayed_exit():
+        # Cleanup already fully finished above; this delay is purely to let
+        # Werkzeug actually flush the HTTP response bytes before the hard exit -
+        # 0.5s measurably wasn't enough margin in practice (caused a client-side
+        # ConnectionResetError), so match the original, empirically-fine value.
         time.sleep(2)
         os._exit(0)
-    
+
     threading.Thread(target=delayed_exit, daemon=True).start()
     
     return jsonify({"message": "System shutdown initiated"}), 200
@@ -169,6 +330,51 @@ def push_telemetry():
             if len(telemetry_payload) > 1: # More than just timestamp
                 logging.info(f"[Monitor] Pushing telemetry: {telemetry_payload}")
                 requests.post(f"{ACP_SERVER_URL}/api/telemetry", json=telemetry_payload, timeout=3)
+
+                # Also log the continuous telemetry onto the shared adaptation-
+                # timeline run, so it renders on the SAME native MLflow chart as
+                # the discrete switch/vmr/retrain events logged by execute.py (in
+                # the separate manage.py process) - wall-clock MILLISECONDS as
+                # `step` gives both processes a shared, comparable axis. It must
+                # stay milliseconds in all three places (here and both
+                # mape_logic/execute.py files) or the two series land on
+                # different scales; seconds would also collide into one step
+                # whenever TELEMETRY_INTERVAL_SECONDS drops below 1.
+                #
+                # Every numeric field monitor_mape()/monitor_drift() returns gets
+                # logged generically (score, r2_score, energy, normalized_energy,
+                # kl_div, and the running model_switches/retrains/vmr_events/
+                # mape_k_energy_uJ counts) rather than a hand-picked subset, so a
+                # new metric added to monitor.py shows up in MLflow automatically.
+                # (simple_switches was dropped from monitor_mape()'s return value -
+                # it's dead/always-zero in ACP mode, the only wired execution path.)
+                if SESSION_RUN_ID:
+                    now_ms = int(time.time() * 1000)
+                    step = now_ms
+                    metrics = []
+                    for key, value in telemetry_payload.items():
+                        if key == "timestamp":
+                            continue
+                        if isinstance(value, (int, float)) and not isinstance(value, bool):
+                            metrics.append(Metric(key, float(value), now_ms, step))
+
+                    # Model distribution: a one-hot indicator for whichever model
+                    # is active this tick, so MLflow can compute/plot the time
+                    # distribution across models - mirrors the dashboard's own
+                    # 'Model Distribution' pie chart, but durable and queryable
+                    # (the dashboard's version resets when the browser tab closes).
+                    model_used = telemetry_payload.get("model_used")
+                    if model_used:
+                        metrics.append(Metric(f"using_{model_used}", 1.0, now_ms, step))
+
+                    # One batched write rather than one call (and one SQLite
+                    # transaction) per metric - at a short TELEMETRY_INTERVAL_SECONDS
+                    # the per-call overhead is what would otherwise start to dominate.
+                    if metrics:
+                        try:
+                            mlflow_client.log_batch(SESSION_RUN_ID, metrics=metrics)
+                        except Exception as e:
+                            logging.warning(f"[MLFLOW] Failed to log telemetry batch: {e}")
             else:
                 logging.info("[Monitor] No new data from monitors.")
 
@@ -176,8 +382,8 @@ def push_telemetry():
             if not should_shutdown:
                 logging.error(f"[Monitor] Error in telemetry loop: {e}", exc_info=True)
         
-        time.sleep(5)
-    
+        time.sleep(TELEMETRY_INTERVAL_SECONDS)
+
     logging.info("[Monitor] Telemetry thread shutting down")
 
 def register_policies_with_acp(policy_prefix):
@@ -318,7 +524,53 @@ if __name__ == '__main__':
     with open(LOCAL_APPROACH_CONFIG, "w") as f:
         # Pass the correct mode to the local manage.py
         f.write(f"{run_mode}_acp") # e.g., "harmone_acp", "switch_acp"
-    
+
+    # 4b. Create the shared MLflow session run for this managed-system run, and
+    # hand its run_id to the manage.py subprocess (a separate OS process) via a
+    # knowledge file, so its adaptation events land on this same timeline.
+    if 'single' not in run_mode:
+        try:
+            system_name = "cv" if LOGIC_PATH.endswith("_cv") else "regression"
+            exp_id = active_experiment_id(mlflow_experiment_for(system_name))
+            session_run = mlflow_client.create_run(experiment_id=exp_id, run_name=f"session-{int(time.time())}")
+            SESSION_RUN_ID = session_run.info.run_id
+            mlflow_client.set_tag(SESSION_RUN_ID, "approach", approach)
+
+            # Sustainability Goals Repository -> params + artifact on the
+            # session run, so exactly which boundaries were active during this
+            # run's adaptations is recorded, not just inferred from the code.
+            thresholds_path = os.path.join(KNOWLEDGE_PATH, "thresholds.json")
+            if os.path.exists(thresholds_path):
+                mlflow_client.log_artifact(SESSION_RUN_ID, thresholds_path)
+                try:
+                    with open(thresholds_path) as f:
+                        thresholds = json.load(f)
+                    for k, v in thresholds.items():
+                        if isinstance(v, (int, float, str)):
+                            mlflow_client.log_param(SESSION_RUN_ID, f"threshold_{k}", v)
+                except Exception as e:
+                    logging.warning(f"[MLFLOW] Failed to log threshold params: {e}")
+
+            # The active policy JSON (tool/policies/<prefix>_*.json) matching
+            # this run's system_type + run_mode, e.g. 'reg_harmone_score.json'.
+            try:
+                policy_prefix = f"{system_type}_{run_mode}"
+                for pf in os.listdir(POLICY_DIR):
+                    if pf.startswith(policy_prefix) and pf.endswith(".json"):
+                        mlflow_client.log_artifact(SESSION_RUN_ID, os.path.join(POLICY_DIR, pf))
+            except Exception as e:
+                logging.warning(f"[MLFLOW] Failed to log policy artifact: {e}")
+
+            with open(os.path.join(KNOWLEDGE_PATH, "mlflow_session_run_id.txt"), "w") as f:
+                f.write(SESSION_RUN_ID)
+            logging.info(f"[MLFLOW] Session run created: {SESSION_RUN_ID}")
+        except Exception as e:
+            logging.error(
+                "[MLFLOW] Could not create the session run (%s). Adaptation "
+                "events for this run will NOT be recorded on a timeline.", e,
+                exc_info=True,
+            )
+
     # 5. Start Background Threads
     threading.Thread(target=push_telemetry, daemon=True).start()
 

@@ -1,11 +1,13 @@
 import os
+import sys
 import time
 import pandas as pd
 import numpy as np
 import torch
 import torch.nn as nn
 import pickle
-import pyRAPL
+sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
+import energy_utils as pyRAPL
 from sklearn.preprocessing import MinMaxScaler
 
 # Ensure directories exist
@@ -75,7 +77,9 @@ for i in range(len(X_stream)):
     # Start PyRAPL energy measurement
     energy_meter.begin()
 
-    start_time = time.time()
+    # perf_counter, not time.time(): the latter has ~15.6ms resolution on
+    # Windows, so a ~2.5ms inference logged 0.0 seconds (167 of 500 rows).
+    start_time = time.perf_counter()
     
     if chosen_model == "lstm":
         lstm_model = LSTMModel()
@@ -104,7 +108,7 @@ for i in range(len(X_stream)):
         X_tensor = torch.tensor(X_input, dtype=torch.float32).unsqueeze(-1)
         prediction = lstm_model(X_tensor).detach().numpy().flatten()[0]
 
-    inference_time = time.time() - start_time
+    inference_time = time.perf_counter() - start_time
 
     # Stop PyRAPL measurement and get energy usage
     energy_meter.end()

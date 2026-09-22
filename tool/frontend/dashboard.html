@@ -1,393 +1,777 @@
 <!DOCTYPE html>
-<html lang="en" class="h-full bg-gray-50">
+<html lang="en" class="h-full">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Harmonica</title>
-    <script src="https://unpkg.com/tailwindcss-jit-cdn@latest"></script>
+
+    <!-- Sets the theme before first paint so a dark reload never flashes white. -->
+    <script>
+        (function () {
+            try {
+                var stored = localStorage.getItem('harmonica-theme');
+                var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                if (stored === 'dark' || (stored === null && prefersDark)) {
+                    document.documentElement.classList.add('dark');
+                }
+            } catch (e) { /* blocked storage: fall through to light */ }
+        })();
+    </script>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['IBM Plex Sans', 'ui-sans-serif', 'system-ui', 'Segoe UI', 'sans-serif'],
+                        mono: ['IBM Plex Mono', 'ui-monospace', 'SFMono-Regular', 'Consolas', 'monospace']
+                    },
+                    colors: {
+                        bark: {
+                            50:'#f7f8f6', 100:'#eef0ec', 200:'#dfe3dc', 300:'#c3c9bf',
+                            400:'#98a093', 500:'#737b6f', 600:'#5a6156', 700:'#474d44',
+                            800:'#2f332d', 900:'#1e211d', 950:'#131513'
+                        },
+                        moss: {
+                            50:'#f0f5f1', 100:'#dbe8de', 200:'#b8d2bf',
+                            300:'#8bb496', 400:'#5d9370', 500:'#3f7554', 600:'#2f5d43',
+                            700:'#274b37', 800:'#1f3b2c', 900:'#1a3125'
+                        }
+                    }
+                }
+            }
+        };
+    </script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
     <link rel="icon" href="data:,">
 
-    
     <style>
-        ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background: #f3f4f6; }
-        ::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
-        .tab-active { border-bottom-color: #3b82f6 !important; color: #3b82f6; }
-        
-        /* Light mode card shadows */
-        .card-shadow { box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1); }
-        .card-shadow-lg { box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1); }
+        /* Makes browser-drawn UI (open <select> panels, spinners) follow the theme. */
+        :root { color-scheme: light; }
+        html.dark { color-scheme: dark; }
+
+        /* Scales all rem-based Tailwind text/spacing utilities up uniformly. */
+        html { font-size: 17px; }
+
+        body { -webkit-font-smoothing: antialiased; }
+        .num { font-variant-numeric: num; font-feature-settings: "tnum"; }
+
+        ::-webkit-scrollbar { width: 10px; height: 10px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 999px; border: 2px solid transparent; background-clip: content-box; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; background-clip: content-box; }
+        .dark ::-webkit-scrollbar-thumb { background: #334155; background-clip: content-box; }
+        .dark ::-webkit-scrollbar-thumb:hover { background: #475569; background-clip: content-box; }
+
+        /* Sidebar nav selection. A class because the routing JS toggles it by name. */
+        .tab-active {
+            color: #274b37 !important;
+            font-weight: 500 !important;
+            box-shadow: inset 2px 0 0 #2f5d43;
+            background-color: rgb(47 93 67 / 0.06) !important;
+        }
+        .dark .tab-active {
+            color: #b8d2bf !important;
+            box-shadow: inset 2px 0 0 #5d9370;
+            background-color: rgb(93 147 112 / 0.12) !important;
+        }
+
+        :focus-visible { outline: 1px solid #3f7554; outline-offset: 2px; border-radius: 2px; }
+
+        .fade-in { animation: fadeIn .18s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: none; } }
+
+        .toast-in { animation: toastIn .22s cubic-bezier(.16,1,.3,1); }
+        @keyframes toastIn { from { opacity: 0; transform: translateY(8px) scale(.97); } to { opacity: 1; transform: none; } }
+
+        .pulse-dot { animation: pulseDot 1.6s cubic-bezier(.4,0,.6,1) infinite; }
+        @keyframes pulseDot { 0%,100% { opacity: 1; } 50% { opacity: .3; } }
+
+        .drawer-in { animation: drawerIn .24s cubic-bezier(.16,1,.3,1); }
+        @keyframes drawerIn { from { transform: translateX(16px); opacity: 0; } to { transform: none; opacity: 1; } }
+
+        /* Thin rule connecting the MAPE-K stages in the loop popover. */
+        .mape-arrow::after {
+            content: ""; position: absolute; top: 0.3rem; right: -0.75rem; width: 0.6rem;
+            border-top: 1px dashed #cbd5e1;
+        }
+        .dark .mape-arrow::after { border-top-color: #475569; }
+
+        @media (prefers-reduced-motion: reduce) {
+            .fade-in, .toast-in, .pulse-dot, .drawer-in, .animate-ping { animation: none !important; }
+        }
     </style>
 </head>
-<body class="h-full text-gray-900 font-sans bg-gray-50">
-    
-    <div id="welcome-screen" class="flex items-center justify-center min-h-screen">
-        <div class="bg-white p-8 rounded-lg card-shadow-lg max-w-2xl w-full">
-            <h2 class="text-2xl font-bold text-gray-900 mb-4">Welcome to Harmonica</h2>
-            <p class="text-gray-600 mb-6">Choose an approach to begin. This will reset any previous data and start a fresh monitoring session.</p>
-            
-            <!-- <div class="grid grid-cols-1 md:grid-cols-2 gap-4"> -->
-                <div class="space-y-4">
+<body class="h-full font-sans antialiased bg-bark-100 text-bark-900 dark:bg-bark-950 dark:text-bark-100">
 
-    
-                <div class="p-4 bg-gray-100 rounded-lg border border-gray-200">
-                    <h3 class="font-semibold text-gray-900 text-lg mb-3 border-b border-gray-300 pb-2">Regression (LSTM/SVM/Linear)</h3>
-                    <div class="space-y-3">
-                        <button id="modal-btn-reg-harmone" class="text-left w-full p-3 bg-gray-200 hover:bg-blue-100 rounded-lg transition-colors border border-gray-300">
-                            <h4 class="font-semibold text-gray-900">HarmonE (Score/Drift)</h4>
-                            <p class="text-sm text-gray-700">Runs the HarmonE approach on Time Series Regression.
-                                Uses the HarmonE performance score to balance accuracy and energy.  
-                    <br><strong>Score:</strong>  
-                    S = (beta)(A) + (1 - beta)(1 - E)<br>
-                    where A = accuracy (e.g., R²), E = normalized energy, beta ∈ [0,1] is the weight parameter.  
-                    <br>
+<!-- ============================== WELCOME ================================= -->
+<div id="welcome-screen" class="min-h-screen flex items-center justify-center p-4 sm:p-6">
+    <div class="w-full max-w-3xl">
+
+        <div class="flex items-start justify-between mb-7">
+            <div class="flex items-center gap-3">
+                <img src="assets/sa4s.png" alt="SA4S" class="h-10 w-10 shrink-0 object-contain">
+                <div>
+                    <h1 class="text-[22px] font-semibold tracking-tight">Harmonica</h1>
+                   
+                </div>
+            </div>
+            <button id="theme-toggle-welcome" type="button" aria-label="Toggle dark mode"
+                    class="theme-toggle h-9 w-9 rounded border border-bark-200 dark:border-bark-800 bg-white dark:bg-bark-900 hover:bg-bark-50 dark:hover:bg-bark-800 flex items-center justify-center transition-colors">
+                <svg class="h-4 w-4 text-amber-500 hidden dark:block" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                    <circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>
+                </svg>
+                <svg class="h-4 w-4 text-bark-600 block dark:hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>
+                </svg>
+            </button>
+        </div>
+
+        <div class="rounded-md border border-bark-200 dark:border-bark-800 bg-white dark:bg-bark-900 overflow-hidden">
+            <div class="px-6 pt-5 pb-4 border-b border-bark-200 dark:border-bark-800">
+                <h2 class="text-base font-semibold">Choose an approach</h2>
+                <p class="text-xs text-bark-500 dark:text-bark-400 mt-0.5">Starts a fresh session and resets previous run data.</p>
+            </div>
+
+            <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
+                <section>
+                    <p class="text-[11px] font-semibold text-bark-500 dark:text-bark-400 mb-2.5">Regression <span class="font-normal normal-case tracking-normal">&middot; LSTM, SVM, Linear</span></p>
+                    <div class="space-y-2">
+                        <button id="modal-btn-reg-harmone"
+                                class="text-left w-full p-3.5 rounded border border-bark-200 dark:border-bark-800 hover:border-bark-400 dark:hover:border-bark-600 hover:bg-bark-50 dark:hover:bg-bark-800/40 transition-colors">
+                            <h4 class="font-semibold text-sm">HarmonE (Score / Drift)</h4>
+                            <p class="text-xs leading-relaxed text-bark-500 dark:text-bark-400 mt-1">
+                                Full adaptive loop. Balances accuracy against energy using
+                                <span class="font-mono text-bark-600 dark:text-bark-300">S = &beta;A + (1&minus;&beta;)(1&minus;E)</span>.
                             </p>
                         </button>
-                        <button id="modal-btn-reg-switch" class="text-left w-full p-3 bg-gray-200 hover:bg-blue-100 rounded-lg transition-colors border border-gray-300">
-                            <h4 class="font-semibold text-gray-900">Simple R² Switch</h4>
-                            <p class="text-sm text-gray-700">Baseline: Switch on R² score+Energy.</p>
+                        <button id="modal-btn-reg-switch"
+                                class="text-left w-full p-3.5 rounded border border-bark-200 dark:border-bark-800 hover:border-bark-400 dark:hover:border-bark-600 hover:bg-bark-50 dark:hover:bg-bark-800/40 transition-colors">
+                            <h4 class="font-semibold text-sm">Simple R&sup2; Switch</h4>
+                            <p class="text-xs leading-relaxed text-bark-500 dark:text-bark-400 mt-1">Baseline. Threshold switching on R&sup2; and energy.</p>
                         </button>
-                        <button id="modal-btn-reg-single" class="text-left w-full p-3 bg-gray-200 hover:bg-blue-100 rounded-lg transition-colors border border-gray-300">
-                            <h4 class="font-semibold text-gray-900">Single Model (Monitor-Only)</h4>
-                            <p class="text-sm text-gray-700">Run one model, monitor only.</p>
+                        <button id="modal-btn-reg-single"
+                                class="text-left w-full p-3.5 rounded border border-bark-200 dark:border-bark-800 hover:border-bark-400 dark:hover:border-bark-600 hover:bg-bark-50 dark:hover:bg-bark-800/40 transition-colors">
+                            <h4 class="font-semibold text-sm">Single Model</h4>
+                            <p class="text-xs leading-relaxed text-bark-500 dark:text-bark-400 mt-1">Monitor only. One model, no adaptation.</p>
                         </button>
                     </div>
-                </div>
-            
-                <div class="p-4 bg-gray-100 rounded-lg border border-gray-200">
-                    <h3 class="font-semibold text-gray-900 text-lg mb-3 border-b border-gray-300 pb-2">Computer Vision (YOLO)</h3>
-                    <div class="space-y-3">
-                        <!-- <button id="modal-btn-cv-harmone" class="text-left w-full p-3 bg-gray-200 hover:bg-blue-100 rounded-lg transition-colors border border-gray-300">
-                            <h4 class="font-semibold text-gray-900">HarmonE (Score/Drift)</h4>
-                            <p class="text-sm text-gray-700">Runs the HarmonE approach on Object Detection.</p>
+                </section>
+
+                <section>
+                    <p class="text-[11px] font-semibold text-bark-500 dark:text-bark-400 mb-2.5">Computer Vision <span class="font-normal normal-case tracking-normal">&middot; YOLO n, s, m</span></p>
+                    <div class="space-y-2">
+                        <!-- <button id="modal-btn-cv-harmone" class="text-left w-full p-3.5 rounded border border-bark-200 dark:border-bark-800">
+                            <h4 class="font-semibold text-sm">HarmonE (Score / Drift)</h4>
                         </button> -->
-                        <button id="modal-btn-cv-switch" class="text-left w-full p-3 bg-gray-200 hover:bg-blue-100 rounded-lg transition-colors border border-gray-300">
-                            <h4 class="font-semibold text-gray-900">Simple Confidence Switch</h4>
-                            <p class="text-sm text-gray-700">Baseline: Switch on confidence+Energy.</p>
+                        <button id="modal-btn-cv-switch"
+                                class="text-left w-full p-3.5 rounded border border-bark-200 dark:border-bark-800 hover:border-bark-400 dark:hover:border-bark-600 hover:bg-bark-50 dark:hover:bg-bark-800/40 transition-colors">
+                            <h4 class="font-semibold text-sm">Simple Confidence Switch</h4>
+                            <p class="text-xs leading-relaxed text-bark-500 dark:text-bark-400 mt-1">Baseline. Threshold switching on confidence and energy.</p>
                         </button>
-                        <button id="modal-btn-cv-single" class="text-left w-full p-3 bg-gray-200 hover:bg-blue-100 rounded-lg transition-colors border border-gray-300">
-                            <h4 class="font-semibold text-gray-900">Single Model (Monitor-Only)</h4>
-                            <p class="text-sm text-gray-700">Run one model, monitor only.</p>
+                        <button id="modal-btn-cv-single"
+                                class="text-left w-full p-3.5 rounded border border-bark-200 dark:border-bark-800 hover:border-bark-400 dark:hover:border-bark-600 hover:bg-bark-50 dark:hover:bg-bark-800/40 transition-colors">
+                            <h4 class="font-semibold text-sm">Single Model</h4>
+                            <p class="text-xs leading-relaxed text-bark-500 dark:text-bark-400 mt-1">Monitor only. One model, no adaptation.</p>
                         </button>
                     </div>
-                </div>
-            
-                <div class="md:col-span-2">
-                    <button id="modal-btn-custom" class="text-left w-full p-4 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors border border-blue-200">
-                        <h3 class="font-semibold text-gray-900">Build Custom System</h3>
-                        <p class="text-sm text-gray-600">Go to the Policy Manager to define your own system from scratch.</p>
+                </section>
+
+                <div class="md:col-span-2 pt-1">
+                    <button id="modal-btn-custom"
+                            class="text-left w-full p-3.5 rounded border border-dashed border-bark-300 dark:border-bark-700 hover:border-bark-400 dark:hover:border-bark-600 transition-colors flex items-center gap-3">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" class="h-4 w-4 text-bark-400"><path d="M12 5v14M5 12h14"/></svg>
+                        <div>
+                            <h4 class="font-semibold text-sm">Build a custom system</h4>
+                            <p class="text-xs text-bark-500 dark:text-bark-400 mt-0.5">Upload your own MAPE files and define a policy.</p>
+                        </div>
                     </button>
                 </div>
             </div>
-
         </div>
     </div>
-    
-    <div id="model-selection-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div class="bg-white p-8 rounded-lg card-shadow-lg max-w-md w-full mx-4">
-            <h3 class="text-xl font-bold text-gray-900 mb-4">Select Model to Run</h3>
-            <p class="text-gray-600 mb-6">Choose which model you want to run in single model mode:</p>
-            
-            <div class="space-y-3">
-                <select id="model-dropdown" class="w-full bg-white border border-gray-300 text-gray-900 px-3 py-2 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                    </select>
+</div>
+
+<!-- =========================== MODEL SELECT MODAL ========================== -->
+<div id="model-selection-modal" class="hidden fixed inset-0 bg-bark-900/50 dark:bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4" role="dialog" aria-modal="true" aria-labelledby="model-modal-title">
+    <div class="bg-white dark:bg-bark-900 border border-bark-200 dark:border-bark-800 rounded-md max-w-md w-full p-5 fade-in">
+        <h3 id="model-modal-title" class="text-base font-semibold">Select a model</h3>
+        <p class="text-xs text-bark-500 dark:text-bark-400 mt-0.5 mb-4">Runs in monitor-only mode with no adaptation.</p>
+        <select id="model-dropdown"
+                class="w-full bg-white dark:bg-bark-950 border border-bark-300 dark:border-bark-700 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-bark-400"></select>
+        <div class="flex gap-2 mt-5">
+            <button id="confirm-model-btn" class="flex-1 bg-moss-700 hover:bg-moss-600 text-white dark:bg-moss-300 dark:hover:bg-moss-200 dark:text-moss-900 px-4 py-2 rounded text-sm font-medium transition-colors">Start run</button>
+            <button id="cancel-model-btn" class="flex-1 border border-bark-300 dark:border-bark-700 hover:bg-bark-50 dark:hover:bg-bark-800 px-4 py-2 rounded text-sm font-medium transition-colors">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<!-- =========================== CUSTOM UPLOAD MODAL ========================= -->
+<div id="custom-upload-modal" class="hidden fixed inset-0 bg-bark-900/50 dark:bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4" role="dialog" aria-modal="true" aria-labelledby="custom-modal-title">
+    <div class="bg-white dark:bg-bark-900 border border-bark-200 dark:border-bark-800 rounded-md max-w-lg w-full p-5 fade-in">
+        <h3 id="custom-modal-title" class="text-base font-semibold">Build a custom system</h3>
+        <p class="text-xs text-bark-500 dark:text-bark-400 mt-0.5 mb-4">Pick the base inference engine, then upload your MAPE files.</p>
+
+        <form id="custom-upload-form" class="space-y-3.5">
+            <div>
+                <label class="block text-xs font-medium mb-1 text-bark-600 dark:text-bark-400">Base system</label>
+                <select id="custom-base-system" class="w-full bg-white dark:bg-bark-950 border border-bark-300 dark:border-bark-700 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-bark-400">
+                    <option value="regression">Regression (LSTM / SVM / Linear)</option>
+                    <option value="cv">Computer Vision (YOLO)</option>
+                </select>
             </div>
+            <div>
+                <label class="block text-xs font-medium mb-1 text-bark-600 dark:text-bark-400">Dataset <span class="text-bark-400">(optional)</span></label>
+                <input type="file" id="custom-dataset-input"
+                       class="w-full text-xs text-bark-500 dark:text-bark-400 file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-xs file:font-medium file:bg-bark-100 file:text-bark-700 dark:file:bg-bark-800 dark:file:text-bark-300 file:cursor-pointer"/>
+                <p id="dataset-hint" class="text-[11px] text-bark-500 mt-1">For Regression: upload <strong>dataset.csv</strong></p>
+            </div>
+            <div>
+                <label class="block text-xs font-medium mb-1 text-bark-600 dark:text-bark-400">MAPE files</label>
+                <input type="file" id="custom-file-input" multiple accept=".py"
+                       class="w-full text-xs text-bark-500 dark:text-bark-400 file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-xs file:font-medium file:bg-bark-100 file:text-bark-700 dark:file:bg-bark-800 dark:file:text-bark-300 file:cursor-pointer"/>
+                <p class="text-[11px] text-bark-500 mt-1">Allowed: monitor.py, analyse.py, plan.py, execute.py</p>
+            </div>
+            <div id="upload-status" class="hidden p-2 text-xs rounded"></div>
+            <div class="flex gap-2 pt-1">
+                <button type="submit" class="flex-1 bg-moss-700 hover:bg-moss-600 text-white dark:bg-moss-300 dark:hover:bg-moss-200 dark:text-moss-900 px-4 py-2 rounded text-sm font-medium transition-colors">Upload &amp; build</button>
+                <button type="button" id="cancel-custom-btn" class="flex-1 border border-bark-300 dark:border-bark-700 hover:bg-bark-50 dark:hover:bg-bark-800 px-4 py-2 rounded text-sm font-medium transition-colors">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ============================== APP SHELL =============================== -->
+<div id="dashboard-wrapper" class="hidden h-screen overflow-hidden">
+  <div class="flex h-full">
+
+    <!-- ------------------------------ SIDEBAR ---------------------------- -->
+    <aside class="hidden md:flex w-56 shrink-0 flex-col border-r border-bark-200 dark:border-bark-800 bg-white dark:bg-bark-900">
+        <div class="h-14 flex items-center gap-2.5 px-4 border-b border-bark-200 dark:border-bark-800">
+            <!-- Served from tool/frontend/assets: the page's own static root does
+                 not reach the repository-level assets/ directory. -->
+            <img src="assets/sa4s.png" alt="SA4S" class="h-7 w-7 shrink-0 object-contain">
+            <span class="font-semibold text-sm tracking-tight">Harmonica</span>
             
-            <div class="flex space-x-3 mt-6">
-                <button id="confirm-model-btn" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors">
-                    Start Single Model Run
+        </div>
+
+        <nav class="flex-1 p-2.5 space-y-0.5" role="tablist" aria-label="Sections">
+            <button role="tab" aria-selected="false" class="tab-btn w-full flex items-center gap-2.5 px-3 py-2 rounded text-sm text-bark-600 dark:text-bark-400 hover:bg-bark-100 dark:hover:bg-bark-800 transition-colors" data-tab="dashboard">
+                <svg class="nav-icon h-4 w-4 opacity-60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l4-5 3 3 4-6"/></svg>
+                Overview
+            </button>
+            <button role="tab" aria-selected="false" class="tab-btn w-full flex items-center gap-2.5 px-3 py-2 rounded text-sm text-bark-600 dark:text-bark-400 hover:bg-bark-100 dark:hover:bg-bark-800 transition-colors" data-tab="models">
+                <svg class="nav-icon h-4 w-4 opacity-60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="5" rx="1.5"/><rect x="3" y="15" width="18" height="5" rx="1.5"/><path d="M7 9v6"/></svg>
+                Models
+            </button>
+            <button role="tab" aria-selected="false" class="tab-btn w-full flex items-center gap-2.5 px-3 py-2 rounded text-sm text-bark-600 dark:text-bark-400 hover:bg-bark-100 dark:hover:bg-bark-800 transition-colors" data-tab="policy">
+                <svg class="nav-icon h-4 w-4 opacity-60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v5H4zM4 15h16v5H4z"/><path d="M8 11.5h8"/></svg>
+                Policy
+            </button>
+            <button role="tab" aria-selected="false" class="tab-btn w-full flex items-center gap-2.5 px-3 py-2 rounded text-sm text-bark-600 dark:text-bark-400 hover:bg-bark-100 dark:hover:bg-bark-800 transition-colors" data-tab="history">
+                <svg class="nav-icon h-4 w-4 opacity-60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+                History
+                <span id="history-count-badge" class="ml-auto text-[10px] font-mono px-1.5 py-0.5 rounded bg-bark-200 text-bark-600 dark:bg-bark-800 dark:text-bark-400">0</span>
+            </button>
+        </nav>
+
+        <div class="p-2.5 border-t border-bark-200 dark:border-bark-800 space-y-2">
+            <a id="open-mlflow-session-btn" href="http://localhost:5001" target="_blank" rel="noopener"
+               class="w-full flex items-center gap-2.5 px-3 py-2 rounded text-sm text-bark-600 dark:text-bark-400 hover:bg-bark-100 dark:hover:bg-bark-800 transition-colors">
+                <svg viewBox="0 0 24 24" fill="none" class="h-4 w-4 shrink-0" aria-hidden="true">
+                    <path d="M18.9509 2.17634C14.0635 -1.24345 7.40926 -0.571051 3.30485 3.75735C-0.799556 8.08576 -1.11776 14.7663 2.55667 19.4652L6.22524 16.7724C4.40423 14.5134 4.03437 11.4124 5.27298 8.78843C6.51159 6.16448 9.1408 4.47914 12.0422 4.44929V7.31581Z" fill="#43C9ED"/>
+                    <path d="M5.0491 21.8237C9.9365 25.2435 16.5907 24.5711 20.6951 20.2427C24.7996 15.9142 25.1178 9.2337 21.4433 4.5348L17.7748 7.2276C19.5958 9.4866 19.9656 12.5876 18.727 15.2116C17.4884 17.8355 14.8592 19.5209 11.9578 19.5507V16.6842Z" fill="#0194E2"/>
+                </svg>
+                MLflow
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" class="h-3 w-3 ml-auto opacity-40"><path d="M15 3h6v6M10 14L21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>
+            </a>
+
+            <div class="flex items-center gap-2">
+                <button id="back-to-menu-btn" class="flex-1 text-left px-3 py-2 rounded text-xs text-bark-500 dark:text-bark-400 hover:bg-bark-100 dark:hover:bg-bark-800 transition-colors">
+                    &larr; Change approach
                 </button>
-                <button id="cancel-model-btn" class="flex-1 bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors">
-                    Cancel
+                <button id="theme-toggle-dashboard" type="button" aria-label="Toggle dark mode"
+                        class="theme-toggle h-8 w-8 shrink-0 rounded hover:bg-bark-100 dark:hover:bg-bark-800 flex items-center justify-center transition-colors">
+                    <svg class="h-4 w-4 text-amber-500 hidden dark:block" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                        <circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>
+                    </svg>
+                    <svg class="h-4 w-4 text-bark-500 block dark:hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>
+                    </svg>
                 </button>
             </div>
         </div>
-    </div>
+    </aside>
 
-    <!-- Custom System Upload Modal -->
-    <div id="custom-upload-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div class="bg-white p-8 rounded-lg card-shadow-lg max-w-lg w-full mx-4">
-            <h3 class="text-xl font-bold text-gray-900 mb-4">Build Custom System</h3>
-            <p class="text-gray-600 mb-4">Select the base inference engine and upload your custom MAPE Python files (monitor.py, plan.py, etc.).</p>
+    <!-- --------------------------- MAIN COLUMN --------------------------- -->
+    <div class="flex-1 flex flex-col min-w-0">
 
-            <form id="custom-upload-form" class="space-y-4">
-                <div>
-                    <label class="block text-sm font-medium mb-1 text-gray-700">Base System (Inference Engine)</label>
-                    <select id="custom-base-system" class="w-full bg-white border border-gray-300 rounded-md p-2 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500">
-                        <option value="regression">Regression (LSTM/SVM/Linear)</option>
-                        <option value="cv">Computer Vision (YOLO)</option>
-                    </select>
-                </div>
+        <!-- Run control bar -->
+        <header class="h-14 shrink-0 flex items-center gap-3 px-4 lg:px-6 border-b border-bark-200 dark:border-bark-800 bg-white dark:bg-bark-900">
 
-                <!-- NEW: Dataset Upload Input -->
-                <div>
-                    <label class="block text-sm font-medium mb-1 text-gray-700">Upload Dataset (Optional)</label>
-                    <input type="file" id="custom-dataset-input" class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"/>
-                    <!-- This hint text changes based on selection -->
-                    <p id="dataset-hint" class="text-xs text-gray-500 mt-1">
-                        For Regression: Upload <strong>dataset.csv</strong>
-                    </p>
-                </div>
+            <div class="flex items-center gap-2 min-w-0">
+                <span id="run-status-pill"
+                      class="inline-flex items-center gap-1.5 text-xs font-medium px-2 py-0.5 rounded-sm bg-bark-200 text-bark-600 dark:bg-bark-800 dark:text-bark-400">
+                    <span id="run-status-dot" class="h-1.5 w-1.5 rounded-full bg-bark-400"></span>
+                    <span id="run-status-text">Idle</span>
+                </span>
+                <span id="run-elapsed" class="text-xs font-mono text-bark-500 dark:text-bark-400 num hidden">00:00</span>
+            </div>
 
-                <div>
-                    <label class="block text-sm font-medium mb-1 text-gray-700">Upload MAPE Files</label>
-                    <input type="file" id="custom-file-input" multiple accept=".py" class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"/>
-                    <p class="text-xs text-gray-500 mt-1">Allowed: monitor.py, analyse.py, plan.py, execute.py</p>
-                </div>
+            <div class="w-px h-5 bg-bark-200 dark:bg-bark-800 hidden sm:block"></div>
 
-                <div id="upload-status" class="hidden p-2 text-sm rounded bg-gray-100"></div>
+            <div class="flex items-center gap-2 min-w-0 flex-1">
+                <span class="text-xs text-bark-500 dark:text-bark-400 hidden lg:inline">Policy</span>
+                <input type="text" id="policy-id-input" value="harmone_score_policy" placeholder="Policy ID&hellip;"
+                       class="bg-transparent border border-bark-200 dark:border-bark-800 px-2.5 py-1 rounded text-xs font-mono w-36 lg:w-52 focus:outline-none focus:ring-1 focus:ring-bark-400">
+                <button id="load-policy-btn" class="text-xs font-medium px-2.5 py-1 rounded border border-bark-200 dark:border-bark-800 hover:bg-bark-100 dark:hover:bg-bark-800 transition-colors">Load</button>
+                <span id="policy-title-dashboard" class="hidden"></span>
+            </div>
 
-                <div class="flex space-x-3 mt-6">
-                    <button type="submit" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors">
-                        Upload & Build
-                    </button>
-                    <button type="button" id="cancel-custom-btn" class="flex-1 bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors">
-                        Cancel
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-    
-    <div id="dashboard-wrapper" class="hidden flex flex-col h-screen">
+            <div class="flex items-center gap-2">
+                <span id="connection-indicator" class="hidden sm:inline-flex items-center gap-1.5 text-[11px] text-bark-500 dark:text-bark-400" aria-live="polite">
+                    <span id="connection-dot" class="h-1.5 w-1.5 rounded-full bg-bark-300 dark:bg-bark-700"></span>
+                    <span id="connection-text">Not connected</span>
+                </span>
 
-        <header class="bg-white border-b border-gray-200 card-shadow z-10">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center h-16">
-
-                <button id="back-to-menu-btn" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-1.5 rounded-md text-sm font-medium transition-colors">
-                    &larr; Change Approach
+                <button id="theme-toggle-mobile" type="button" aria-label="Toggle dark mode"
+                        class="theme-toggle md:hidden h-8 w-8 shrink-0 rounded hover:bg-bark-100 dark:hover:bg-bark-800 flex items-center justify-center transition-colors">
+                    <svg class="h-4 w-4 text-amber-500 hidden dark:block" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                        <circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>
+                    </svg>
+                    <svg class="h-4 w-4 text-bark-500 block dark:hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>
+                    </svg>
                 </button>
 
-                <h1 class="text-2xl font-bold text-gray-900 hidden md:block">Harmonica</h1>
-                
-                <div class="flex items-center space-x-2">
-                    <label for="policy-id-input" class="text-sm font-medium text-gray-700">Policy ID:</label>
-                    <input type="text" id="policy-id-input" value="harmone_score_policy" class="bg-white border border-gray-300 text-gray-900 px-3 py-1.5 rounded-md text-sm w-48 md:w-64 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Enter policy ID to load...">
-                    <button id="load-policy-btn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded-md text-sm font-medium transition-colors">Load</button>
-                </div>
+                <button id="adaptive-start-btn"
+                        class="inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-md text-xs font-bold shadow-sm ring-2 ring-emerald-500/30 transition-colors">
+                    <svg viewBox="0 0 24 24" fill="currentColor" class="h-3.5 w-3.5"><path d="M8 5v14l11-7z"/></svg>
+                    Start Managed System
+                </button>
+                <button id="stop-system-btn"
+                        class="hidden inline-flex items-center gap-1.5 border-2 border-rose-300 dark:border-rose-500/40 text-rose-700 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 px-4 py-2 rounded-md text-xs font-bold transition-colors">
+                    <svg viewBox="0 0 24 24" fill="currentColor" class="h-3.5 w-3.5"><rect x="6" y="6" width="12" height="12" rx="1.5"/></svg>
+                    Stop
+                </button>
             </div>
         </header>
 
-        <main class="flex-1 overflow-y-auto bg-gray-50 p-4 lg:p-8">
-            <div class="max-w-7xl mx-auto">
-                
-                <nav class="mb-6 border-b border-gray-300">
-                    <ul class="flex space-x-8">
-                        <li><button class="tab-btn text-gray-600 hover:text-gray-900 py-2 border-b-2 border-transparent transition-colors" data-tab="policy">Policy Management</button></li>
-                        <!-- <li><button class="tab-btn text-gray-600 hover:text-gray-900 py-2 border-b-2 border-transparent transition-colors tab-active" data-tab="dashboard">Live Dashboard</button></li> -->
-                        <li class="relative group">
-                            <button class="tab-btn text-gray-600 hover:text-gray-900 py-2 border-b-2 border-transparent transition-colors flex items-center gap-2"
-                                    data-tab="dashboard">
-                                
-                                <!-- Text -->
-                                Live Dashboard
-                        
-                                <!-- Pulsing attention dot -->
-                                <span id="live-dashboard-indicator"
-                                      class="inline-block w-2 h-2 bg-blue-500 rounded-full animate-ping"></span>
-                            </button>
-                        
-                            <!-- Tooltip -->
-                            <div class="absolute left-1/2 -translate-x-1/2 mt-2 hidden group-hover:block px-3 py-2 
-                                        text-sm rounded-md bg-gray-900 text-white shadow-lg whitespace-nowrap z-50">
-                                Click here to view live telemetry after saving the policy policy
+        <!-- Cumulative run counters -->
+        <div id="counters-strip" class="shrink-0 hidden lg:flex items-center gap-6 px-6 h-9 border-b border-bark-200 dark:border-bark-800 bg-bark-50 dark:bg-bark-900/50 text-[11px]">
+            
+            <button id="mape-toggle" class="ml-auto inline-flex items-center gap-1 text-bark-400 hover:text-bark-900 dark:hover:text-bark-100 transition-colors" aria-expanded="false">
+                <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 16v-4M12 8h.01" stroke-linecap="round"/></svg>
+                How the loop works
+            </button>
+        </div>
+
+        <!-- MAPE-K popover -->
+        <div id="mape-body" class="hidden shrink-0 border-b border-bark-200 dark:border-bark-800 bg-bark-50 dark:bg-bark-900/50 px-6 py-4">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-3 max-w-5xl">
+                <div class="mape-stage mape-arrow relative" data-stage="monitor">
+                    <div class="flex items-center gap-1.5 mb-1"><span class="stage-dot h-1.5 w-1.5 rounded-full bg-bark-300 dark:bg-bark-700"></span><h4 class="text-[11px] font-semibold">Monitor</h4></div>
+                    <p class="text-xs text-bark-500 dark:text-bark-400">Reads score, energy and drift each tick.</p>
+                </div>
+                <div class="mape-stage mape-arrow relative" data-stage="analyse">
+                    <div class="flex items-center gap-1.5 mb-1"><span class="stage-dot h-1.5 w-1.5 rounded-full bg-bark-300 dark:bg-bark-700"></span><h4 class="text-[11px] font-semibold">Analyse</h4></div>
+                    <p class="text-xs text-bark-500 dark:text-bark-400">Checks each tick against the thresholds.</p>
+                </div>
+                <div class="mape-stage mape-arrow relative" data-stage="plan">
+                    <div class="flex items-center gap-1.5 mb-1"><span class="stage-dot h-1.5 w-1.5 rounded-full bg-bark-300 dark:bg-bark-700"></span><h4 class="text-[11px] font-semibold">Plan</h4></div>
+                    <p class="text-xs text-bark-500 dark:text-bark-400">Picks a tactic: switch, reuse or retrain.</p>
+                </div>
+                <div class="mape-stage relative" data-stage="execute">
+                    <div class="flex items-center gap-1.5 mb-1"><span class="stage-dot h-1.5 w-1.5 rounded-full bg-bark-300 dark:bg-bark-700"></span><h4 class="text-[11px] font-semibold">Execute</h4></div>
+                    <p class="text-xs text-bark-500 dark:text-bark-400">Applies it and records the event.</p>
+                </div>
+            </div>
+            <dl class="mt-3 pt-3 border-t border-bark-200 dark:border-bark-800 grid grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-1 text-[11px] max-w-5xl">
+                <div class="flex justify-between gap-3"><dt class="text-bark-500 dark:text-bark-400">Current Model Repo</dt><dd class="font-mono text-bark-500 dark:text-bark-400">alias @active</dd></div>
+                <div class="flex justify-between gap-3"><dt class="text-bark-500 dark:text-bark-400">Versioned Model Repo</dt><dd class="font-mono text-bark-500 dark:text-bark-400">model + data</dd></div>
+                <div class="flex justify-between gap-3"><dt class="text-bark-500 dark:text-bark-400">Sustainability Goals</dt><dd class="font-mono text-bark-500 dark:text-bark-400">run params</dd></div>
+                <div class="flex justify-between gap-3"><dt class="text-bark-500 dark:text-bark-400">Adaptation timeline</dt><dd class="font-mono text-bark-500 dark:text-bark-400">events / energy</dd></div>
+            </dl>
+        </div>
+
+        <!-- Scrolling content -->
+        <main class="flex-1 overflow-y-auto">
+            <div class="px-4 lg:px-6 py-5 max-w-[1700px] mx-auto">
+
+                <!-- ====================== OVERVIEW ====================== -->
+                <div class="tab-content" id="dashboard-content" role="tabpanel">
+
+                    <div id="start-hint" class="hidden mb-5 rounded border border-emerald-200 dark:border-emerald-500/25 bg-emerald-50 dark:bg-emerald-500/5 px-4 py-2.5 text-sm text-emerald-900 dark:text-emerald-200">
+                        Policy loaded. Press <strong>Start</strong> to begin streaming telemetry into the MAPE-K loop.
+                    </div>
+
+                    <!-- Decision inspector + tiles -->
+                    <div class="grid grid-cols-1 xl:grid-cols-3 gap-4 mb-5">
+
+                        <div class="xl:col-span-2 rounded-md border border-bark-200 dark:border-bark-800 bg-white dark:bg-bark-900 p-4">
+                            <div class="flex items-center justify-between mb-3">
+                                <div class="flex items-baseline gap-2">
+                                    <h3 class="text-xs font-semibold text-bark-500 dark:text-bark-400">Latest decision</h3>
+                                    <span id="decision-age" class="text-[11px] text-bark-400 dark:text-bark-500"></span>
+                                </div>
+                                <span id="decision-verdict" class="text-[11px] font-medium px-1.5 py-0.5 rounded-sm bg-bark-200 text-bark-600 dark:bg-bark-800 dark:text-bark-400">No data</span>
                             </div>
-                        </li>
-                        
-                        </ul>
-                </nav>
+                            <p id="decision-sentence" class="text-sm text-bark-500 dark:text-bark-400">Waiting for the first analysis tick&hellip;</p>
 
-                <div id="message-container" class="hidden text-center p-4 rounded-md mb-4"></div>
+                            <div class="grid grid-cols-3 gap-4 mt-4">
+                                <div>
+                                    <div class="flex justify-between text-[11px] mb-1">
+                                        <span class="text-bark-500 dark:text-bark-400">Score</span>
+                                        <span id="gauge-score-label" class="font-mono text-bark-500 dark:text-bark-400">&mdash;</span>
+                                    </div>
+                                    <div class="h-1.5 rounded-full bg-bark-200 dark:bg-bark-800 overflow-hidden">
+                                        <div id="gauge-score-bar" class="h-full w-0 rounded-full bg-bark-400 transition-all"></div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <div class="flex justify-between text-[11px] mb-1">
+                                        <span class="text-bark-500 dark:text-bark-400">Energy</span>
+                                        <span id="gauge-energy-label" class="font-mono text-bark-500 dark:text-bark-400">&mdash;</span>
+                                    </div>
+                                    <div class="h-1.5 rounded-full bg-bark-200 dark:bg-bark-800 overflow-hidden">
+                                        <div id="gauge-energy-bar" class="h-full w-0 rounded-full bg-bark-400 transition-all"></div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <div class="flex justify-between text-[11px] mb-1">
+                                        <span class="text-bark-500 dark:text-bark-400">Drift (KL)</span>
+                                        <span id="gauge-drift-label" class="font-mono text-bark-500 dark:text-bark-400">&mdash;</span>
+                                    </div>
+                                    <div class="h-1.5 rounded-full bg-bark-200 dark:bg-bark-800 overflow-hidden">
+                                        <div id="gauge-drift-bar" class="h-full w-0 rounded-full bg-bark-400 transition-all"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
 
-                <div class="tab-content" id="dashboard-content">
-                    <div class="flex justify-between items-center mb-4">
-                        <h2 class="text-xl font-semibold text-gray-900">Live Telemetry: <span id="policy-title-dashboard" class="text-blue-600">No Policy Loaded</span></h2>
-                        
-                        <button id="download-telemetry-btn" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-1.5 rounded-md text-sm font-medium transition-colors">
-                            Download Telemetry (CSV)
-                        </button>
+                        <div class="grid grid-cols-2 rounded border border-bark-200 dark:border-bark-800 bg-white dark:bg-bark-900 overflow-hidden">
+                            <div class="px-4 py-3 border-b border-r border-bark-200 dark:border-bark-800">
+                                <p id="stat-metric-label" class="text-[11px] text-bark-500 dark:text-bark-400 truncate">Main metric</p>
+                                <p id="stat-metric-value" class="text-lg font-medium mt-0.5 num">&mdash;</p>
+                                <p id="stat-metric-sub" class="text-[11px] text-bark-500 dark:text-bark-400">No telemetry</p>
+                            </div>
+                            <div class="px-4 py-3 border-b border-bark-200 dark:border-bark-800">
+                                <p class="text-[11px] text-bark-500 dark:text-bark-400">Serving</p>
+                                <p id="stat-model-value" class="text-lg font-medium mt-0.5 truncate">&mdash;</p>
+                                <p id="stat-model-sub" class="text-[11px] text-bark-500 dark:text-bark-400">&nbsp;</p>
+                            </div>
+                            <div class="px-4 py-3 border-r border-bark-200 dark:border-bark-800">
+                                <p class="text-[11px] text-bark-500 dark:text-bark-400">Adaptations</p>
+                                <p id="stat-adaptations-value" class="text-lg font-medium mt-0.5 num">0</p>
+                                <p class="text-[11px] text-bark-500 dark:text-bark-400">this run</p>
+                            </div>
+                            <div class="px-4 py-3">
+                                <p class="text-[11px] text-bark-500 dark:text-bark-400">Ticks</p>
+                                <p id="stat-ticks-value" class="text-lg font-medium mt-0.5 num">0</p>
+                                <p class="text-[11px] text-bark-500 dark:text-bark-400">telemetry points</p>
+                            </div>
+                        </div>
                     </div>
 
-                    <div id="adaptive-start-container" class="mb-4 hidden flex justify-center">
-                        <button id="adaptive-start-btn" class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-md text-base font-medium transition-colors">
-                            Start Managed System
-                        </button>
+                    <!-- Hero chart + event lane -->
+                    <div class="rounded-md border border-bark-200 dark:border-bark-800 bg-white dark:bg-bark-900 p-4 mb-4">
+                        <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
+                            <div>
+                                <h3 id="main-chart-title" class="text-sm font-semibold">Main metric</h3>
+                                <p id="main-chart-sub" class="text-[11px] text-bark-500 dark:text-bark-400 mt-0.5">Shaded band marks the violation region</p>
+                            </div>
+                            <div class="flex items-center gap-1 rounded border border-bark-200 dark:border-bark-800 p-0.5" role="group" aria-label="Time range">
+                                <button class="range-btn px-2 py-1 rounded-md text-[11px] font-medium text-bark-500 dark:text-bark-400 transition-colors" data-range="60">1m</button>
+                                <button class="range-btn px-2 py-1 rounded-md text-[11px] font-medium text-bark-500 dark:text-bark-400 transition-colors" data-range="300">5m</button>
+                                <button class="range-btn px-2 py-1 rounded-md text-[11px] font-medium text-bark-500 dark:text-bark-400 transition-colors" data-range="900">15m</button>
+                                <button class="range-btn px-2 py-1 rounded-md text-[11px] font-medium text-bark-500 dark:text-bark-400 transition-colors" data-range="0">All</button>
+                            </div>
+                        </div>
+                        <div class="relative">
+                            <div class="h-72"><canvas id="main-metric-chart"></canvas></div>
+                            <div id="main-chart-empty" class="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
+                                <p class="text-sm text-bark-500 dark:text-bark-400">No telemetry yet</p>
+                                <p class="text-[11px] text-bark-500 dark:text-bark-500 mt-1">Press Start to begin the run</p>
+                            </div>
+                        </div>
+                        <div class="mt-2 pt-2 border-t border-bark-200 dark:border-bark-800">
+                            <div class="flex items-center gap-2">
+                                <span class="text-[10px] text-bark-500 dark:text-bark-400 shrink-0 w-12">Events</span>
+                                <div id="event-lane" class="relative flex-1 h-6 rounded bg-bark-50 dark:bg-bark-950/40"></div>
+                            </div>
+                        </div>
                     </div>
-                    
-                    
-                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                        
-                        <div class="lg:col-span-3 bg-white p-6 rounded-lg card-shadow border border-gray-200">
-                            <h3 id="main-chart-title" class="text-lg font-medium mb-4 text-gray-900">Main Metric</h3>
-                            <div class="h-80"><canvas id="main-metric-chart"></canvas></div>
+
+                    <!-- Secondary charts -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+                        <div class="rounded-md border border-bark-200 dark:border-bark-800 bg-white dark:bg-bark-900 p-4">
+                            <h3 id="qa1-chart-title" class="text-xs font-semibold mb-3">Associated QA 1</h3>
+                            <div class="h-44 relative"><canvas id="qa1-chart"></canvas></div>
                         </div>
-                        
-                        <div class="bg-white p-6 rounded-lg card-shadow border border-gray-200">
-                            <h3 id="qa1-chart-title" class="text-lg font-medium mb-4 text-gray-900">Associated QA 1</h3>
-                            <div class="h-60"><canvas id="qa1-chart"></canvas></div>
+                        <div class="rounded-md border border-bark-200 dark:border-bark-800 bg-white dark:bg-bark-900 p-4">
+                            <h3 id="qa2-chart-title" class="text-xs font-semibold mb-3">Associated QA 2</h3>
+                            <div class="h-44 relative"><canvas id="qa2-chart"></canvas></div>
                         </div>
-                        <div class="bg-white p-6 rounded-lg card-shadow border border-gray-200">
-                            <h3 id="qa2-chart-title" class="text-lg font-medium mb-4 text-gray-900">Associated QA 2</h3>
-                            <div class="h-60"><canvas id="qa2-chart"></canvas></div>
+                        <div class="rounded-md border border-bark-200 dark:border-bark-800 bg-white dark:bg-bark-900 p-4">
+                            <h3 class="text-xs font-semibold mb-3">Inference time <span class="font-normal text-bark-400">ms</span></h3>
+                            <div class="h-44 relative"><canvas id="latency-chart"></canvas></div>
                         </div>
-                        
-                        <div class="bg-white p-6 rounded-lg card-shadow border border-gray-200">
-                            <h3 id="model-chart-title" class="text-lg font-medium mb-4 text-gray-900">Model Distribution</h3>
-                            <div class="h-60" style="position: relative; max-height: 240px;"><canvas id="model-chart"></canvas></div>
+                        <div class="rounded-md border border-bark-200 dark:border-bark-800 bg-white dark:bg-bark-900 p-4">
+                            <h3 id="model-chart-title" class="text-xs font-semibold mb-3">Model distribution</h3>
+                            <div class="h-44 relative" style="max-height:176px"><canvas id="model-chart"></canvas></div>
                         </div>
                     </div>
                 </div>
 
-                <div class="tab-content hidden" id="policy-content">
-                    <h2 class="text-xl font-semibold mb-4 text-gray-900">Policy Management</h2>
-                    
-                    <div class="mb-4">
-                        <label for="policy-presets" class="block text-sm font-medium mb-1 text-gray-700">Load Preset:</label>
-                        <select id="policy-presets" class="w-full bg-white border border-gray-300 rounded-md p-2 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                            <option value="">-- Select a preset --</option>
-                            <optgroup label="Regression Presets">
-                                <option value="reg_harmone_score">REG: HarmonE Score Policy</option>
-                                <option value="reg_switch_r2">REG: Simple R² Switch Policy</option>
-                            </optgroup>
-                            <optgroup label="Computer Vision Presets">
-                                <option value="cv_harmone_score">CV: HarmonE Score Policy</option>
-                                <option value="cv_switch_conf">CV: Simple Confidence Switch</option>
-                            </optgroup>
-                        </select>
+                <!-- ======================= MODELS ======================== -->
+                <div class="tab-content hidden" id="models-content" role="tabpanel">
+                    <div class="flex flex-wrap items-end justify-between gap-3 mb-4">
+                        <div>
+                            <h2 class="text-base font-semibold">Models</h2>
+                            <p class="text-xs text-bark-500 dark:text-bark-400 mt-0.5">Every model this system can switch between, and how each is currently performing.</p>
+                        </div>
+                        <p id="models-sample-note" class="text-[11px] text-bark-500 dark:text-bark-400"></p>
                     </div>
-                    
-                    <form id="policy-form" class="bg-white p-6 rounded-lg card-shadow space-y-6 border border-gray-200">
-                        
-                        <fieldset class="border border-gray-300 p-4 rounded-md">
-                            <legend class="text-lg font-medium px-2 text-gray-500">General</legend>
+                    <div id="models-list" class="space-y-3">
+                        <div class="text-sm text-bark-500 dark:text-bark-400 text-center py-12 rounded-md border border-dashed border-bark-300 dark:border-bark-700">
+                            Load an approach to see its models.
+                        </div>
+                    </div>
+
+                    <div class="mt-6">
+                        <h3 class="text-xs font-semibold text-bark-500 dark:text-bark-400 mb-2">Sustainability goals</h3>
+                        <div id="goals-grid" class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2"></div>
+                    </div>
+                </div>
+
+                <!-- ======================= POLICY ======================== -->
+                <div class="tab-content hidden" id="policy-content" role="tabpanel">
+                    <div class="flex flex-wrap justify-between items-end gap-4 mb-4">
+                        <div>
+                            <h2 class="text-base font-semibold">Policy</h2>
+                            <p id="policy-plain-summary" class="text-xs text-bark-500 dark:text-bark-400 mt-0.5">&mdash;</p>
+                        </div>
+                        <div class="w-full sm:w-64">
+                            <label for="policy-presets" class="block text-xs font-medium mb-1 text-bark-600 dark:text-bark-400">Load preset</label>
+                            <select id="policy-presets" class="w-full bg-white dark:bg-bark-900 border border-bark-300 dark:border-bark-700 rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-bark-400">
+                                <option value="">&mdash; Select a preset &mdash;</option>
+                                <optgroup label="Regression">
+                                    <option value="reg_harmone_score">HarmonE Score Policy</option>
+                                    <option value="reg_switch_r2">Simple R&sup2; Switch Policy</option>
+                                </optgroup>
+                                <optgroup label="Computer Vision">
+                                    <option value="cv_harmone_score">HarmonE Score Policy</option>
+                                    <option value="cv_switch_conf">Simple Confidence Switch</option>
+                                </optgroup>
+                            </select>
+                        </div>
+                    </div>
+
+                    <form id="policy-form" class="space-y-4 max-w-5xl">
+                        <fieldset class="rounded-md border border-bark-200 dark:border-bark-800 bg-white dark:bg-bark-900 p-4">
+                            <legend class="text-xs font-semibold text-bark-500 dark:text-bark-400 px-1.5 -ml-1.5">General</legend>
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
                                 <div>
-                                    <label for="form-policy-id" class="block text-sm font-medium mb-1 text-gray-700">Policy ID</label>
-                                    <input type="text" id="form-policy-id" class="w-full bg-white border border-gray-300 rounded-md p-2 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
+                                    <label for="form-policy-id" class="block text-xs font-medium mb-1 text-bark-600 dark:text-bark-400">Policy ID</label>
+                                    <input type="text" id="form-policy-id" required
+                                           class="w-full bg-white dark:bg-bark-950 border border-bark-300 dark:border-bark-700 rounded px-3 py-1.5 text-sm font-mono read-only:bg-bark-100 dark:read-only:bg-bark-800/60 read-only:text-bark-500 focus:outline-none focus:ring-1 focus:ring-bark-400">
                                 </div>
                                 <div>
-                                    <label for="form-metric" class="block text-sm font-medium mb-1 text-gray-700">Metric to Watch (quality_attribute)</label>
-                                    <input type="text" id="form-metric" class="w-full bg-white border border-gray-300 rounded-md p-2 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
+                                    <label for="form-metric" class="block text-xs font-medium mb-1 text-bark-600 dark:text-bark-400">Metric to watch</label>
+                                    <input type="text" id="form-metric" required
+                                           class="w-full bg-white dark:bg-bark-950 border border-bark-300 dark:border-bark-700 rounded px-3 py-1.5 text-sm font-mono read-only:bg-bark-100 dark:read-only:bg-bark-800/60 read-only:text-bark-500 focus:outline-none focus:ring-1 focus:ring-bark-400">
                                 </div>
                             </div>
                         </fieldset>
 
-                        <fieldset class="border border-gray-300 p-4 rounded-md">
-                            <legend class="text-lg font-medium px-2 text-gray-900">Adaptation Boundary (Primary)</legend>
+                        <fieldset class="rounded-md border border-bark-200 dark:border-bark-800 bg-white dark:bg-bark-900 p-4">
+                            <legend class="text-xs font-semibold text-bark-500 dark:text-bark-400 px-1.5 -ml-1.5">Adaptation boundary &middot; primary</legend>
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
                                 <div>
-                                    <label for="form-condition" class="block text-sm font-medium mb-1 text-gray-700">Condition</label>
-                                    <select id="form-condition" class="w-full bg-white border border-gray-300 rounded-md p-2 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                    <label for="form-condition" class="block text-xs font-medium mb-1 text-bark-600 dark:text-bark-400">Condition</label>
+                                    <select id="form-condition" class="w-full bg-white dark:bg-bark-950 border border-bark-300 dark:border-bark-700 rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-bark-400">
                                         <option value="LESS_THAN">LESS_THAN</option>
                                         <option value="GREATER_THAN">GREATER_THAN</option>
                                     </select>
                                 </div>
                                 <div>
-                                    <label for="form-threshold" class="block text-sm font-medium mb-1 text-gray-700">Static Threshold</label>
-                                    <input type="number" step="0.01" id="form-threshold" class="w-full bg-white border border-gray-300 rounded-md p-2 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
+                                    <label for="form-threshold" class="block text-xs font-medium mb-1 text-bark-600 dark:text-bark-400">Static threshold</label>
+                                    <input type="number" step="0.01" id="form-threshold" required
+                                           class="w-full bg-white dark:bg-bark-950 border border-bark-300 dark:border-bark-700 rounded px-3 py-1.5 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-bark-400">
                                 </div>
                             </div>
                         </fieldset>
 
-                        <fieldset class="border border-gray-300 p-4 rounded-md">
-                            <legend class="text-lg font-medium px-2 text-gray-900">Adaptation Boundary (Secondary)</legend>
-                            <div id="secondary-boundaries-container" class="space-y-4 mt-2">
-                                <div class="secondary-boundary-group border border-gray-200 p-3 rounded-md space-y-2 bg-gray-50">
-                                    <h4 class="font-medium text-gray-700">Secondary Boundary 1</h4>
-                                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <fieldset class="rounded-md border border-bark-200 dark:border-bark-800 bg-white dark:bg-bark-900 p-4">
+                            <legend class="text-xs font-semibold text-bark-500 dark:text-bark-400 px-1.5 -ml-1.5">Adaptation boundary &middot; secondary</legend>
+                            <div id="secondary-boundaries-container" class="space-y-3 mt-2">
+                                <div class="secondary-boundary-group rounded border border-bark-200 dark:border-bark-800 bg-bark-50 dark:bg-bark-950/40 p-3 space-y-2.5">
+                                    <h4 class="text-[11px] font-semibold text-bark-500 dark:text-bark-400">Secondary Boundary 1</h4>
+                                    <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
                                         <div>
-                                            <label class="block text-sm font-medium mb-1 text-gray-700">Metric (QA)</label>
-                                            <input type="text" class="sec-boundary-metric w-full bg-white border border-gray-300 rounded-md p-2 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
+                                            <label class="block text-xs font-medium mb-1 text-bark-600 dark:text-bark-400">Metric (QA)</label>
+                                            <input type="text" required class="sec-boundary-metric w-full bg-white dark:bg-bark-950 border border-bark-300 dark:border-bark-700 rounded px-3 py-1.5 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-bark-400">
                                         </div>
                                         <div>
-                                            <label class="block text-sm font-medium mb-1 text-gray-700">Condition</label>
-                                            <select class="sec-boundary-condition w-full bg-white border border-gray-300 rounded-md p-2 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                            <label class="block text-xs font-medium mb-1 text-bark-600 dark:text-bark-400">Condition</label>
+                                            <select class="sec-boundary-condition w-full bg-white dark:bg-bark-950 border border-bark-300 dark:border-bark-700 rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-bark-400">
                                                 <option value="LESS_THAN">LESS_THAN</option>
                                                 <option value="GREATER_THAN">GREATER_THAN</option>
                                             </select>
                                         </div>
                                         <div>
-                                            <label class="block text-sm font-medium mb-1 text-gray-700">Threshold</label>
-                                            <input type="number" step="0.01" class="sec-boundary-threshold w-full bg-white border border-gray-300 rounded-md p-2 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
+                                            <label class="block text-xs font-medium mb-1 text-bark-600 dark:text-bark-400">Threshold</label>
+                                            <input type="number" step="0.01" required class="sec-boundary-threshold w-full bg-white dark:bg-bark-950 border border-bark-300 dark:border-bark-700 rounded px-3 py-1.5 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-bark-400">
                                         </div>
                                         <div>
-                                            <label class="block text-sm font-medium mb-1 text-gray-700">Tactic ID</label>
-                                            <input type="text" class="sec-boundary-tactic-id w-full bg-white border border-gray-300 rounded-md p-2 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
+                                            <label class="block text-xs font-medium mb-1 text-bark-600 dark:text-bark-400">Tactic ID</label>
+                                            <input type="text" required class="sec-boundary-tactic-id w-full bg-white dark:bg-bark-950 border border-bark-300 dark:border-bark-700 rounded px-3 py-1.5 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-bark-400">
                                         </div>
                                     </div>
                                     <div class="flex justify-end">
-                                        <button type="button" class="remove-sec-boundary-btn bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-md text-sm">Remove</button>
+                                        <button type="button" class="remove-sec-boundary-btn text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 px-2.5 py-1 rounded text-xs font-medium transition-colors">Remove</button>
                                     </div>
                                 </div>
                             </div>
-                            <button type="button" id="add-sec-boundary-btn" class="mt-4 bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-md text-sm">+ Add Secondary Boundary</button>
-                        </fieldset>
-                        <fieldset class="border border-gray-300 p-4 rounded-md">
-                            <legend class="text-lg font-medium px-2 text-gray-900">Tactics (Primary)</legend>
-                            <div id="tactics-container" class="space-y-4 mt-2">
-                                <div class="tactic-group border border-gray-200 p-3 rounded-md space-y-2 bg-gray-50">
-                                    <h4 class="font-medium text-gray-700">Tactic 1</h4>
-                                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                        <div>
-                                            <label class="block text-sm font-medium mb-1 text-gray-700">Tactic ID</label>
-                                            <input type="text" class="tactic-id w-full bg-white border border-gray-300 rounded-md p-2 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
-                                        </div>
-                                        <div>
-                                            <label class="block text-sm font-medium mb-1 text-gray-700">Priority</label>
-                                            <input type="number" value="1" class="tactic-priority w-full bg-white border border-gray-300 rounded-md p-2 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
-                                        </div>
-                                        <div class="md:col-span-2">
-                                            <label class="block text-sm font-medium mb-1 text-gray-700">Tactic Endpoint URL</label>
-                                            <input type="text" class="tactic-endpoint w-full bg-white border border-gray-300 rounded-md p-2 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" value="http://localhost:8080/adaptor/tactic" required>
-                                        </div>
-                                        <div class="flex items-end">
-                                            <button type="button" class="remove-tactic-btn bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-md text-sm">Remove</button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <button type="button" id="add-tactic-btn" class="mt-4 bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-md text-sm">+ Add Tactic</button>
+                            <button type="button" id="add-sec-boundary-btn"
+                                    class="mt-3 inline-flex items-center gap-1.5 border border-bark-300 dark:border-bark-700 hover:bg-bark-50 dark:hover:bg-bark-800 px-2.5 py-1 rounded text-xs font-medium transition-colors">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" class="h-3.5 w-3.5"><path d="M12 5v14M5 12h14"/></svg>
+                                Add secondary boundary
+                            </button>
                         </fieldset>
 
-                        <fieldset class="border border-gray-300 p-4 rounded-md">
-                            <legend class="text-lg font-medium px-2 text-gray-900">Associated QAs</legend>
-                             <div>
-                                <label for="form-qas" class="block text-sm font-medium mb-1 text-gray-700">Associated Metrics (comma-separated)</label>
-                                <input type="text" id="form-qas" class="w-full bg-white border border-gray-300 rounded-md p-2 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="e.g., r2_score,energy,model_used">
+                        <fieldset class="rounded-md border border-bark-200 dark:border-bark-800 bg-white dark:bg-bark-900 p-4">
+                            <legend class="text-xs font-semibold text-bark-500 dark:text-bark-400 px-1.5 -ml-1.5">Tactics</legend>
+                            <div id="tactics-container" class="space-y-3 mt-2">
+                                <div class="tactic-group rounded border border-bark-200 dark:border-bark-800 bg-bark-50 dark:bg-bark-950/40 p-3 space-y-2.5">
+                                    <h4 class="text-[11px] font-semibold text-bark-500 dark:text-bark-400">Tactic 1</h4>
+                                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                        <div>
+                                            <label class="block text-xs font-medium mb-1 text-bark-600 dark:text-bark-400">Tactic ID</label>
+                                            <input type="text" required class="tactic-id w-full bg-white dark:bg-bark-950 border border-bark-300 dark:border-bark-700 rounded px-3 py-1.5 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-bark-400">
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-medium mb-1 text-bark-600 dark:text-bark-400">Priority</label>
+                                            <input type="number" value="1" required class="tactic-priority w-full bg-white dark:bg-bark-950 border border-bark-300 dark:border-bark-700 rounded px-3 py-1.5 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-bark-400">
+                                        </div>
+                                        <div class="md:col-span-2">
+                                            <label class="block text-xs font-medium mb-1 text-bark-600 dark:text-bark-400">Tactic endpoint URL</label>
+                                            <input type="text" required value="http://localhost:8080/adaptor/tactic" class="tactic-endpoint w-full bg-white dark:bg-bark-950 border border-bark-300 dark:border-bark-700 rounded px-3 py-1.5 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-bark-400">
+                                        </div>
+                                        <div class="flex items-end">
+                                            <button type="button" class="remove-tactic-btn text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 px-2.5 py-1.5 rounded text-xs font-medium transition-colors">Remove</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <button type="button" id="add-tactic-btn"
+                                    class="mt-3 inline-flex items-center gap-1.5 border border-bark-300 dark:border-bark-700 hover:bg-bark-50 dark:hover:bg-bark-800 px-2.5 py-1 rounded text-xs font-medium transition-colors">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" class="h-3.5 w-3.5"><path d="M12 5v14M5 12h14"/></svg>
+                                Add tactic
+                            </button>
+                        </fieldset>
+
+                        <fieldset class="rounded-md border border-bark-200 dark:border-bark-800 bg-white dark:bg-bark-900 p-4">
+                            <legend class="text-xs font-semibold text-bark-500 dark:text-bark-400 px-1.5 -ml-1.5">Associated QAs</legend>
+                            <div class="mt-2">
+                                <label for="form-qas" class="block text-xs font-medium mb-1 text-bark-600 dark:text-bark-400">Associated metrics <span class="text-bark-400">(comma separated)</span></label>
+                                <input type="text" id="form-qas" placeholder="e.g. r2_score, energy, model_used"
+                                       class="w-full bg-white dark:bg-bark-950 border border-bark-300 dark:border-bark-700 rounded px-3 py-1.5 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-bark-400">
                             </div>
                         </fieldset>
-                        
-                        <div class="flex space-x-4">
-                            <button type="button" id="save-policy-folder-btn" class="flex-1 bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-md text-base font-medium transition-colors">
-                                 Save as Policy
+
+                        <div class="flex flex-wrap gap-2">
+                            <button type="button" id="save-policy-folder-btn"
+                                    class="bg-moss-700 hover:bg-moss-600 text-white dark:bg-moss-300 dark:hover:bg-moss-200 dark:text-moss-900 px-4 py-2 rounded text-sm font-semibold transition-colors">Save as policy</button>
+                            <button type="button" id="download-policy-btn"
+                                    class="border border-bark-300 dark:border-bark-700 hover:bg-bark-50 dark:hover:bg-bark-800 px-4 py-2 rounded text-sm font-semibold transition-colors">Download JSON</button>
+                            <button type="button" id="trigger-retrain-btn"
+                                    class="ml-auto inline-flex items-center gap-1.5 border border-bark-300 dark:border-bark-700 hover:bg-bark-50 dark:hover:bg-bark-800 px-4 py-2 rounded text-sm font-medium transition-colors disabled:opacity-50">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 3v6h-6"/></svg>
+                                Retrain now
+                                <span id="mlflow-retrain-status" class="text-xs text-bark-400">Idle</span>
                             </button>
-                            <button type="button" id="download-policy-btn" class="flex-1 bg-gray-500 hover:bg-gray-600 text-white px-6 py-3 rounded-md text-base font-medium transition-colors">
-                                 Download File
+                            <button id="download-telemetry-btn" type="button"
+                                    class="inline-flex items-center gap-1.5 border border-bark-300 dark:border-bark-700 hover:bg-bark-50 dark:hover:bg-bark-800 px-4 py-2 rounded text-sm font-medium transition-colors">
+                                Telemetry CSV
                             </button>
                         </div>
                     </form>
                 </div>
 
-                <div class="tab-content hidden" id="history-content">
-                    <h2 class="text-xl font-semibold mb-4 text-gray-900">Adaptation History & Analysis</h2>
-                    <div id="history-feed" class="space-y-6">
-                        <div class="text-gray-500">No adaptation events recorded yet.</div>
+                <!-- ======================= HISTORY ======================= -->
+                <div class="tab-content hidden" id="history-content" role="tabpanel">
+                    <h2 class="text-base font-semibold mb-4">Adaptation history</h2>
+                    <div id="history-feed" class="space-y-3">
+                        <div class="text-sm text-bark-500 dark:text-bark-400 text-center py-12 rounded-md border border-dashed border-bark-300 dark:border-bark-700">
+                            No adaptation events recorded yet.
+                        </div>
                     </div>
                 </div>
 
             </div>
         </main>
+
+        <nav class="md:hidden shrink-0 grid grid-cols-4 border-t border-bark-200 dark:border-bark-800 bg-white dark:bg-bark-900" aria-label="Sections">
+            <button class="tab-btn flex flex-col items-center gap-0.5 py-2 text-[10px] text-bark-500 dark:text-bark-400 transition-colors" data-tab="dashboard">
+                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l4-5 3 3 4-6"/></svg>
+                Overview
+            </button>
+            <button class="tab-btn flex flex-col items-center gap-0.5 py-2 text-[10px] text-bark-500 dark:text-bark-400 transition-colors" data-tab="models">
+                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="5" rx="1.5"/><rect x="3" y="15" width="18" height="5" rx="1.5"/><path d="M7 9v6"/></svg>
+                Models
+            </button>
+            <button class="tab-btn flex flex-col items-center gap-0.5 py-2 text-[10px] text-bark-500 dark:text-bark-400 transition-colors" data-tab="policy">
+                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v5H4zM4 15h16v5H4z"/><path d="M8 11.5h8"/></svg>
+                Policy
+            </button>
+            <button class="tab-btn flex flex-col items-center gap-0.5 py-2 text-[10px] text-bark-500 dark:text-bark-400 transition-colors" data-tab="history">
+                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+                History
+            </button>
+        </nav>
     </div>
+  </div>
+</div>
+
+<!-- ============================ VERSION DRAWER ============================ -->
+<div id="version-drawer" class="hidden fixed inset-0 z-40" role="dialog" aria-modal="true" aria-labelledby="drawer-title">
+    <div id="version-drawer-backdrop" class="absolute inset-0 bg-bark-900/40 dark:bg-black/60"></div>
+    <div class="absolute right-0 top-0 h-full w-full max-w-lg bg-white dark:bg-bark-900 border-l border-bark-200 dark:border-bark-800 flex flex-col drawer-in">
+        <div class="h-14 shrink-0 flex items-center justify-between px-5 border-b border-bark-200 dark:border-bark-800">
+            <div class="min-w-0">
+                <h3 id="drawer-title" class="text-sm font-semibold truncate">Version history</h3>
+                <p id="drawer-subtitle" class="text-[11px] text-bark-500 dark:text-bark-400 font-mono truncate"></p>
+            </div>
+            <button id="version-drawer-close" aria-label="Close" class="h-8 w-8 rounded hover:bg-bark-100 dark:hover:bg-bark-800 flex items-center justify-center transition-colors">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" class="h-4 w-4"><path d="M18 6L6 18M6 6l12 12"/></svg>
+            </button>
+        </div>
+        <div id="drawer-body" class="flex-1 overflow-y-auto p-5 space-y-5"></div>
+    </div>
+</div>
+
+<!-- ================================ TOASTS =============================== -->
+<div id="toast-container" class="fixed bottom-4 right-4 z-[60] flex flex-col gap-2 w-80 pointer-events-none" aria-live="polite" aria-atomic="false"></div>
+<span id="message-container" class="hidden"></span>
 
     <script>
         // === CONFIGURATION ===
         const ACP_SERVER_URL = "http://localhost:5000";
         const POLLING_INTERVAL = 1000;
-        const CHART_MAX_DATA_POINTS = 10;
+        // Hard cap on points drawn. The window is chosen by time (see
+        // selectedRangeSeconds); this only stops a very long run from trying to
+        // paint tens of thousands of points into an 800px-wide canvas.
+        const CHART_MAX_DATA_POINTS = 400;
+        let selectedRangeSeconds = 300;   // 5m default; 0 means "all"
 
         // === GLOBAL STATE ===
         let currentPolicyId = "";
@@ -395,6 +779,102 @@
         let chartInstances = {};
         let globalKnowledge = { telemetry_history: [] };
         let currentSystemType = ""; // Track current system type for modal
+        let activeSystemType = ""; // Track which system (regression/cv) is currently loaded, for any approach - set from writeApproachConfig()
+
+        // === THEME ===
+        // Chart.js draws to a canvas and can't inherit `dark:` classes, so every
+        // chart colour comes from here and a theme switch re-tints live instances.
+        const CHART_PALETTE = {
+            light: {
+                tick: '#98a093', grid: '#eef0ec', legend: '#5a6156',
+                series: ['#2f5d43', '#5a6156', '#b45309', '#3f7554', '#9f1239', '#1e40af'],
+                threshold: '#b91c1c', event: '#2f5d43',
+                violationFill: 'rgba(185, 28, 28, 0.045)',
+                eventLabelBg: 'rgba(47, 93, 67, 0.92)',
+                tooltipBg: '#ffffff', tooltipText: '#1e211d'
+            },
+            dark: {
+                tick: '#737b6f', grid: '#2f332d', legend: '#98a093',
+                series: ['#8bb496', '#98a093', '#fbbf24', '#5d9370', '#fb7185', '#93c5fd'],
+                threshold: '#f87171', event: '#8bb496',
+                violationFill: 'rgba(248, 113, 113, 0.06)',
+                eventLabelBg: 'rgba(139, 180, 150, 0.9)',
+                tooltipBg: '#1e211d', tooltipText: '#f7f8f6'
+            }
+        };
+
+        function isDark() {
+            return document.documentElement.classList.contains('dark');
+        }
+
+        function palette() {
+            return isDark() ? CHART_PALETTE.dark : CHART_PALETTE.light;
+        }
+
+        // Tracked so the history feed can destroy them on rebuild instead of
+        // leaking one Chart per event per poll.
+        let historyChartInstances = [];
+
+        function retintChart(chart) {
+            if (!chart || !chart.options) return;
+            const p = palette();
+            const scales = chart.options.scales || {};
+
+            ['x', 'y'].forEach(axis => {
+                if (!scales[axis]) return;
+                if (scales[axis].ticks) scales[axis].ticks.color = p.tick;
+                if (scales[axis].grid) scales[axis].grid.color = p.grid;
+            });
+
+            if (chart.options.plugins && chart.options.plugins.legend && chart.options.plugins.legend.labels) {
+                chart.options.plugins.legend.labels.color = p.legend;
+            }
+
+            // Datasets carry a role, not a raw colour, so the new hex is a lookup.
+            chart.data.datasets.forEach(ds => {
+                if (!ds._role) return;
+                const colour = ds._role === 'threshold' ? p.threshold
+                             : ds._role === 'palette'   ? p.series
+                             : p.series[ds._roleIndex || 0];
+                if (Array.isArray(colour)) {
+                    ds.backgroundColor = colour;
+                } else {
+                    ds.borderColor = colour;
+                    ds.backgroundColor = colour;
+                }
+            });
+
+            const ann = chart.options.plugins && chart.options.plugins.annotation;
+            if (ann && ann.annotations) {
+                Object.values(ann.annotations).forEach(a => {
+                    if (!a || typeof a !== 'object') return;
+                    const isEventMarker = a._role !== 'threshold-marker';
+                    a.borderColor = isEventMarker ? p.event : p.threshold;
+                    if (a.label) {
+                        a.label.backgroundColor = isEventMarker ? p.eventLabelBg : p.threshold;
+                    }
+                });
+            }
+
+            chart.update('none');
+        }
+
+        function retintAllCharts() {
+            Object.values(chartInstances).forEach(retintChart);
+            historyChartInstances.forEach(retintChart);
+        }
+
+        function applyTheme(theme) {
+            document.documentElement.classList.toggle('dark', theme === 'dark');
+            try { localStorage.setItem('harmonica-theme', theme); } catch (e) { /* storage blocked */ }
+            retintAllCharts();
+        }
+
+        function initThemeToggles() {
+            document.querySelectorAll('.theme-toggle').forEach(btn => {
+                btn.addEventListener('click', () => applyTheme(isDark() ? 'light' : 'dark'));
+            });
+        }
 
         // === DOM ELEMENTS ===
         const welcomeScreen = document.getElementById('welcome-screen');
@@ -542,6 +1022,14 @@
         // === INITIALIZATION ===
         document.addEventListener('DOMContentLoaded', () => {
 
+            // `activeSystemType` used to be set only inside writeApproachConfig(),
+            // i.e. only as a side effect of clicking an approach in THIS tab. Every
+            // Knowledge Base poller guards on it, so after a plain reload the
+            // Models page, decision inspector and MLflow links all stayed empty.
+            // /api/approach reports what approach.conf actually holds, so the page
+            // can recover that state from the server instead of guessing.
+            restoreActiveSystem();
+
             // ▼▼▼ VIEW NAVIGATION LOGIC (WITH "single" FIX) ▼▼▼
             backToMenuBtn.addEventListener('click', async () => {
                 try {
@@ -573,7 +1061,7 @@
                         
                         const historyFeed = document.getElementById('history-feed');
                         if (historyFeed) {
-                            historyFeed.innerHTML = '<p class="text-gray-500 text-center py-8">No adaptation events yet</p>';
+                            historyFeed.innerHTML = '<div class="text-sm text-bark-500 dark:text-bark-400 text-center py-12 rounded-md border border-dashed border-bark-300 dark:border-bark-700">No adaptation events recorded yet.</div>';
                         }
                         
                     } else {
@@ -598,7 +1086,7 @@
                 document.querySelector('.tab-btn[data-tab="policy"]').click();
                 await writeApproachConfig('reg_harmone_score');
                 await savePolicyToFolder(); 
-                document.getElementById("adaptive-start-container").classList.remove("hidden");
+                setRunState('ready');
             });
 
             document.getElementById('modal-btn-reg-switch').addEventListener('click', async () => {
@@ -611,7 +1099,7 @@
                 document.querySelector('.tab-btn[data-tab="policy"]').click();
                 await writeApproachConfig('reg_switch_r2');
                 await savePolicyToFolder(); 
-                document.getElementById("adaptive-start-container").classList.remove("hidden");
+                setRunState('ready');
             });
 
             document.getElementById('modal-btn-reg-single').addEventListener('click', () => {
@@ -633,7 +1121,7 @@
                     document.querySelector('.tab-btn[data-tab="policy"]').click();
                     await writeApproachConfig('cv_harmone_score');
                     await savePolicyToFolder();
-                    document.getElementById("adaptive-start-container").classList.remove("hidden");
+                    setRunState('ready');
                 });
             }
 
@@ -648,7 +1136,7 @@
                 document.querySelector('.tab-btn[data-tab="policy"]').click();
                 await writeApproachConfig('cv_switch_conf');
                 await savePolicyToFolder(); 
-                document.getElementById("adaptive-start-container").classList.remove("hidden");
+                setRunState('ready');
             });
 
             document.getElementById('modal-btn-cv-single').addEventListener('click', () => {
@@ -712,7 +1200,7 @@
                 }
             
                 uploadStatus.textContent = "Uploading and building system...";
-                uploadStatus.className = "p-2 text-sm rounded bg-blue-100 text-blue-700 block";
+                uploadStatus.className = UPLOAD_STATUS_STYLES.info;
                 uploadStatus.classList.remove('hidden');
             
                 try {
@@ -727,7 +1215,7 @@
             
                     if (response.ok) {
                         uploadStatus.textContent = "Success! " + result.message;
-                        uploadStatus.className = "p-2 text-sm rounded bg-green-100 text-green-700 block";
+                        uploadStatus.className = UPLOAD_STATUS_STYLES.success;
                         
                         setTimeout(() => {
                             customUploadModal.classList.add('hidden');
@@ -770,7 +1258,7 @@
                             savePolicyToFolder(); // <--- Crucial: This writes the file to /policies immediately
                         
                             // 4. Show the start button
-                            document.getElementById("adaptive-start-container").classList.remove("hidden");
+                            setRunState('ready');
 
                             // --- END OF CHANGE ---
             
@@ -782,7 +1270,7 @@
                 } catch (error) {
                     console.error(error);
                     uploadStatus.textContent = "Error: " + error.message;
-                    uploadStatus.className = "p-2 text-sm rounded bg-red-100 text-red-700 block";
+                    uploadStatus.className = UPLOAD_STATUS_STYLES.error;
                 }
             });
 
@@ -800,17 +1288,38 @@
             // Tab switching logic
             tabs.forEach(tab => {
                 tab.addEventListener('click', () => {
-                    tabs.forEach(t => t.classList.remove('tab-active', 'text-blue-500'));
-                    tab.classList.add('tab-active', 'text-blue-500');
-                    
+                    tabs.forEach(t => {
+                        t.classList.remove('tab-active');
+                        t.setAttribute('aria-selected', 'false');
+                    });
+                    tab.classList.add('tab-active');
+                    tab.setAttribute('aria-selected', 'true');
+
                     const tabId = tab.getAttribute('data-tab');
                     tabContents.forEach(content => {
-                        content.classList.add('hidden');
-                        if (content.id === `${tabId}-content`) {
-                            content.classList.remove('hidden');
-                        }
+                        content.classList.toggle('hidden', content.id !== `${tabId}-content`);
                     });
+
+                    // Charts sized while their panel was display:none come back
+                    // at zero width, so re-measure whatever just became visible.
+                    if (tabId === 'dashboard') {
+                        Object.values(chartInstances).forEach(c => { try { c.resize(); } catch (err) {} });
+                    }
+                    if (tabId === 'models') refreshModels();
+                    if (tabId === 'policy') renderPolicySummary();
                 });
+            });
+
+            // Up/down arrows move between sidebar sections.
+            document.querySelector('nav[role="tablist"]').addEventListener('keydown', (e) => {
+                if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+                e.preventDefault();
+                const list = [...document.querySelectorAll('nav[role="tablist"] .tab-btn')];
+                const i = list.indexOf(document.activeElement);
+                if (i === -1) return;
+                const next = list[(i + (e.key === 'ArrowDown' ? 1 : list.length - 1)) % list.length];
+                next.focus();
+                next.click();
             });
 
             // Preset dropdown listener
@@ -844,16 +1353,6 @@
                     }
                 }
             });
-            document.addEventListener("DOMContentLoaded", () => {
-                const dashboardTab = document.querySelector('.tab-btn[data-tab="dashboard"]');
-                const indicator = document.getElementById("live-dashboard-indicator");
-            
-                dashboardTab.addEventListener("click", () => {
-                    // Stop the pulsing once the user actually clicks
-                    indicator.classList.add("hidden");
-                });
-            });
-            
 
             // NEW: Secondary Boundary Logic
             addSecBoundaryBtn.addEventListener('click', () => addSecBoundaryGroup());
@@ -866,6 +1365,73 @@
 
 
             downloadTelemetryBtn.addEventListener('click', handleTelemetryDownload);
+
+            initThemeToggles();
+            setRunState('idle');
+            setConnection('idle', 'Not connected');
+
+            document.getElementById('stop-system-btn').addEventListener('click', stopManagedSystem);
+
+            // Time-range selector for the hero chart.
+            const rangeButtons = document.querySelectorAll('.range-btn');
+            function paintRange() {
+                rangeButtons.forEach(b => {
+                    const on = Number(b.dataset.range) === selectedRangeSeconds;
+                    b.classList.toggle('bg-bark-100', on);
+                    b.classList.toggle('dark:bg-bark-800', on);
+                    b.classList.toggle('text-bark-900', on);
+                    b.classList.toggle('dark:text-bark-100', on);
+                    b.setAttribute('aria-pressed', String(on));
+                });
+            }
+            rangeButtons.forEach(b => b.addEventListener('click', () => {
+                selectedRangeSeconds = Number(b.dataset.range);
+                paintRange();
+                if (globalKnowledge) updateDashboardCharts(globalKnowledge);
+            }));
+            paintRange();
+
+            // Version drawer.
+            document.getElementById('models-list').addEventListener('click', (e) => {
+                const btn = e.target.closest('.version-btn');
+                if (btn) openVersionDrawer(btn.dataset.model, btn.dataset.label);
+            });
+            document.getElementById('version-drawer-close').addEventListener('click', closeVersionDrawer);
+            document.getElementById('version-drawer-backdrop').addEventListener('click', closeVersionDrawer);
+
+            // Escape closes whichever overlay is open.
+            document.addEventListener('keydown', (e) => {
+                if (e.key !== 'Escape') return;
+                if (!document.getElementById('version-drawer').classList.contains('hidden')) return closeVersionDrawer();
+                if (!modelSelectionModal.classList.contains('hidden')) return hideModelSelectionModal();
+                if (!customUploadModal.classList.contains('hidden')) customUploadModal.classList.add('hidden');
+            });
+
+            // Keep the plain-language policy summary in step with the form.
+            policyForm.addEventListener('input', renderPolicySummary);
+
+            const mapeToggle = document.getElementById('mape-toggle');
+            const mapeBody = document.getElementById('mape-body');
+            function setMapeOpen(open) {
+                mapeBody.classList.toggle('hidden', !open);
+                mapeToggle.setAttribute('aria-expanded', String(open));
+                try { localStorage.setItem('harmonica-mape-open', open ? '1' : '0'); } catch (e) { /* storage blocked */ }
+            }
+
+            let mapeOpen = false;
+            try {
+                const stored = localStorage.getItem('harmonica-mape-open');
+                if (stored !== null) mapeOpen = stored === '1';
+            } catch (e) { /* storage blocked */ }
+            setMapeOpen(mapeOpen);
+
+            mapeToggle.addEventListener('click', () => setMapeOpen(mapeBody.classList.contains('hidden')));
+
+            document.getElementById('trigger-retrain-btn').addEventListener('click', triggerRetrain);
+
+            // isTrusted: only a real user click dismisses the dot, not the
+            // programmatic .click() calls used for tab routing.
+
             initializeCharts();
             document.querySelector('.tab-btn[data-tab="dashboard"]').click();
         });
@@ -874,56 +1440,75 @@
 
         // ▼▼▼ 2. UPDATED INITIALIZE CHARTS (Added annotation plugin to options) ▼▼▼
         function initializeCharts() {
-            const lineChartConfig = (title) => ({
+            const p = palette();
+
+            // Card titles already name the series, so per-chart legends are
+            // redundant ink. The main chart keeps one because it carries two.
+            const lineChartConfig = ({ legend = false, compact = false } = {}) => ({
                 type: 'line',
                 data: { labels: [], datasets: [] },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
                     scales: {
-                        x: { 
+                        x: {
                             type: 'time',
                             time: { unit: 'second', displayFormats: { second: 'HH:mm:ss' } },
-                            ticks: { color: '#6b7280' },  // Light mode: gray-500
-                            grid: { color: '#e5e7eb' }    // Light mode: gray-200
+                            ticks: { color: p.tick, maxRotation: 0, autoSkipPadding: 24, font: { size: compact ? 9 : 10 } },
+                            grid: { display: false },
+                            border: { color: p.grid }
                         },
-                        y: { 
-                            ticks: { color: '#6b7280' },  // Light mode: gray-500
-                            grid: { color: '#e5e7eb' }   // Light mode: gray-200
+                        y: {
+                            ticks: { color: p.tick, maxTicksLimit: compact ? 4 : 6, font: { size: compact ? 9 : 10 } },
+                            grid: { color: p.grid, drawTicks: false },
+                            border: { display: false }
                         }
                     },
                     plugins: {
-                        legend: { labels: { color: '#374151' } }, // Light mode: gray-700
-                        tooltip: { mode: 'index', intersect: false },
-                        annotation: { // Include annotation plugin here
-                            annotations: {}
-                        }
-                    },
-                    animation: { duration: 0 }
-                }
-            });
-            
-            const doughnutChartConfig = (title) => ({
-                type: 'doughnut',
-                data: { labels: [], datasets: [] },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { 
-                            position: 'bottom',
-                            labels: { color: '#374151' } // Light mode: gray-700
+                        legend: {
+                            display: legend,
+                            align: 'end',
+                            labels: { color: p.legend, usePointStyle: true, pointStyle: 'circle', boxWidth: 6, padding: 12, font: { size: 10 } }
                         },
-                        title: { display: false, text: title }
+                        tooltip: {
+                            mode: 'index', intersect: false,
+                            backgroundColor: p.tooltipBg, titleColor: p.tooltipText, bodyColor: p.tooltipText,
+                            borderColor: p.grid, borderWidth: 1, padding: 8,
+                            titleFont: { size: 11 }, bodyFont: { size: 11 }
+                        },
+                        annotation: { annotations: {} }
                     },
                     animation: { duration: 0 }
                 }
             });
 
-            chartInstances.main = new Chart(document.getElementById('main-metric-chart'), lineChartConfig("Main Metric"));
-            chartInstances.qa1 = new Chart(document.getElementById('qa1-chart'), lineChartConfig("QA 1"));
-            chartInstances.qa2 = new Chart(document.getElementById('qa2-chart'), lineChartConfig("QA 2"));
-            chartInstances.modelChart = new Chart(document.getElementById('model-chart'), doughnutChartConfig("Model Distribution"));
+            const doughnutChartConfig = () => ({
+                type: 'doughnut',
+                data: { labels: [], datasets: [] },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '68%',
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { color: p.legend, usePointStyle: true, pointStyle: 'circle', boxWidth: 6, padding: 10, font: { size: 10 } }
+                        },
+                        tooltip: {
+                            backgroundColor: p.tooltipBg, titleColor: p.tooltipText, bodyColor: p.tooltipText,
+                            borderColor: p.grid, borderWidth: 1, padding: 8
+                        }
+                    },
+                    animation: { duration: 0 }
+                }
+            });
+
+            chartInstances.main = new Chart(document.getElementById('main-metric-chart'), lineChartConfig({ legend: true }));
+            chartInstances.qa1 = new Chart(document.getElementById('qa1-chart'), lineChartConfig({ compact: true }));
+            chartInstances.qa2 = new Chart(document.getElementById('qa2-chart'), lineChartConfig({ compact: true }));
+            chartInstances.latency = new Chart(document.getElementById('latency-chart'), lineChartConfig({ compact: true }));
+            chartInstances.modelChart = new Chart(document.getElementById('model-chart'), doughnutChartConfig());
         }
 
         // ▼▼▼ 3. UPDATED DASHBOARD CHARTS FUNCTION (ANNOTATIONS FIX + DATA FLUSH) ▼▼▼
@@ -931,20 +1516,17 @@
             const policy = data.policy || {};
             const telemetry = data.telemetry_history || [];
             const interventions = data.intervention_logs || [];
-            
+            const p = palette();
+
             let mainMetric = policy.quality_attribute || "N/A";
             const boundary = policy.adaptation_boundary || {};
-            let threshold = boundary.threshold;
-            let thresholdData = [];
-            
-            const dataLength = telemetry.length;
-            const sliceStart = Math.max(0, dataLength - CHART_MAX_DATA_POINTS);
-            const limitedTelemetry = telemetry.slice(sliceStart);
-            
-            const labels = limitedTelemetry.map(t => new Date(t.timestamp * 1000));
-            
-            // === DEFINE VALID MODELS BASED ON CURRENT MODE ===
-            // This whitelist acts as a firewall against "ghost" data
+            const threshold = boundary.threshold;
+            const condition = boundary.condition;
+
+            const rows = windowTelemetry(telemetry);
+            const labels = rows.map(t => new Date(t.timestamp * 1000));
+
+            // Whitelist guarding against stale "ghost" models from a previous run.
             let validModels = null;
             if (currentPolicyId && currentPolicyId.includes('cv_')) {
                 validModels = ['yolo_n', 'yolo_s', 'yolo_m', 'unknown'];
@@ -952,155 +1534,241 @@
                 validModels = ['svm', 'lstm', 'linear', 'unknown'];
             }
 
-            // --- 1. Generate Annotations with STRICT FILTER ---
-            const annotations = {};
-            let annotationCount = 0;
-            
-            const minTimestamp = limitedTelemetry.length > 0 ? limitedTelemetry[0].timestamp : 0;
-            const relevantInterventions = interventions.filter(i => 
-                i.status === "CONFIRMED_SUCCESS" && i.timestamp >= minTimestamp
-            );
-            
-            relevantInterventions.forEach(i => {
-                const timestamp = new Date(i.timestamp * 1000);
-                const tacticId = i.tactic_id.replace(/_/g, ' ').toUpperCase(); 
-                
-                // Find telemetry immediately following intervention to see new model
-                const nextTelemetry = telemetry.find(t => t.timestamp >= i.timestamp);
-                const rawModel = nextTelemetry && nextTelemetry.model_used ? nextTelemetry.model_used : "unknown";
-                const switchedModel = rawModel.toUpperCase();
-
-                // === STRICT FILTER FOR GRAPH ANNOTATIONS ===
-                // If we are in CV mode, strictly HIDE any annotation that talks about SVM/LSTM
-                if (validModels && !validModels.includes(rawModel.toLowerCase())) {
-                    return; // Skip this annotation!
-                }
-
-                annotations[`line${annotationCount}`] = {
-                    type: 'line',
-                    mode: 'vertical',
-                    scaleID: 'x',
-                    value: timestamp,
-                    borderColor: '#10b981',
-                    borderWidth: 2,
-                    borderDash: [6, 6],
-                    label: {
-                        display: true,
-                        content: [tacticId, `↳ Model: ${switchedModel}`],
-                        position: 'start',
-                        backgroundColor: 'rgba(16, 185, 129, 0.9)',
-                        color: '#ffffff',
-                        font: { size: 10, weight: 'bold' },
-                        padding: 4,
-                        rotation: -90,
-                        yAdjust: 20
-                    }
-                };
-                annotationCount++;
-            });
-
-            // --- 2. Main Chart Update ---
             const isSingleMode = currentPolicyId.includes('single');
             if (isSingleMode && policy.associated_qas && policy.associated_qas.length > 0) {
                 mainMetric = policy.associated_qas[0];
-                document.getElementById('main-chart-title').textContent = `Main Metric: ${mainMetric} (Monitor-Only)`;
+                document.getElementById('main-chart-title').textContent = `${mainMetric} · monitor only`;
+                document.getElementById('main-chart-sub').textContent = 'No adaptation boundary in this mode';
             } else {
-                document.getElementById('main-chart-title').textContent = `Main Metric: ${mainMetric}`;
-                thresholdData = labels.map(() => threshold);
+                document.getElementById('main-chart-title').textContent = mainMetric;
+                document.getElementById('main-chart-sub').textContent =
+                    typeof threshold === 'number'
+                        ? `Shaded band marks the violation region (${condition === 'GREATER_THAN' ? '>' : '<'} ${threshold})`
+                        : 'Shaded band marks the violation region';
             }
-            
-            const mainMetricData = limitedTelemetry.map(t => t[mainMetric]);
-            
+
+            document.getElementById('main-chart-empty').classList.toggle('hidden', rows.length > 0);
+
+            // --- Violation band ------------------------------------------------
+            // A shaded region reads faster than a dashed line: you see "we are in
+            // the bad zone" without tracing the line against a reference.
+            const annotations = {};
+            if (!isSingleMode && typeof threshold === 'number') {
+                annotations.violation = {
+                    type: 'box',
+                    yMin: condition === 'GREATER_THAN' ? threshold : undefined,
+                    yMax: condition === 'GREATER_THAN' ? undefined : threshold,
+                    backgroundColor: p.violationFill,
+                    borderWidth: 0,
+                    drawTime: 'beforeDatasetsDraw',
+                    _role: 'threshold-marker'
+                };
+                annotations.thresholdLine = {
+                    type: 'line',
+                    scaleID: 'y',
+                    value: threshold,
+                    borderColor: p.threshold,
+                    borderWidth: 1,
+                    borderDash: [4, 4],
+                    _role: 'threshold-marker'
+                };
+            }
+
+            const minTs = rows.length ? rows[0].timestamp : 0;
+            const confirmed = interventions.filter(i => i.status === "CONFIRMED_SUCCESS");
+            const visibleEvents = confirmed.filter(i => i.timestamp >= minTs).filter(i => {
+                const next = telemetry.find(t => t.timestamp >= i.timestamp);
+                const raw = next && next.model_used ? next.model_used.toLowerCase() : 'unknown';
+                return !validModels || validModels.includes(raw);
+            });
+
+            visibleEvents.forEach((i, idx) => {
+                annotations[`ev${idx}`] = {
+                    type: 'line',
+                    scaleID: 'x',
+                    value: new Date(i.timestamp * 1000),
+                    borderColor: p.event,
+                    borderWidth: 1.5,
+                    borderDash: [3, 3]
+                };
+            });
+
             updateChart(chartInstances.main, labels, [
                 {
                     label: mainMetric,
-                    data: mainMetricData,
-                    borderColor: '#3b82f6',
-                    backgroundColor: '#3b82f6',
-                    tension: 0.1,
-                    pointRadius: 2
-                },
-                {
-                    label: 'Threshold',
-                    data: thresholdData,
-                    borderColor: '#ef4444',
-                    backgroundColor: '#ef4444',
-                    borderDash: [5, 5],
+                    data: rows.map(t => t[mainMetric]),
+                    borderColor: p.series[0],
+                    backgroundColor: p.series[0],
+                    tension: 0.3,
                     pointRadius: 0,
-                    fill: false
+                    pointHoverRadius: 3,
+                    borderWidth: 2,
+                    _role: 'series', _roleIndex: 0
                 }
-            ], { 
-                plugins: { 
-                    annotation: { 
-                        annotations: annotations 
-                    } 
-                }
-            });
+            ], { plugins: { annotation: { annotations } } });
 
-            // --- 3. Pie Chart (Model Distribution) with STRICT FILTER ---
+            renderEventLane(visibleEvents, rows, telemetry);
+
+            // --- Model distribution --------------------------------------------
             const qaNames = policy.associated_qas ? [...policy.associated_qas] : [];
-            const modelChartIndex = qaNames.indexOf('model_used');
-            
-            if (modelChartIndex > -1) {
-                qaNames.splice(modelChartIndex, 1); 
-                
-                const modelCounts = {};
-                telemetry.forEach(t => { 
-                    const model = t['model_used'];
-                    if (model) {
-                        // === STRICT FILTER FOR PIE CHART ===
-                        // If model is "svm" but we are in "cv_" mode, IGNORE IT.
-                        if (validModels && !validModels.includes(model.toLowerCase())) {
-                            return; 
-                        }
-                        
-                        modelCounts[model] = (modelCounts[model] || 0) + 1;
-                    }
+            const modelIdx = qaNames.indexOf('model_used');
+            if (modelIdx > -1) {
+                qaNames.splice(modelIdx, 1);
+                const counts = {};
+                telemetry.forEach(t => {
+                    const m = t['model_used'];
+                    if (!m) return;
+                    if (validModels && !validModels.includes(m.toLowerCase())) return;
+                    counts[m] = (counts[m] || 0) + 1;
                 });
-                const modelLabels = Object.keys(modelCounts);
-                const modelData = Object.values(modelCounts);
-
-                updateChart(chartInstances.modelChart, modelLabels, [{
-                    label: 'Model Usage',
-                    data: modelData,
-                    backgroundColor: ['#3b82f6', '#10b981', '#eab308', '#a855f7', '#f472b6', '#6b7280'],
+                updateChart(chartInstances.modelChart, Object.keys(counts), [{
+                    label: 'Model usage',
+                    data: Object.values(counts),
+                    backgroundColor: p.series,
+                    borderWidth: 0,
+                    _role: 'palette'
                 }]);
             } else {
                 updateChart(chartInstances.modelChart, [], []);
             }
-            
-            // --- Associated QA Line Charts ---
+
+            // --- Associated QA charts ------------------------------------------
             const qaCharts = [chartInstances.qa1, chartInstances.qa2];
             const qaTitles = ['qa1-chart-title', 'qa2-chart-title'];
-            const qaColors = ['#10b981', '#eab308'];
+            const qaIdx = [1, 2];
 
             qaNames.forEach((qaName, index) => {
-                if (index < qaCharts.length) { 
-                    const qaChart = qaCharts[index];
-                    const qaTitle = qaTitles[index];
-                    if (qaChart && qaTitle) {
-                        document.getElementById(qaTitle).textContent = qaName || `Associated QA ${index+1}`;
-                        const qaData = limitedTelemetry.map(t => t[qaName]);
-                        updateChart(qaChart, labels, [{
-                            label: qaName,
-                            data: qaData,
-                            borderColor: qaColors[index],
-                            backgroundColor: qaColors[index],
-                            tension: 0.1
-                        }]);
-                    }
-                }
+                if (index >= qaCharts.length) return;
+                document.getElementById(qaTitles[index]).textContent = qaName || `Associated QA ${index + 1}`;
+                const c = qaIdx[index];
+                updateChart(qaCharts[index], labels, [{
+                    label: qaName,
+                    data: rows.map(t => t[qaName]),
+                    borderColor: p.series[c],
+                    backgroundColor: p.series[c],
+                    tension: 0.3,
+                    pointRadius: 0,
+                    pointHoverRadius: 3,
+                    borderWidth: 2,
+                    _role: 'series', _roleIndex: c
+                }]);
             });
 
-            // Clear unused line charts
             for (let i = qaNames.length; i < qaCharts.length; i++) {
-                const qaChart = qaCharts[i];
-                const qaTitle = qaTitles[i];
-                if (qaChart && qaTitle) {
-                    document.getElementById(qaTitle).textContent = `Associated QA ${i+1}`;
-                    updateChart(qaChart, [], []);
-                }
+                document.getElementById(qaTitles[i]).textContent = `Associated QA ${i + 1}`;
+                updateChart(qaCharts[i], [], []);
             }
+
+            // --- Inference time: one of the paper's four headline metrics -------
+            const latencyKey = rows.length && rows[0].inference_time !== undefined ? 'inference_time' : null;
+            updateChart(chartInstances.latency, latencyKey ? labels : [], latencyKey ? [{
+                label: 'ms',
+                data: rows.map(t => (typeof t.inference_time === 'number' ? t.inference_time * 1000 : null)),
+                borderColor: p.series[3],
+                backgroundColor: p.series[3],
+                tension: 0.3,
+                pointRadius: 0,
+                pointHoverRadius: 3,
+                borderWidth: 2,
+                _role: 'series', _roleIndex: 3
+            }] : []);
+
+            updateStatTiles({ mainMetric, threshold, condition, isSingleMode, telemetry,
+                             confirmedAdaptations: confirmed.length, validModels });
+        }
+
+        // Adaptation events as ticks on their own lane, so the plot above stays
+        // readable instead of carrying rotated labels across the data.
+        function renderEventLane(events, rows, telemetry) {
+            const lane = document.getElementById('event-lane');
+            if (!lane) return;
+
+            if (!rows.length) {
+                lane.innerHTML = '<span class="absolute inset-0 flex items-center justify-center text-[10px] text-bark-500 dark:text-bark-500">no events in range</span>';
+                return;
+            }
+
+            const t0 = rows[0].timestamp;
+            const t1 = rows[rows.length - 1].timestamp;
+            const span = Math.max(t1 - t0, 1);
+
+            if (!events.length) {
+                lane.innerHTML = '<span class="absolute inset-0 flex items-center justify-center text-[10px] text-bark-500 dark:text-bark-500">no events in range</span>';
+                return;
+            }
+
+            lane.innerHTML = events.map(e => {
+                const pct = Math.min(Math.max((e.timestamp - t0) / span, 0), 1) * 100;
+                const next = telemetry.find(t => t.timestamp >= e.timestamp);
+                const model = next && next.model_used ? next.model_used : 'unknown';
+                const label = `${e.tactic_id.replace(/_/g, ' ')} → ${model}`;
+                return `<span class="group absolute top-0 h-full flex items-center" style="left:${pct}%">
+                    <span class="h-3 w-0.5 rounded bg-emerald-500 dark:bg-emerald-400"></span>
+                    <span class="pointer-events-none absolute bottom-full mb-1 left-1/2 -translate-x-1/2 hidden group-hover:block whitespace-nowrap rounded-md bg-bark-900 dark:bg-bark-700 px-2 py-1 text-[10px] text-white z-20">${label}</span>
+                </span>`;
+            }).join('');
+        }
+
+        function updateStatTiles({ mainMetric, threshold, condition, isSingleMode, telemetry, confirmedAdaptations, validModels }) {
+            const latest = telemetry.length ? telemetry[telemetry.length - 1] : null;
+
+            document.getElementById('stat-metric-label').textContent =
+                mainMetric && mainMetric !== 'N/A' ? mainMetric : 'Main metric';
+
+            const valueEl = document.getElementById('stat-metric-value');
+            const subEl = document.getElementById('stat-metric-sub');
+            const raw = latest ? latest[mainMetric] : undefined;
+
+            if (typeof raw === 'number' && isFinite(raw)) {
+                valueEl.textContent = raw.toFixed(3);
+                let violating = false;
+                if (!isSingleMode && typeof threshold === 'number') {
+                    violating = condition === 'GREATER_THAN' ? raw > threshold : raw < threshold;
+                }
+                valueEl.className = 'text-xl font-semibold mt-1 num ' +
+                    (isSingleMode || typeof threshold !== 'number' ? ''
+                        : violating ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400');
+                subEl.textContent = isSingleMode || typeof threshold !== 'number'
+                    ? 'monitor only'
+                    : `${violating ? 'outside' : 'within'} ${threshold}`;
+            } else {
+                valueEl.textContent = '—';
+                valueEl.className = 'text-xl font-semibold mt-1 num';
+                subEl.textContent = 'No telemetry';
+            }
+
+            const rawModel = latest && latest.model_used ? latest.model_used : null;
+            const modelOk = rawModel && (!validModels || validModels.includes(rawModel.toLowerCase()));
+            document.getElementById('stat-model-value').textContent = modelOk ? rawModel : '—';
+            document.getElementById('stat-adaptations-value').textContent = confirmedAdaptations;
+            document.getElementById('stat-ticks-value').textContent = telemetry.length;
+
+            highlightMapeStage(telemetry, confirmedAdaptations);
+        }
+
+
+        // Lights up the stage the loop most recently exercised.
+        let lastSeenAdaptationCount = 0;
+        let executeHighlightUntil = 0;
+
+        function highlightMapeStage(telemetry, confirmedAdaptations) {
+            if (confirmedAdaptations > lastSeenAdaptationCount) {
+                executeHighlightUntil = Date.now() + 6000;
+            }
+            lastSeenAdaptationCount = confirmedAdaptations;
+
+            const active = Date.now() < executeHighlightUntil ? 'execute'
+                         : telemetry.length ? 'monitor'
+                         : null;
+
+            document.querySelectorAll('.mape-stage').forEach(stage => {
+                const dot = stage.querySelector('.stage-dot');
+                if (!dot) return;
+                const on = stage.dataset.stage === active;
+                dot.className = 'stage-dot h-2 w-2 rounded-full ' + (on
+                    ? (active === 'execute' ? 'bg-emerald-500 pulse-dot' : 'bg-bark-900 dark:bg-bark-100 pulse-dot')
+                    : 'bg-bark-300 dark:bg-bark-700');
+            });
         }
         
         // ▼▼▼ 4. UPDATECHART FUNCTION (accepts options for annotations) ▼▼▼
@@ -1108,24 +1776,28 @@
             if (chart.config.type === 'doughnut') {
                 chart.data.labels = labels;
                 chart.data.datasets = datasets;
-            } 
-            else {
-                const dataLength = labels.length;
-                const sliceStart = Math.max(0, dataLength - CHART_MAX_DATA_POINTS);
-                
-                chart.data.labels = labels.slice(sliceStart);
-                chart.data.datasets = datasets.map(ds => ({
-                    ...ds,
-                    data: ds.data.slice(sliceStart)
-                }));
-                
-                if (extraOptions.plugins && extraOptions.plugins.annotation) {
-                    chart.options.plugins.annotation.annotations = extraOptions.plugins.annotation.annotations;
-                } else if (chart.options.plugins.annotation) {
-                     chart.options.plugins.annotation.annotations = {};
+            } else {
+                chart.data.labels = labels;
+                chart.data.datasets = datasets;
+
+                const ann = extraOptions.plugins && extraOptions.plugins.annotation;
+                if (chart.options.plugins.annotation) {
+                    chart.options.plugins.annotation.annotations = ann ? ann.annotations : {};
                 }
             }
             chart.update();
+        }
+
+        // Keeps the last `selectedRangeSeconds` of telemetry, capped so a long
+        // run never tries to paint more points than the canvas has pixels.
+        function windowTelemetry(telemetry) {
+            if (!telemetry.length) return [];
+            let rows = telemetry;
+            if (selectedRangeSeconds > 0) {
+                const cutoff = telemetry[telemetry.length - 1].timestamp - selectedRangeSeconds;
+                rows = telemetry.filter(t => t.timestamp >= cutoff);
+            }
+            return rows.length > CHART_MAX_DATA_POINTS ? rows.slice(-CHART_MAX_DATA_POINTS) : rows;
         }
 
         // === API & DATA HANDLING ===
@@ -1181,38 +1853,87 @@
                 updatePolicyForm(data);
                 updateHistoryFeed(data);
 
-                if (data.policy) {
-                    showMessage(`Successfully loaded policy '${currentPolicyId}'. Last updated: ${new Date().toLocaleTimeString()}`, "success");
-                }
+                // Deliberately silent on success: the header dot carries this now.
+                setConnection('live', `Live · ${new Date().toLocaleTimeString()}`);
 
             } catch (error) {
                 console.error("Failed to fetch knowledge:", error);
-                // Only show error if we are still on the expected policy
+                setConnection('error', 'Disconnected');
                 if (currentPolicyId === requestedPolicyId) {
-                    showMessage(`Failed to connect to managing system server at ${ACP_SERVER_URL}. Is it running?`, "error");
+                    showMessage(`Lost connection to the managing server at ${ACP_SERVER_URL}. Is it running?`, "error");
                 }
                 if (pollingIntervalId) clearInterval(pollingIntervalId);
+                setRunState('stopped');
             }
         }
 
+        // Whole class strings, never assembled from fragments: the Tailwind CDN
+        // only generates utilities it can see literally in the source.
+        const UPLOAD_STATUS_STYLES = {
+            info:    'block p-2.5 text-sm rounded border bg-bark-100 text-bark-800 border-bark-200 dark:bg-bark-800 dark:text-bark-200 dark:border-bark-700',
+            success: 'block p-2.5 text-sm rounded border bg-emerald-50 text-emerald-800 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-300 dark:border-emerald-500/25',
+            error:   'block p-2.5 text-sm rounded border bg-rose-50 text-rose-800 border-rose-200 dark:bg-rose-500/10 dark:text-rose-300 dark:border-rose-500/25'
+        };
+
+        const MESSAGE_STYLES = {
+            info:    'bg-bark-100 text-bark-800 border-bark-200 dark:bg-bark-800 dark:text-bark-200 dark:border-bark-700',
+            success: 'bg-emerald-50 text-emerald-800 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-300 dark:border-emerald-500/25',
+            warning: 'bg-amber-50 text-amber-800 border-amber-200 dark:bg-amber-500/10 dark:text-amber-300 dark:border-amber-500/25',
+            error:   'bg-rose-50 text-rose-800 border-rose-200 dark:bg-rose-500/10 dark:text-rose-300 dark:border-rose-500/25'
+        };
+
+        // Transient toasts. The previous build rendered these into a banner that
+        // sat above the content permanently - and fetchKnowledge() called it on
+        // every poll, so a success bar with a ticking clock was always on screen.
+        const TOAST_ACCENT = {
+            info:    'border-l-bark-400',
+            success: 'border-l-emerald-500',
+            warning: 'border-l-amber-500',
+            error:   'border-l-rose-500'
+        };
+        const TOAST_TTL = { info: 4000, success: 3500, warning: 6000, error: 9000 };
+        let lastToast = { text: null, at: 0 };
+
         function showMessage(text, type = "info") {
-            messageContainer.textContent = text;
-            messageContainer.classList.remove('hidden', 'bg-red-100', 'bg-green-100', 'bg-yellow-100', 'bg-blue-100', 'text-red-800', 'text-green-800', 'text-yellow-800', 'text-blue-800');
-            
-            let bgColor = 'bg-blue-100'; // default info
-            let textColor = 'text-blue-800';
-            if (type === "error") {
-                bgColor = 'bg-red-100';
-                textColor = 'text-red-800';
-            } else if (type === "success") {
-                bgColor = 'bg-green-100'; 
-                textColor = 'text-green-800';
-            } else if (type === "warning") {
-                bgColor = 'bg-yellow-100';
-                textColor = 'text-yellow-800';
-            }
-            messageContainer.classList.add(bgColor, textColor, 'border', 'border-gray-300');
-            messageContainer.classList.remove('hidden');
+            const container = document.getElementById('toast-container');
+            if (!container) return;
+
+            // Polling means the same message can arrive many times in a row.
+            const now = Date.now();
+            if (text === lastToast.text && now - lastToast.at < 4000) return;
+            lastToast = { text, at: now };
+
+            const toast = document.createElement('div');
+            toast.className =
+                'toast-in pointer-events-auto rounded border border-l-4 border-bark-200 dark:border-bark-700 ' +
+                'bg-white dark:bg-bark-900 px-3.5 py-2.5 text-xs leading-relaxed ' +
+                (TOAST_ACCENT[type] || TOAST_ACCENT.info);
+            toast.textContent = text;
+            container.appendChild(toast);
+
+            while (container.children.length > 4) container.firstElementChild.remove();
+
+            setTimeout(() => {
+                toast.style.transition = 'opacity .2s, transform .2s';
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateY(4px)';
+                setTimeout(() => toast.remove(), 220);
+            }, TOAST_TTL[type] || 4000);
+        }
+
+        // The header dot: a steady "is the server answering" signal, so routine
+        // polling no longer needs to say anything at all.
+        function setConnection(state, text) {
+            const dot = document.getElementById('connection-dot');
+            const label = document.getElementById('connection-text');
+            if (!dot || !label) return;
+            const styles = {
+                live:    'h-1.5 w-1.5 rounded-full bg-emerald-500 pulse-dot',
+                idle:    'h-1.5 w-1.5 rounded-full bg-bark-300 dark:bg-bark-700',
+                error:   'h-1.5 w-1.5 rounded-full bg-rose-500'
+            };
+            dot.className = styles[state] || styles.idle;
+            label.textContent = text;
         }
 
         // === POLICY MANAGEMENT ===
@@ -1465,24 +2186,24 @@
         function addTacticGroup(tactic = null, index = null) {
             const tacticCount = index || tacticsContainer.children.length + 1;
             const newTacticGroup = document.createElement('div');
-            newTacticGroup.className = 'tactic-group border border-gray-200 p-3 rounded-md space-y-2 bg-gray-50';
+            newTacticGroup.className = 'tactic-group rounded border border-bark-200 dark:border-bark-800 bg-bark-50 dark:bg-bark-950/40 p-4 space-y-3';
             newTacticGroup.innerHTML = `
-                <h4 class="font-medium text-gray-700">Tactic ${tacticCount}</h4>
+                <h4 class="text-xs font-semibold text-bark-500 dark:text-bark-400">Tactic ${tacticCount}</h4>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
-                        <label class="block text-sm font-medium mb-1 text-gray-700">Tactic ID</label>
-                        <input type="text" class="tactic-id w-full bg-white border border-gray-300 rounded-md p-2 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" value="${tactic?.tactic_id || ''}" required>
+                        <label class="block text-xs font-medium mb-1.5 text-bark-600 dark:text-bark-400">Tactic ID</label>
+                        <input type="text" class="tactic-id w-full bg-white dark:bg-bark-950 border border-bark-300 dark:border-bark-700 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-bark-400 focus:border-bark-400" value="${tactic?.tactic_id || ''}" required>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium mb-1 text-gray-700">Priority</label>
-                        <input type="number" value="${tactic?.priority || tacticCount}" class="tactic-priority w-full bg-white border border-gray-300 rounded-md p-2 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
+                        <label class="block text-xs font-medium mb-1.5 text-bark-600 dark:text-bark-400">Priority</label>
+                        <input type="number" value="${tactic?.priority || tacticCount}" class="tactic-priority w-full bg-white dark:bg-bark-950 border border-bark-300 dark:border-bark-700 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-bark-400 focus:border-bark-400" required>
                     </div>
                     <div class="md:col-span-2">
-                        <label class="block text-sm font-medium mb-1 text-gray-700">Tactic Endpoint URL</label>
-                        <input type="text" class="tactic-endpoint w-full bg-white border border-gray-300 rounded-md p-2 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" value="${tactic?.tactic_endpoint || 'http://localhost:8080/adaptor/tactic'}" required>
+                        <label class="block text-xs font-medium mb-1.5 text-bark-600 dark:text-bark-400">Tactic endpoint URL</label>
+                        <input type="text" class="tactic-endpoint w-full bg-white dark:bg-bark-950 border border-bark-300 dark:border-bark-700 rounded px-3 py-2 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-bark-400 focus:border-bark-400" value="${tactic?.tactic_endpoint || 'http://localhost:8080/adaptor/tactic'}" required>
                     </div>
                     <div class="flex items-end">
-                        <button type="button" class="remove-tactic-btn bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-md text-sm">Remove</button>
+                        <button type="button" class="remove-tactic-btn text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 px-3 py-2 rounded text-sm font-medium transition-colors">Remove</button>
                     </div>
                 </div>
             `;
@@ -1499,32 +2220,32 @@
         function addSecBoundaryGroup(boundary = null, index = null) {
             const boundaryCount = index || secondaryBoundariesContainer.children.length + 1;
             const newBoundaryGroup = document.createElement('div');
-            newBoundaryGroup.className = 'secondary-boundary-group border border-gray-200 p-3 rounded-md space-y-2 bg-gray-50';
+            newBoundaryGroup.className = 'secondary-boundary-group rounded border border-bark-200 dark:border-bark-800 bg-bark-50 dark:bg-bark-950/40 p-4 space-y-3';
             newBoundaryGroup.innerHTML = `
-                <h4 class="font-medium text-gray-700">Secondary Boundary ${boundaryCount}</h4>
+                <h4 class="text-xs font-semibold text-bark-500 dark:text-bark-400">Secondary Boundary ${boundaryCount}</h4>
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <div>
-                        <label class="block text-sm font-medium mb-1 text-gray-700">Metric (QA)</label>
-                        <input type="text" class="sec-boundary-metric w-full bg-white border border-gray-300 rounded-md p-2 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" value="${boundary?.quality_attribute || ''}" required>
+                        <label class="block text-xs font-medium mb-1.5 text-bark-600 dark:text-bark-400">Metric (QA)</label>
+                        <input type="text" class="sec-boundary-metric w-full bg-white dark:bg-bark-950 border border-bark-300 dark:border-bark-700 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-bark-400 focus:border-bark-400" value="${boundary?.quality_attribute || ''}" required>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium mb-1 text-gray-700">Condition</label>
-                        <select class="sec-boundary-condition w-full bg-white border border-gray-300 rounded-md p-2 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <label class="block text-xs font-medium mb-1.5 text-bark-600 dark:text-bark-400">Condition</label>
+                        <select class="sec-boundary-condition w-full bg-white dark:bg-bark-950 border border-bark-300 dark:border-bark-700 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-bark-400 focus:border-bark-400">
                             <option value="LESS_THAN" ${boundary?.condition === 'LESS_THAN' ? 'selected' : ''}>LESS_THAN</option>
                             <option value="GREATER_THAN" ${boundary?.condition === 'GREATER_THAN' ? 'selected' : ''}>GREATER_THAN</option>
                         </select>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium mb-1 text-gray-700">Threshold</label>
-                        <input type="number" step="0.01" class="sec-boundary-threshold w-full bg-white border border-gray-300 rounded-md p-2 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" value="${boundary?.threshold || ''}" required>
+                        <label class="block text-xs font-medium mb-1.5 text-bark-600 dark:text-bark-400">Threshold</label>
+                        <input type="number" step="0.01" class="sec-boundary-threshold w-full bg-white dark:bg-bark-950 border border-bark-300 dark:border-bark-700 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-bark-400 focus:border-bark-400" value="${boundary?.threshold || ''}" required>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium mb-1 text-gray-700">Tactic ID</label>
-                        <input type="text" class="sec-boundary-tactic-id w-full bg-white border border-gray-300 rounded-md p-2 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" value="${boundary?.tactic_id || ''}" required>
+                        <label class="block text-xs font-medium mb-1.5 text-bark-600 dark:text-bark-400">Tactic ID</label>
+                        <input type="text" class="sec-boundary-tactic-id w-full bg-white dark:bg-bark-950 border border-bark-300 dark:border-bark-700 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-bark-400 focus:border-bark-400" value="${boundary?.tactic_id || ''}" required>
                     </div>
                 </div>
                 <div class="flex justify-end">
-                    <button type="button" class="remove-sec-boundary-btn bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-md text-sm">Remove</button>
+                    <button type="button" class="remove-sec-boundary-btn text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 px-3 py-1.5 rounded text-sm font-medium transition-colors">Remove</button>
                 </div>
             `;
             secondaryBoundariesContainer.appendChild(newBoundaryGroup);
@@ -1546,8 +2267,15 @@
             const telemetry = data.telemetry_history || [];
             const policy = data.policy || {};
 
+            // Rebuilt every poll, so the old canvases' charts must be destroyed first.
+            historyChartInstances.forEach(c => { try { c.destroy(); } catch (e) { /* already gone */ } });
+            historyChartInstances = [];
+
+            const badge = document.getElementById('history-count-badge');
+            if (badge) badge.textContent = interventions.length;
+
             if (interventions.length === 0) {
-                feed.innerHTML = '<div class="text-gray-500">No adaptation events recorded yet.</div>';
+                feed.innerHTML = '<div class="text-sm text-bark-500 dark:text-bark-400 text-center py-12 rounded-md border border-dashed border-bark-300 dark:border-bark-700">No adaptation events recorded yet.</div>';
                 return;
             }
 
@@ -1564,9 +2292,13 @@
         
         function createHistoryCard(event, index, telemetry, policy) {
             const card = document.createElement('div');
-            card.className = 'bg-white p-6 rounded-lg card-shadow border border-gray-200';
-            
-            const statusColor = event.status === "CONFIRMED_SUCCESS" ? "text-green-600" : (event.status.includes("FAILED") ? "text-red-600" : "text-yellow-600");
+            card.className = 'rounded-md border border-bark-200 dark:border-bark-800 bg-white dark:bg-bark-900 p-5 fade-in';
+
+            const statusStyle = event.status === "CONFIRMED_SUCCESS"
+                ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-300 dark:border-emerald-500/25'
+                : event.status.includes("FAILED")
+                    ? 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-500/10 dark:text-rose-300 dark:border-rose-500/25'
+                    : 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/10 dark:text-amber-300 dark:border-amber-500/25';
             
             const primaryBoundary = policy.adaptation_boundary || {};
             const secondaryBoundary = (policy.secondary_boundaries || []).find(b => b.quality_attribute === event.trigger_metric);
@@ -1586,29 +2318,27 @@
             const triggerValue = event.trigger_value ? parseFloat(event.trigger_value).toFixed(2) : 'N/A';
 
             card.innerHTML = `
-                <div class="flex justify-between items-center mb-4">
-                    <h3 class="text-lg font-medium text-gray-900">Adaptation Event</h3>
-                    <span class="text-sm font-mono ${statusColor}">${event.status}</span>
+                <div class="flex flex-wrap justify-between items-center gap-2 mb-1">
+                    <h3 class="text-sm font-semibold">Adaptation event</h3>
+                    <span class="text-[11px] font-medium font-mono px-1.5 py-0.5 rounded-sm border ${statusStyle}">${event.status}</span>
                 </div>
-                <div class="text-sm text-gray-500 mb-4">${new Date(event.timestamp * 1000).toLocaleString()}</div>
-                
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                    <div>
-                        <div class="text-xs text-gray-500 uppercase">Violation Trigger</div>
-                        <div class="text-lg font-semibold text-red-600">${displayMetric} (${triggerValue})</div>
-                        <div class="text-sm text-gray-600">Adapt when ${displayCondition || ''} ${displayThreshold || ''}</div>
+                <div class="text-xs text-bark-500 dark:text-bark-400 mb-5">${new Date(event.timestamp * 1000).toLocaleString()}</div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
+                    <div class="rounded border border-bark-200 dark:border-bark-800 bg-bark-50 dark:bg-bark-950/40 px-4 py-3">
+                        <div class="text-[11px] font-semibold text-bark-500 dark:text-bark-400">Violation trigger</div>
+                        <div class="text-base font-semibold text-rose-600 dark:text-rose-400 mt-1 truncate">${displayMetric} <span class="num">(${triggerValue})</span></div>
+                        <div class="text-xs text-bark-500 dark:text-bark-400 mt-0.5">Adapt when ${displayCondition || ''} ${displayThreshold ?? ''}</div>
                     </div>
-                    <div>
-                        <div class="text-xs text-gray-500 uppercase">Action Taken</div>
-                        <div class="text-lg font-semibold text-blue-600">${event.tactic_id}</div>
+                    <div class="rounded border border-bark-200 dark:border-bark-800 bg-bark-50 dark:bg-bark-950/40 px-4 py-3">
+                        <div class="text-[11px] font-semibold text-bark-500 dark:text-bark-400">Action taken</div>
+                        <div class="text-base font-semibold text-bark-500 dark:text-bark-400 mt-1 truncate">${event.tactic_id}</div>
                     </div>
                 </div>
-                
-                <div class="mt-4">
-                    <h4 class="text-sm font-medium text-gray-700 mb-2">Before & After Performance (${displayMetric})</h4>
-                    <div class="h-40 bg-gray-50 p-2 rounded-md border border-gray-200">
-                        <canvas id="history-chart-${index}"></canvas>
-                    </div>
+
+                <h4 class="text-xs font-medium text-bark-600 dark:text-bark-400 mb-2">Before &amp; after &mdash; ${displayMetric}</h4>
+                <div class="h-40 rounded border border-bark-200 dark:border-bark-800 p-2">
+                    <canvas id="history-chart-${index}"></canvas>
                 </div>
             `;
             return card;
@@ -1633,47 +2363,52 @@
             const labels = chartData.map(t => new Date(t.timestamp * 1000));
             const data = chartData.map(t => t[triggerMetric]);
             
+            const p = palette();
+
             const eventLine = {
                 type: 'line',
                 mode: 'vertical',
                 scaleID: 'x',
                 value: new Date(eventTimestamp * 1000),
-                borderColor: '#ef4444',
+                borderColor: p.event,
                 borderWidth: 2,
                 borderDash: [5, 5],
                 label: {
-                    content: 'Adaptation Event',
+                    content: 'Adaptation event',
                     enabled: true,
                     position: 'start',
-                    backgroundColor: '#ef4444'
+                    backgroundColor: p.eventLabelBg
                 }
             };
 
-            new Chart(canvas, {
+            const chart = new Chart(canvas, {
                 type: 'line',
                 data: {
                     labels: labels,
                     datasets: [{
                         label: triggerMetric,
                         data: data,
-                        borderColor: '#3b82f6',
-                        tension: 0.1,
-                        pointRadius: 2
+                        borderColor: p.series[0],
+                        backgroundColor: p.series[0],
+                        tension: 0.25,
+                        borderWidth: 2,
+                        pointRadius: 2,
+                        _role: 'series', _roleIndex: 0
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
                     scales: {
-                        x: { 
+                        x: {
                             type: 'time',
                             time: { unit: 'second', displayFormats: { second: 'HH:mm:ss' } },
-                            ticks: { color: '#6b7280', maxTicksLimit: 6 },
-                            grid: { color: '#e5e7eb' }
+                            ticks: { color: p.tick, maxTicksLimit: 6 },
+                            grid: { color: p.grid }
                         },
-                        y: { 
-                            ticks: { color: '#6b7280', maxTicksLimit: 5 },
-                            grid: { color: '#e5e7eb' }
+                        y: {
+                            ticks: { color: p.tick, maxTicksLimit: 5 },
+                            grid: { color: p.grid }
                         }
                     },
                     plugins: {
@@ -1687,6 +2422,8 @@
                     animation: { duration: 0 }
                 }
             });
+
+            historyChartInstances.push(chart);
         }
 
         // === NEW: Approach Configuration Writer ===
@@ -1699,6 +2436,11 @@
                 });
 
                 if (response.ok) {
+                    activeSystemType = approach.includes("cv") ? "cv" : "regression";
+                    startKnowledgePolling();
+                    refreshMlflowLinks();
+                    if (mlflowLinksIntervalId) clearInterval(mlflowLinksIntervalId);
+                    mlflowLinksIntervalId = setInterval(refreshMlflowLinks, 5000);
                     showMessage(` Approach configuration set to '${approach}'`, "success");
                     return true;
                 } else {
@@ -1905,11 +2647,739 @@
             }
         }
 
+        async function fetchMlflowInfo(system) {
+            const response = await fetch(`${ACP_SERVER_URL}/api/mlflow-info/${system}?t=${Date.now()}`);
+            if (!response.ok) throw new Error(`Failed to fetch MLflow info: ${response.statusText}`);
+            return response.json();
+        }
+
+        // "Open in MLflow" / "View Active Model" are real <a href> links, kept
+        // up to date in the background, rather than buttons that window.open()
+        // on click. A scripted window.open() - even opened synchronously before
+        // an await, even from a real click - was getting outright popup-blocked
+        // in a real browser. A direct <a> navigation is never blocked; it's the
+        // browser's normal link-follow behavior, not a script asking for a new
+        // window.
+        let mlflowLinksIntervalId = null;
+
+        async function refreshMlflowLinks() {
+            if (!activeSystemType) return;
+            try {
+                const info = await fetchMlflowInfo(activeSystemType);
+                const link = document.getElementById("open-mlflow-session-btn");
+                if (!link) return;
+
+                if (info.session_run_id && info.experiment_id) {
+                    link.href = `${info.mlflow_ui_url}/#/experiments/${info.experiment_id}/runs/${info.session_run_id}`;
+                    link.title = "Open the live adaptation session run";
+                } else if (info.experiment_id) {
+                    link.href = `${info.mlflow_ui_url}/#/experiments/${info.experiment_id}`;
+                    link.title = "No live session yet - opens the experiment";
+                } else {
+                    link.href = info.mlflow_ui_url;
+                    link.title = "Open MLflow";
+                }
+            } catch (error) {
+                console.error('Error refreshing MLflow links:', error);
+            }
+        }
+
+
+        // =====================================================================
+        // RUN STATE
+        // The run is now a first-class thing with a lifecycle, rather than a
+        // button that disappeared once pressed and a session you could only end
+        // by leaving the page.
+        // =====================================================================
+        let runState = 'idle';          // idle | ready | running | stopped
+        let runStartedAt = null;
+        let runTimerId = null;
+
+        const RUN_PILL_STYLES = {
+            idle:    'inline-flex items-center gap-1.5 text-xs font-medium px-2 py-0.5 rounded-sm bg-bark-200 text-bark-600 dark:bg-bark-800 dark:text-bark-400',
+            ready:   'inline-flex items-center gap-1.5 text-xs font-medium px-2 py-0.5 rounded-sm bg-bark-200 text-bark-700 dark:bg-bark-800 dark:text-bark-300',
+            running: 'inline-flex items-center gap-1.5 text-xs font-medium px-2 py-0.5 rounded-sm bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300',
+            stopped: 'inline-flex items-center gap-1.5 text-xs font-medium px-2 py-0.5 rounded-sm bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300'
+        };
+        const RUN_DOT_STYLES = {
+            idle:    'h-1.5 w-1.5 rounded-full bg-bark-400',
+            ready:   'h-1.5 w-1.5 rounded-full bg-bark-900 dark:bg-bark-100',
+            running: 'h-1.5 w-1.5 rounded-full bg-emerald-500 pulse-dot',
+            stopped: 'h-1.5 w-1.5 rounded-full bg-amber-500'
+        };
+        const RUN_LABELS = { idle: 'Idle', ready: 'Ready', running: 'Running', stopped: 'Stopped' };
+
+        function setRunState(state) {
+            runState = state;
+            const pill = document.getElementById('run-status-pill');
+            const dot = document.getElementById('run-status-dot');
+            const text = document.getElementById('run-status-text');
+            const startBtn = document.getElementById('adaptive-start-btn');
+            const stopBtn = document.getElementById('stop-system-btn');
+            const elapsed = document.getElementById('run-elapsed');
+            const hint = document.getElementById('start-hint');
+
+            if (pill) pill.className = RUN_PILL_STYLES[state];
+            if (dot) dot.className = RUN_DOT_STYLES[state];
+            if (text) text.textContent = RUN_LABELS[state];
+
+            const isRunning = state === 'running';
+            if (startBtn) startBtn.classList.toggle('hidden', isRunning);
+            if (stopBtn) stopBtn.classList.toggle('hidden', !isRunning);
+            if (elapsed) elapsed.classList.toggle('hidden', !isRunning);
+            if (hint) hint.classList.toggle('hidden', state !== 'ready');
+
+            if (isRunning) {
+                runStartedAt = runStartedAt || Date.now();
+                if (!runTimerId) runTimerId = setInterval(tickElapsed, 1000);
+                tickElapsed();
+            } else {
+                if (runTimerId) { clearInterval(runTimerId); runTimerId = null; }
+                if (state === 'idle' || state === 'ready') runStartedAt = null;
+            }
+        }
+
+        function tickElapsed() {
+            const el = document.getElementById('run-elapsed');
+            if (!el || !runStartedAt) return;
+            const s = Math.floor((Date.now() - runStartedAt) / 1000);
+            const mm = String(Math.floor(s / 60)).padStart(2, '0');
+            const ss = String(s % 60).padStart(2, '0');
+            el.textContent = `${mm}:${ss}`;
+        }
+
+        async function stopManagedSystem() {
+            const btn = document.getElementById('stop-system-btn');
+            btn.disabled = true;
+            try {
+                const res = await fetch(`${ACP_SERVER_URL}/api/stop-managed-system`, { method: 'POST' });
+                if (!res.ok) throw new Error(res.statusText);
+                showMessage('Managed system stopped. Telemetry collected so far is kept.', 'success');
+            } catch (error) {
+                console.error('Stop failed:', error);
+                showMessage(`Could not stop the managed system: ${error.message}`, 'error');
+            } finally {
+                btn.disabled = false;
+                if (pollingIntervalId) { clearInterval(pollingIntervalId); pollingIntervalId = null; }
+                setRunState('stopped');
+                setConnection('idle', 'Stopped');
+            }
+        }
+
+        // =====================================================================
+        // KNOWLEDGE BASE
+        // mape_info.json / thresholds.json / versionedMR, surfaced through the
+        // read-only endpoints added to app.py. None of this was previously
+        // reachable from the browser.
+        // =====================================================================
+        let knowledgePollId = null;
+        let latestKnowledge = null;
+
+        async function refreshKnowledgeState() {
+            if (!activeSystemType) return;
+            try {
+                const res = await fetch(`${ACP_SERVER_URL}/api/knowledge-state/${activeSystemType}?t=${Date.now()}`);
+                // Any non-200 (503 while a writer holds the file, or the server
+                // restarting) leaves the previous render in place.
+                if (!res.ok) return;
+                const next = await res.json();
+                // Never overwrite good state with an empty payload.
+                if (!next || (!next.thresholds && !next.event_counters && !next.ema_scores)) return;
+                latestKnowledge = next;
+                renderCounters(latestKnowledge);
+                renderDecisionInspector(latestKnowledge);
+                renderGoals(latestKnowledge);
+            } catch (error) {
+                console.error('Knowledge state fetch failed:', error);
+            }
+        }
+
+        function renderCounters(k) {
+            const c = k.event_counters || {};
+            const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+            set('ctr-switches', c.model_switches ?? 0);
+            set('ctr-retrains', c.retrains ?? 0);
+            set('ctr-vmr', c.vmr_events ?? 0);
+            const uj = c.mape_k_energy_uJ;
+            set('ctr-energy', typeof uj === 'number' ? `${(uj / 1e6).toFixed(2)} J` : '—');
+        }
+
+        function renderDecisionInspector(k) {
+            const score = k.last_score_check;
+            const drift = k.last_drift_check;
+            const verdict = document.getElementById('decision-verdict');
+            const sentence = document.getElementById('decision-sentence');
+
+            // A stale score_check is the last harmone_local value, not this
+            // run's. Treat "no live decision" as a genuine fresh start rather
+            // than replaying the previous run's reasoning as if it were current.
+            const scoreLive = score && !score.stale;
+            if (!scoreLive) {
+                verdict.textContent = 'No data';
+                verdict.className = 'text-[11px] font-medium px-1.5 py-0.5 rounded-sm bg-bark-200 text-bark-600 dark:bg-bark-800 dark:text-bark-400';
+                sentence.textContent = 'Waiting for the first analysis tick…';
+                const ageEl = document.getElementById('decision-age');
+                if (ageEl) {
+                    ageEl.textContent = score ? 'no live decision yet' : '';
+                    ageEl.title = score
+                        ? `Last harmone_local reading: score ${fmt(score.score)} vs ${fmt(score.min_score_threshold)}. `
+                          + 'ACP mode records its own decision once telemetry starts arriving.'
+                        : '';
+                }
+                renderGauge('score', null, null, 'above');
+                renderGauge('energy', null, null, 'below');
+                renderGauge('drift', null, null, 'below');
+                return;
+            }
+
+            if (!score && !drift) {
+                verdict.textContent = 'No data';
+                verdict.className = 'text-[11px] font-medium px-1.5 py-0.5 rounded-sm bg-bark-200 text-bark-600 dark:bg-bark-800 dark:text-bark-400';
+                sentence.textContent = 'Waiting for the first analysis tick…';
+                return;
+            }
+
+            const needsSwitch = score && score.switch_needed;
+            // A stale drift reading is the last harmone_local value, not a live
+            // one - push_telemetry() never sends kl_div, so ACP mode cannot
+            // evaluate drift. Letting it set the verdict pinned the panel to
+            // "Drift detected" permanently off a frozen number.
+            const driftLive = drift && !drift.stale;
+            const drifted = driftLive && drift.drift_detected;
+
+            verdict.textContent = drifted ? 'Drift detected' : needsSwitch ? 'Adaptation needed' : 'Within bounds';
+            verdict.className = 'text-[11px] font-medium px-1.5 py-0.5 rounded-sm ' + (
+                drifted ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300'
+                : needsSwitch ? 'bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300'
+                : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300');
+
+            // Say why, in words, using the loop's own recorded reasoning.
+            const parts = [];
+            if (score) {
+                const op = score.score < score.min_score_threshold ? '&lt;' : '&ge;';
+                parts.push(`score <span class="font-mono font-medium">${fmt(score.score)}</span> ${op} threshold <span class="font-mono font-medium">${fmt(score.min_score_threshold)}</span>`);
+                if (score.energy_normalized !== undefined) {
+                    parts.push(`normalised energy <span class="font-mono font-medium">${fmt(score.energy_normalized)}</span> / <span class="font-mono font-medium">${fmt(score.energy_threshold)}</span>`);
+                }
+            }
+            if (driftLive && drift.kl_div !== undefined && drift.kl_div !== null) {
+                parts.push(`KL divergence <span class="font-mono font-medium">${fmt(drift.kl_div)}</span> vs <span class="font-mono font-medium">${fmt(drift.drift_threshold)}</span>`);
+            } 
+            if (score && score.threshold_violated) {
+                parts.push(`violated: <span class="font-mono font-medium">${score.threshold_violated}</span>`);
+            }
+            sentence.innerHTML = parts.join(' &middot; ') || 'No recorded reasoning yet.';
+
+            const age = document.getElementById('decision-age');
+            if (age) {
+                if (k.decision_at) {
+                    const secs = Math.max(0, Math.round(Date.now() / 1000 - k.decision_at));
+                    age.textContent = secs < 2 ? 'just now' : `${secs}s ago`;
+                    age.title = 'Analysed by the managing server (ACP mode)';
+                } else {
+                    age.textContent = 'from last local run';
+                    age.title = 'analyse.py only runs in harmone_local mode; no live ACP decision yet';
+                }
+            }
+
+            renderGauge('score', score ? score.score : null, score ? score.min_score_threshold : null, 'above');
+            renderGauge('energy', score ? score.energy_normalized : null, score ? score.energy_threshold : null, 'below');
+            renderGauge('drift', driftLive ? drift.kl_div : null, driftLive ? drift.drift_threshold : null, 'below');
+            const driftLabel = document.getElementById('gauge-drift-label');
+            if (driftLabel && drift && drift.stale) {
+                driftLabel.textContent = 'not monitored';
+                driftLabel.title = `Last local-mode reading: KL ${fmt(drift.kl_div)} vs ${fmt(drift.drift_threshold)}. `
+                    + 'ACP mode never sends kl_div, so the drift boundary is not evaluated.';
+            }
+        }
+
+        function fmt(v) {
+            if (v === null || v === undefined || typeof v !== 'number') return '—';
+            return Math.abs(v) >= 100 ? v.toFixed(0) : v.toFixed(3);
+        }
+
+        // `good` says which side of the threshold is healthy.
+        function renderGauge(name, value, threshold, good) {
+            const bar = document.getElementById(`gauge-${name}-bar`);
+            const label = document.getElementById(`gauge-${name}-label`);
+            if (!bar || !label) return;
+
+            if (typeof value !== 'number' || typeof threshold !== 'number' || threshold === 0) {
+                bar.style.width = '0%';
+                bar.className = 'h-full w-0 rounded-full bg-bark-400 transition-all';
+                label.textContent = '—';
+                return;
+            }
+
+            const ratio = value / threshold;
+            const pct = Math.min(Math.max(ratio, 0), 1.5) / 1.5 * 100;
+
+            // Three steps rather than pass/fail: comfortably inside the budget,
+            // close to it, and over. "Close" is the state worth seeing early.
+            const margin = good === 'above' ? ratio : 1 / (ratio || 1e-9);
+            const tone = margin >= 1.15 ? 'bg-moss-600 dark:bg-moss-400'
+                       : margin >= 1.0  ? 'bg-amber-500'
+                       : 'bg-red-600 dark:bg-red-500';
+
+            bar.style.width = `${pct}%`;
+            bar.className = 'h-full rounded-full transition-all ' + tone;
+            label.textContent = `${fmt(value)} / ${fmt(threshold)}`;
+        }
+
+        const GOAL_LABELS = {
+            min_score: 'Min score', max_energy: 'Max energy', beta: 'β (accuracy weight)',
+            gamma: 'γ', alpha: 'α', E_m: 'E min', E_M: 'E max'
+        };
+
+        function renderGoals(k) {
+            const grid = document.getElementById('goals-grid');
+            if (!grid) return;
+            const t = k.thresholds || {};
+            const keys = Object.keys(GOAL_LABELS).filter(key => t[key] !== undefined);
+            if (!keys.length) {
+                grid.innerHTML = '<p class="text-xs text-bark-400 col-span-full">No thresholds file found for this system.</p>';
+                return;
+            }
+            grid.innerHTML = keys.map(key => `
+                <div class="rounded border border-bark-200 dark:border-bark-800 bg-white dark:bg-bark-900 px-3 py-2">
+                    <p class="text-[10px] text-bark-500 dark:text-bark-400 truncate">${GOAL_LABELS[key]}</p>
+                    <p class="text-sm font-mono font-medium mt-0.5 num">${t[key]}</p>
+                </div>`).join('');
+        }
+
+        // =====================================================================
+        // MODELS
+        // =====================================================================
+        let modelsPollId = null;
+
+        // An empty Models page should say which of the three possible reasons it
+        // is empty for, rather than showing the same neutral placeholder whether
+        // no approach is chosen, the server is down, or the server is running a
+        // build that predates these endpoints.
+        function modelsPlaceholder(title, detail) {
+            const list = document.getElementById('models-list');
+            if (!list) return;
+            list.innerHTML = `<div class="text-center py-12 rounded-md border border-dashed border-bark-300 dark:border-bark-700">
+                <p class="text-sm text-bark-500 dark:text-bark-400">${title}</p>
+                <p class="text-xs text-bark-500 dark:text-bark-400 mt-1">${detail}</p>
+            </div>`;
+        }
+
+        async function refreshModels() {
+            if (!activeSystemType) {
+                modelsPlaceholder('No approach selected',
+                    'Pick an approach from the start screen to load its models.');
+                return;
+            }
+            try {
+                const res = await fetch(`${ACP_SERVER_URL}/api/models/${activeSystemType}?t=${Date.now()}`);
+                if (res.status === 404) {
+                    modelsPlaceholder('Managing server is out of date',
+                        'This page needs /api/models, which the running server does not expose. Restart the managing server (app.py) to pick it up.');
+                    return;
+                }
+                // 503 = a writer holds the knowledge file for this instant. Keep
+                // whatever is already rendered rather than flashing it empty.
+                if (res.status === 503) return;
+                if (!res.ok) {
+                    modelsPlaceholder('Could not load models', `The server replied ${res.status}.`);
+                    return;
+                }
+                renderModels(await res.json());
+            } catch (error) {
+                console.error('Model list fetch failed:', error);
+                modelsPlaceholder('Managing server unreachable',
+                    `No response from ${ACP_SERVER_URL}. Is app.py running?`);
+            }
+        }
+
+        function formatBytes(n) {
+            if (typeof n !== 'number') return '—';
+            if (n < 1024) return `${n} B`;
+            if (n < 1024 ** 2) return `${(n / 1024).toFixed(0)} KB`;
+            return `${(n / 1024 ** 2).toFixed(1)} MB`;
+        }
+
+        function renderModels(data) {
+            const list = document.getElementById('models-list');
+            const note = document.getElementById('models-sample-note');
+            if (!list) return;
+
+            if (note) {
+                const src = `${data.registry_count} in the MLflow registry`;
+                note.textContent = !data.run_active
+                    ? `${src} · no active run, so no rates yet`
+                    : data.sampled_inferences
+                        ? `${src} · rates over ${data.sampled_inferences.toLocaleString()} inferences this run`
+                        : `${src} · waiting for this run's first inferences`;
+            }
+
+            if (!data.models || !data.models.length) {
+                modelsPlaceholder('No models found', 'The server returned an empty catalogue.');
+                return;
+            }
+
+            // EMA scores are unbounded and can be large and negative, so rank by
+            // position rather than plotting them on a shared absolute axis.
+            const scored = data.models.filter(m => typeof m.ema_score === 'number');
+            const best = scored.length ? Math.max(...scored.map(m => m.ema_score)) : null;
+            const worst = scored.length ? Math.min(...scored.map(m => m.ema_score)) : null;
+            const spread = best !== null && worst !== null && best !== worst ? best - worst : null;
+
+            // Energy is shaded against the policy's own E_M bound, so the
+            // accuracy/energy tradeoff the approach exists to manage is legible
+            // in the table rather than something you compute in your head.
+            const eM = latestKnowledge && latestKnowledge.thresholds
+                ? latestKnowledge.thresholds.E_M : null;
+            const energyCell = (uj) => {
+                if (typeof uj !== 'number') return '<span class="text-bark-300 dark:text-bark-600">&mdash;</span>';
+                const mj = (uj / 1000).toFixed(1) + ' mJ';
+                if (!eM) return mj;
+                const r = uj / eM;
+                const tone = r > 1 ? 'text-red-700 dark:text-red-400'
+                           : r > 0.6 ? 'text-amber-700 dark:text-amber-400'
+                           : 'text-moss-700 dark:text-moss-300';
+                const title = r > 1 ? `over the ${eM} uJ budget` : `${Math.round(r * 100)}% of the ${eM} uJ budget`;
+                return `<span class="${tone}" title="${title}">${mj}</span>`;
+            };
+
+            const num = (v, digits, suffix) =>
+                typeof v === 'number' ? v.toFixed(digits) + (suffix || '') : '<span class="text-bark-300 dark:text-bark-600">&mdash;</span>';
+
+            const dash = '<span class="text-bark-300 dark:text-bark-600">&mdash;</span>';
+            const rows = data.models.map(m => {
+                const pct = spread && typeof m.ema_score === 'number'
+                    ? ((m.ema_score - worst) / spread) * 100
+                    : (typeof m.ema_score === 'number' ? 100 : 0);
+                const isBest = typeof m.ema_score === 'number' && m.ema_score === best;
+
+                return `
+                <tr class="border-t border-bark-200 dark:border-bark-800 ${m.is_active ? 'bg-bark-50 dark:bg-bark-800/40' : ''}">
+                    <td class="py-2.5 pr-4 pl-4">
+                        <div class="flex items-center gap-2">
+                            <span class="text-sm font-medium">${m.label}</span>
+                            ${m.is_active ? '<span class="text-[10px] font-medium px-1.5 py-0.5 rounded-sm bg-moss-700 text-white dark:bg-moss-300 dark:text-moss-900">serving</span>' : ''}
+                            ${!m.available ? '<span class="text-[10px] font-medium px-1.5 py-0.5 rounded-sm bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-300">missing file</span>' : ''}
+                            ${!m.registered ? '<span class="text-[10px] font-medium px-1.5 py-0.5 rounded-sm bg-bark-200 text-bark-600 dark:bg-bark-800 dark:text-bark-300" title="No entry in the MLflow Model Registry">unregistered</span>' : ''}
+                            ${m.registered && !m.selectable ? '<span class="text-[10px] font-medium px-1.5 py-0.5 rounded-sm bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300" title="In the registry but absent from ema_scores, so the planner never picks it">not selectable</span>' : ''}
+                        </div>
+                        <p class="text-[11px] text-bark-500 dark:text-bark-400 mt-0.5">${m.blurb}</p>
+                    </td>
+                    <td class="py-2.5 px-4 w-44">
+                        <div class="flex items-baseline justify-between gap-2">
+                            <span class="text-sm font-mono num">${num(m.ema_score, 2)}</span>
+                            ${isBest ? '<span class="text-[10px] text-green-700 dark:text-green-400">best</span>' : ''}
+                        </div>
+                        <div class="h-px mt-1.5 bg-bark-200 dark:bg-bark-800">
+                            <div class="h-px ${isBest ? 'bg-green-600 dark:bg-green-400' : 'bg-bark-400 dark:bg-bark-600'}" style="width:${Math.max(pct, 2)}%"></div>
+                        </div>
+                    </td>
+                    <td class="py-2.5 px-4 text-sm font-mono num text-right">${m.recent_inferences ? (m.share * 100).toFixed(1) + '%' : dash}</td>
+                    <td class="py-2.5 px-4 text-sm font-mono num text-right">${num(m.mean_inference_ms, 1, ' ms')}</td>
+                    <td class="py-2.5 px-4 text-sm font-mono num text-right">${energyCell(m.mean_energy_uj)}</td>
+                    <td class="py-2.5 px-4 text-sm font-mono num text-right text-bark-500 dark:text-bark-400">${formatBytes(m.size_bytes)}</td>
+                    <td class="py-2.5 pl-4 pr-4 text-right">
+                        <button class="version-btn text-sm text-bark-600 dark:text-bark-300 hover:text-bark-900 dark:hover:text-white underline underline-offset-2 decoration-bark-300 dark:decoration-bark-600"
+                                data-model="${m.name}" data-label="${m.label}"
+                                title="MLflow registry: ${m.registry_versions} · versionedMR on disk: ${m.disk_versions}">${m.registry_versions} / ${m.disk_versions}</button>
+                        ${m.active_alias_version ? `<div class="text-[10px] font-mono text-moss-700 dark:text-moss-300 mt-0.5">@active v${m.active_alias_version}</div>` : ''}
+                    </td>
+                </tr>`;
+            }).join('');
+
+            list.innerHTML = `
+                <div class="rounded border border-bark-200 dark:border-bark-800 bg-white dark:bg-bark-900 overflow-x-auto">
+                    <table class="w-full text-left">
+                        <thead>
+                            <tr class="text-[11px] text-bark-500 dark:text-bark-400">
+                                <th class="font-normal py-2 pl-4 pr-4">Model</th>
+                                <th class="font-normal py-2 px-4">EMA score</th>
+                                <th class="font-normal py-2 px-4 text-right">Share</th>
+                                <th class="font-normal py-2 px-4 text-right">Latency</th>
+                                <th class="font-normal py-2 px-4 text-right">Energy</th>
+                                <th class="font-normal py-2 px-4 text-right">Size</th>
+                                <th class="font-normal py-2 pl-4 pr-4 text-right" title="MLflow registry versions / versionedMR versions on disk">Registry / disk</th>
+                            </tr>
+                        </thead>
+                        <tbody>${rows}</tbody>
+                    </table>
+                </div>`;
+        }
+
+        // =====================================================================
+        // VERSION DRAWER
+        // =====================================================================
+        function openVersionDrawer(model, label) {
+            const drawer = document.getElementById('version-drawer');
+            document.getElementById('drawer-title').textContent = `${label} · version history`;
+            document.getElementById('drawer-subtitle').textContent = `harmone-${activeSystemType}-${model}`;
+            document.getElementById('drawer-body').innerHTML =
+                '<p class="text-sm text-bark-400">Loading…</p>';
+            drawer.classList.remove('hidden');
+            loadVersions(model);
+        }
+
+        function closeVersionDrawer() {
+            document.getElementById('version-drawer').classList.add('hidden');
+        }
+
+        async function loadVersions(model) {
+            const body = document.getElementById('drawer-body');
+            try {
+                const res = await fetch(`${ACP_SERVER_URL}/api/versions/${activeSystemType}/${model}?t=${Date.now()}`);
+                if (!res.ok) throw new Error(res.statusText);
+                const d = await res.json();
+
+                const when = ts => ts ? new Date(ts * 1000).toLocaleString() : '—';
+                const best = latestKnowledge && latestKnowledge.vmr_best_match;
+
+                const registry = d.registry_versions.length ? d.registry_versions.map(v => `
+                    <a href="${d.mlflow_ui_url}/#/models/${d.registered_model_name}/versions/${v.version}" target="_blank" rel="noopener"
+                       class="flex items-center justify-between gap-3 rounded border border-bark-200 dark:border-bark-800 px-3 py-2 hover:bg-bark-50 dark:hover:bg-bark-800/50 transition-colors">
+                        <div class="min-w-0">
+                            <p class="text-sm font-medium">Version ${v.version}
+                                ${v.is_active_alias ? '<span class="ml-1.5 text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded bg-moss-700 text-white dark:bg-moss-300 dark:text-moss-900">@active</span>' : ''}
+                            </p>
+                            <p class="text-[11px] text-bark-400 font-mono truncate">${v.run_id ? v.run_id.slice(0, 16) + '…' : 'no run'}</p>
+                        </div>
+                        <span class="text-[11px] text-bark-400 shrink-0">${when(v.created_at)}</span>
+                    </a>`).join('')
+                    : '<p class="text-xs text-bark-400">Nothing registered for this model yet.</p>';
+
+                const disk = d.disk_versions.length ? d.disk_versions.map(v => {
+                    const isMatch = best && best.path && best.path.includes(`/${model}/version_${v.version}/`);
+                    return `
+                    <div class="flex items-center justify-between gap-3 rounded border ${isMatch ? 'border-emerald-300 dark:border-emerald-500/40 bg-emerald-50/50 dark:bg-emerald-500/5' : 'border-bark-200 dark:border-bark-800'} px-3 py-2">
+                        <div class="min-w-0">
+                            <p class="text-sm font-medium">version_${v.version}
+                                ${isMatch ? `<span class="ml-1.5 text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded bg-emerald-600 text-white">closest data match</span>` : ''}
+                            </p>
+                            <p class="text-[11px] text-bark-400">
+                                ${v.has_training_data ? (v.training_rows !== null && v.training_rows !== undefined ? `${v.training_rows.toLocaleString()} training rows` : 'paired artifact') : 'no paired data'}
+                            </p>
+                        </div>
+                        <span class="text-[11px] text-bark-400 shrink-0">${when(v.created_at)}</span>
+                    </div>`;
+                }).join('') : '<p class="text-xs text-bark-400">No versions archived on disk.</p>';
+
+                body.innerHTML = `
+                    <section>
+                        <div class="flex items-baseline justify-between mb-2">
+                            <h4 class="text-xs font-semibold text-bark-500 dark:text-bark-400">MLflow registry</h4>
+                            <span class="text-[11px] text-bark-400">${d.registry_versions.length}</span>
+                        </div>
+                        <div class="space-y-1.5">${registry}</div>
+                    </section>
+                    <section>
+                        <div class="flex items-baseline justify-between mb-2">
+                            <h4 class="text-xs font-semibold text-bark-500 dark:text-bark-400">Versioned Model Repository</h4>
+                            <span class="text-[11px] text-bark-400">${d.disk_versions.length}</span>
+                        </div>
+                        <div class="space-y-1.5">${disk}</div>
+                        ${best && best.kl_div !== null && best.kl_div !== undefined
+                            ? `<p class="text-[11px] text-bark-400 mt-2">Closest archived data to the current distribution: KL ${Number(best.kl_div).toFixed(3)}</p>` : ''}
+                    </section>
+                    <p class="text-[11px] text-bark-400 leading-relaxed border-t border-bark-200 dark:border-bark-800 pt-3">
+                        These two lists can legitimately differ. The registry records what was
+                        published through MLflow; the repository is what the loop can actually
+                        reuse at runtime.
+                    </p>`;
+            } catch (error) {
+                body.innerHTML = `<p class="text-sm text-rose-500">Could not load versions: ${error.message}</p>`;
+            }
+        }
+
+        // =====================================================================
+        // POLICY SUMMARY
+        // =====================================================================
+        function renderPolicySummary() {
+            const el = document.getElementById('policy-plain-summary');
+            if (!el) return;
+            try {
+                const p = getPolicyFromForm();
+                if (!p.quality_attribute || typeof p.adaptation_boundary.threshold !== 'number'
+                    || isNaN(p.adaptation_boundary.threshold)) {
+                    el.textContent = 'Fill in a metric and threshold to see what this policy does.';
+                    return;
+                }
+                const op = p.adaptation_boundary.condition === 'GREATER_THAN' ? 'rises above' : 'falls below';
+                const tactic = (p.tactics[0] && p.tactics[0].tactic_id) || 'the primary tactic';
+                let text = `Run ${tactic} when ${p.quality_attribute} ${op} ${p.adaptation_boundary.threshold}`;
+                (p.secondary_boundaries || []).forEach(b => {
+                    if (!b.quality_attribute || typeof b.threshold !== 'number' || isNaN(b.threshold)) return;
+                    const op2 = b.condition === 'GREATER_THAN' ? 'rises above' : 'falls below';
+                    text += `, or ${b.tactic_id || 'its tactic'} when ${b.quality_attribute} ${op2} ${b.threshold}`;
+                });
+                el.textContent = text + '.';
+            } catch (e) {
+                el.textContent = '—';
+            }
+        }
+
+        // Recovers which managed system is configured from approach.conf, so a
+        // reload (or opening the dashboard in a second tab) does not leave every
+        // Knowledge Base panel blank.
+        // approach.conf may hold either a bare approach ("reg_harmone") or a full
+        // preset key ("reg_harmone_score"), depending on what wrote it, so match
+        // exactly first and fall back to the longest prefix.
+        const APPROACH_TO_PRESET = {
+            reg_harmone: 'reg_harmone_score',
+            cv_harmone: 'cv_harmone_score'
+        };
+
+        function presetForApproach(approach) {
+            if (!approach) return null;
+            if (HARMONY_PRESETS[approach]) return approach;
+            if (APPROACH_TO_PRESET[approach]) return APPROACH_TO_PRESET[approach];
+            const match = Object.keys(HARMONY_PRESETS)
+                .filter(k => k.startsWith(approach))
+                .sort((a, b) => a.length - b.length)[0];
+            return match || null;
+        }
+
+        async function restoreActiveSystem() {
+            let approach = null;
+            try {
+                const res = await fetch(`${ACP_SERVER_URL}/api/approach?t=${Date.now()}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    approach = data.approach;
+                    if (data.system && !activeSystemType) activeSystemType = data.system;
+                }
+            } catch (e) {
+                // Server down: the pollers below simply stay idle.
+            }
+
+            // The policy form was likewise only ever filled as a side effect of
+            // clicking an approach, so a reloaded page showed an empty Policy tab.
+            // Recover it from the same source, without clobbering anything typed.
+            const presetKey = presetForApproach(approach);
+            if (presetKey && !document.getElementById('form-policy-id').value) {
+                populateFormWithPreset(HARMONY_PRESETS[presetKey]);
+                policyIdInput.value = HARMONY_PRESETS[presetKey].policy_id;
+                const dropdown = document.getElementById('policy-presets');
+                if (dropdown) dropdown.value = presetKey;
+                renderPolicySummary();
+            }
+
+            if (!activeSystemType) {
+                setConnection('idle', 'No approach selected');
+                return;
+            }
+
+            startKnowledgePolling();
+            refreshMlflowLinks();
+            if (!mlflowLinksIntervalId) {
+                mlflowLinksIntervalId = setInterval(refreshMlflowLinks, 5000);
+            }
+        }
+
+        // Starts every background poller that depends on a chosen approach.
+        function startKnowledgePolling() {
+            if (!activeSystemType) return;
+            refreshKnowledgeState();
+            refreshModels();
+            if (knowledgePollId) clearInterval(knowledgePollId);
+            knowledgePollId = setInterval(refreshKnowledgeState, 2000);
+            if (modelsPollId) clearInterval(modelsPollId);
+            modelsPollId = setInterval(refreshModels, 4000);
+        }
+
+        // === MANUAL RETRAIN ===
+        // Runs as an MLflow Project in a background thread, so fire and poll.
+        let retrainPollIntervalId = null;
+
+        function setRetrainStatus(text, tone) {
+            const el = document.getElementById('mlflow-retrain-status');
+            if (!el) return;
+            const tones = {
+                idle:    'text-sm mt-1',
+                running: 'text-sm mt-1 text-amber-600 dark:text-amber-400',
+                done:    'text-sm mt-1 text-emerald-600 dark:text-emerald-400',
+                failed:  'text-sm mt-1 text-rose-600 dark:text-rose-400'
+            };
+            el.className = tones[tone] || tones.idle;
+            el.textContent = text;
+        }
+
+        async function pollRetrainStatus() {
+            if (!activeSystemType) return;
+            try {
+                const res = await fetch(`${ACP_SERVER_URL}/api/retrain-status/${activeSystemType}?t=${Date.now()}`);
+                if (!res.ok) return;
+                const state = await res.json();
+
+                if (state.status === 'running') {
+                    setRetrainStatus('Running…', 'running');
+                    return;
+                }
+
+                if (retrainPollIntervalId) {
+                    clearInterval(retrainPollIntervalId);
+                    retrainPollIntervalId = null;
+                }
+                document.getElementById('trigger-retrain-btn').disabled = false;
+
+                if (state.status === 'failed' || state.error) {
+                    setRetrainStatus('Failed', 'failed');
+                    showMessage(`Retrain failed: ${state.error || 'unknown error'}`, "error");
+                } else if (state.status === 'done' || state.status === 'finished' || state.status === 'success') {
+                    setRetrainStatus('Completed', 'done');
+                    showMessage("Retrain finished. The new run is in MLflow.", "success");
+                    refreshMlflowLinks();
+                } else {
+                    setRetrainStatus('Idle', 'idle');
+                }
+            } catch (error) {
+                console.error('Error polling retrain status:', error);
+            }
+        }
+
+        async function triggerRetrain() {
+            if (!activeSystemType) {
+                showMessage("Load an approach first - there is no system to retrain yet.", "warning");
+                return;
+            }
+
+            const btn = document.getElementById('trigger-retrain-btn');
+            btn.disabled = true;
+            setRetrainStatus('Starting…', 'running');
+
+            try {
+                const res = await fetch(`${ACP_SERVER_URL}/api/trigger-retrain`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ system: activeSystemType })
+                });
+                const result = await res.json();
+
+                if (res.status === 409) {
+                    showMessage("A retrain is already running for this system.", "warning");
+                } else if (!res.ok) {
+                    throw new Error(result.error || res.statusText);
+                } else {
+                    showMessage("Retrain started as an MLflow Project. Watch the status in the MLflow panel.", "info");
+                }
+
+                setRetrainStatus('Running…', 'running');
+                if (retrainPollIntervalId) clearInterval(retrainPollIntervalId);
+                retrainPollIntervalId = setInterval(pollRetrainStatus, 2000);
+
+            } catch (error) {
+                console.error('Error triggering retrain:', error);
+                btn.disabled = false;
+                setRetrainStatus('Failed', 'failed');
+                showMessage(`Could not start retrain: ${error.message}`, "error");
+            }
+        }
+
         document.getElementById("adaptive-start-btn").addEventListener("click", async () => {
-            showMessage("Starting managed system...", "info");
+            showMessage("Starting managed system…", "info");
             await runManagedSystem();
+            runStartedAt = Date.now();
+            setRunState('running');
+            startKnowledgePolling();
             
-            document.getElementById("adaptive-start-container").classList.add("hidden");
             
             if (policyIdInput.value) {
                 currentPolicyId = policyIdInput.value;

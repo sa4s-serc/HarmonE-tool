@@ -1,1 +1,11 @@
 event_type,last_line,model,version,details
+switch,31,yolo_m,,
+switch,59,yolo_n,,
+switch,61,yolo_n,,
+switch,61,yolo_n,,
+switch,61,yolo_n,,
+switch,147,yolo_s,,
+switch,151,yolo_m,,
+switch,151,yolo_s,,
+switch,151,yolo_m,,
+switch,151,yolo_s,,

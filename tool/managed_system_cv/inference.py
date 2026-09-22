@@ -1,7 +1,9 @@
 import os
+import sys
 import time
 import pandas as pd
-import pyRAPL
+sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
+import energy_utils as pyRAPL
 import torch
 import shutil
 from pathlib import Path
@@ -101,9 +103,11 @@ for i, image_path in enumerate(image_files):
     model = YOLO(model_path)
     
     energy_meter.begin()
-    start_time = time.time()
+    # perf_counter, not time.time(): the latter has ~15.6ms resolution on
+    # Windows, so a ~2.5ms inference logged 0.0 seconds (167 of 500 rows).
+    start_time = time.perf_counter()
     results = model(image_path, verbose=False)
-    inference_time = time.time() - start_time
+    inference_time = time.perf_counter() - start_time
     energy_meter.end()
     energy_usage_uJ = energy_meter.result.pkg[0] if energy_meter.result.pkg else 0.0
 

@@ -1,0 +1,23 @@
+artifact_path: /home/ananyahalgatti/Desktop/nasscom/gitrepo/hm/tool/mlruns/1/models/m-ec5a987cd73e4485a3b833e917c33201/artifacts
+flavors:
+  python_function:
+    config:
+      device: null
+    data: data
+    env:
+      conda: conda.yaml
+      virtualenv: python_env.yaml
+    loader_module: mlflow.pytorch
+    pickle_module_name: mlflow.pytorch.pickle_module
+    python_version: 3.10.12
+  pytorch:
+    code: null
+    model_data: data
+    pytorch_version: 2.4.1+cpu
+mlflow_version: 3.16.1
+model_id: m-ec5a987cd73e4485a3b833e917c33201
+model_size_bytes: 47888
+model_uuid: m-ec5a987cd73e4485a3b833e917c33201
+prompts: null
+run_id: 39a737c0e68d433791bd83bbe697ed4c
+utc_time_created: '2026-09-20 21:27:49.857851'

@@ -1,5 +1,7 @@
 import os
+import sys
 import json
+import time
 import numpy as np
 import pandas as pd
 from scipy.stats import entropy
@@ -8,7 +10,17 @@ from monitor import monitor_mape, monitor_drift
 # Define the base directory dynamically based on the script's location
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 KNOWLEDGE_DIR = os.path.join(BASE_DIR, "..", "knowledge")
-BASE_VERSION_DIR = os.path.join(BASE_DIR, "..", "versionedMR")
+
+sys.path.append(os.path.abspath(os.path.join(BASE_DIR, "..", "..")))
+from session_utils import session_versioned_dir
+
+# Only this session's versions are reuse candidates: HarmonE's VMR reuse is
+# "drift realigned with a distribution THIS run already trained on", not
+# "some model from an unrelated earlier run happens to match". See
+# tool/session_utils.py.
+BASE_VERSION_DIR = session_versioned_dir(
+    os.path.join(BASE_DIR, "..", "versionedMR"), KNOWLEDGE_DIR
+)
 
 thresholds_file = os.path.join(KNOWLEDGE_DIR, "thresholds.json")
 mape_info_file = os.path.join(KNOWLEDGE_DIR, "mape_info.json")
@@ -18,14 +30,54 @@ drift_data_file = os.path.join(KNOWLEDGE_DIR, "drift.csv")
 predictions_file = os.path.join(KNOWLEDGE_DIR, "predictions.csv")
 
 def load_mape_info():
-    """Load stored MAPE info including energy debt and recovery cycles."""
-    with open(mape_info_file, "r") as f:
-        return json.load(f)
+    """Load stored MAPE info including energy debt and recovery cycles.
+
+    Retries once: a concurrent writer can briefly leave the file mid-rename on
+    Windows, and this used to raise straight out of the monitoring loop.
+    """
+    for attempt in (0, 1):
+        try:
+            with open(mape_info_file, "r") as f:
+                return json.load(f)
+        except (json.JSONDecodeError, FileNotFoundError, PermissionError):
+            if attempt:
+                raise
+            time.sleep(0.05)
 
 def save_mape_info(data):
-    """Save updated MAPE info including energy debt and recovery cycles."""
-    with open(mape_info_file, "w") as f:
+    """Save updated MAPE info including energy debt and recovery cycles.
+
+    Written to a temp file and moved into place with os.replace(), which is
+    atomic on Windows and POSIX. Three processes (inference.py via monitor,
+    manage.py via analyse/execute) read-modify-write this file concurrently;
+    a plain open(path, "w") truncates it to zero before the new bytes land,
+    so a reader landing in that window gets an empty file. Measured at a 25%
+    failure rate under sustained concurrent writes.
+    """
+    tmp_path = "%s.tmp%s" % (mape_info_file, os.getpid())
+    with open(tmp_path, "w") as f:
         json.dump(data, f, indent=4)
+        f.flush()
+        os.fsync(f.fileno())
+
+    # os.replace raises WinError 5 if anything else currently has the
+    # destination open, and the dashboard polls this file every couple of
+    # seconds. Those read handles live for microseconds, so a short retry
+    # clears them; if it somehow does not, fall back to the direct write
+    # rather than lose the update or crash the loop.
+    for _ in range(40):
+        try:
+            os.replace(tmp_path, mape_info_file)
+            return
+        except PermissionError:
+            time.sleep(0.02)
+
+    # Still locked after ~0.8s. Skip this snapshot rather than fall back to a
+    # truncating write: the next tick rewrites the whole file anyway, whereas a
+    # torn write can leave state that load_mape_info cannot parse.
+    if os.path.exists(tmp_path):
+        os.remove(tmp_path)
+    print("[MAPE] WARNING: could not update %s (locked); skipping this snapshot" % mape_info_file)
 
 def analyse_mape():
     """Analyze performance and decide if switching is needed, using dynamic energy thresholds."""
@@ -72,6 +124,17 @@ def analyse_mape():
 
     # Save updated info
     mape_info["recovery_cycles"] = recovery_cycles
+    # Persist what this check actually found, so execute.py can log the real
+    # trigger context (score/threshold, not just "a switch happened") against
+    # any adaptation this decision leads to.
+    mape_info["last_score_check"] = {
+        "score": mape_data["score"],
+        "min_score_threshold": min_score,
+        "energy_normalized": used_energy,
+        "energy_threshold": current_energy_threshold,
+        "switch_needed": switch_needed,
+        "threshold_violated": threshold_violated,
+    }
     save_mape_info(mape_info)
 
     print(f"📊 Updated Energy Threshold: {new_energy_threshold:.4f}")
@@ -148,8 +211,23 @@ def analyse_drift():
     if not drift_data:
         return None
 
-    kl_div = drift_data["kl_div"]
-    drift_detected = kl_div > 0.5  #? Threshold for drift detection
+    kl_div = float(drift_data["kl_div"])
+    drift_threshold = 0.5
+    drift_detected = bool(kl_div > drift_threshold)
+
+    # Persist what this check actually found (see analyse_mape's last_score_check
+    # for the same rationale) so the real KL divergence/threshold is available
+    # to log against whatever adaptation this decision leads to. kl_div/comparison
+    # results here are numpy scalars (from scipy/numpy ops in monitor.py); cast
+    # to native float/bool since numpy.bool_ (unlike numpy.float64) isn't
+    # JSON-serializable by the stdlib json module.
+    mape_info = load_mape_info()
+    mape_info["last_drift_check"] = {
+        "kl_div": kl_div,
+        "drift_threshold": drift_threshold,
+        "drift_detected": drift_detected,
+    }
+    save_mape_info(mape_info)
 
     if drift_detected:
         print(f"🚨 Drift detected! KL divergence = {kl_div:.4f}")

@@ -12,7 +12,7 @@ YOLO_MODEL_URLS = {
 }
 
 for model_name, url in YOLO_MODEL_URLS.items():
-    dest = f"base_models/{model_name}.pt"
+    dest = f"models/{model_name}.pt"
     if not os.path.exists(dest):
         try:
             print(f"Downloading {model_name} from {url}...")

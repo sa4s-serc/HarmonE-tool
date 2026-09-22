@@ -1,0 +1,12 @@
+name: harmone_cv
+
+entry_points:
+  retrain:
+    parameters:
+      epochs: {type: float, default: 5}
+      imgsz: {type: float, default: 640}
+      patience: {type: float, default: 3}
+    command: "python retrain.py --epochs {epochs} --imgsz {imgsz} --patience {patience}"
+    # `batch` is intentionally not exposed here: retrain.py picks it from the
+    # active model size (yolo_n/s/m) by default. Override it directly with
+    # `python retrain.py --batch N` outside of `mlflow run` if needed.

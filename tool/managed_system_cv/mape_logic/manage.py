@@ -1,20 +1,22 @@
 import threading
 import time
-import pyRAPL
+import sys
 import csv
 import os
 import pandas as pd
 import logging
+
+# --- File Paths ---
+# Define the base directory dynamically based on the script's location
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(os.path.join(BASE_DIR, "..", ".."))
+import energy_utils as pyRAPL
 
 # --- IMPORTANT: Import all your execute functions ---
 # Make sure your execute.py has all three of these
 from execute import execute_mape, execute_drift, execute_simple_switch
 
 pyRAPL.setup()
-
-# --- File Paths ---
-# Define the base directory dynamically based on the script's location
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 KNOWLEDGE_DIR = os.path.join(BASE_DIR, "..", "knowledge")
 
 log_file = os.path.join(KNOWLEDGE_DIR, "mape_log.csv")
