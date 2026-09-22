@@ -30,7 +30,7 @@ One script handles everything: virtual environment creation, dependency installa
 
 ```bash
 # 1. Navigate to the project directory
-cd /home/user/<path>/harmonica/tool
+cd /home/user/<path>/HarmonE-tool/tool
 
 # 2. Make the setup script executable (only needed once)
 chmod +x harmone_start.sh
